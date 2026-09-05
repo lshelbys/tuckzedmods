@@ -14,42 +14,65 @@
    */
   function applyNavState(user) {
     const uploadLink  = document.getElementById('nav-upload');
+    const uploadLi    = uploadLink ? uploadLink.parentElement : null;
     const signinLink  = document.getElementById('nav-signin');
     const userPill    = document.getElementById('nav-user-pill');
     const userLabel   = document.getElementById('nav-user-label');
     const signoutBtn  = document.getElementById('nav-signout-btn');
 
-    if (!uploadLink || !signinLink) return; // nav not present
+    if (!signinLink) return; // nav not present
 
     if (user) {
-      // ── Signed in ───────────────────────────────────────────
+      // ── Signed in ─────────────────────────────────────────────
       const isAdmin = user.email.toLowerCase() === window.TZ_AUTH.ADMIN_EMAIL.toLowerCase();
 
-      // "Upload Mods" → admin.html for admin, restricted notice for others
-      uploadLink.href = isAdmin ? 'admin.html' : '#';
-      if (!isAdmin) {
-        uploadLink.addEventListener('click', e => {
-          e.preventDefault();
-          window.TZ?.showToast('Upload access is restricted to admins.');
-        });
+      // Always hide "Upload Mods" when signed in
+      if (uploadLi) uploadLi.style.display = 'none';
+
+      // Hide "Sign In" link
+      signinLink.style.display = 'none';
+
+      // Show user pill
+      if (userPill) userPill.style.display = '';
+
+      if (isAdmin) {
+        // Admin: make the label a clickable link back to the admin panel
+        if (userLabel) {
+          userLabel.textContent  = '⚡ Admin';
+          userLabel.style.cursor = 'pointer';
+          userLabel.title        = 'Go to Admin Panel';
+          userLabel.setAttribute('role', 'button');
+          userLabel.setAttribute('tabindex', '0');
+          userLabel.onclick = function () {
+            window.location.href = 'admin.html';
+          };
+          userLabel.onkeydown = function (e) {
+            if (e.key === 'Enter' || e.key === ' ') window.location.href = 'admin.html';
+          };
+        }
+      } else {
+        // Regular user: show username, no link
+        if (userLabel) {
+          userLabel.textContent  = user.email.split('@')[0];
+          userLabel.style.cursor = 'default';
+          userLabel.onclick      = null;
+        }
       }
 
-      // Show user pill, hide sign-in link
-      signinLink.style.display = 'none';
-      if (userPill)  userPill.style.display  = '';
-      if (userLabel) userLabel.textContent    = isAdmin ? '⚡ Admin' : user.email.split('@')[0];
+      // Sign Out handler
       if (signoutBtn) {
-        signoutBtn.onclick = async () => {
+        signoutBtn.onclick = async function () {
           await window.TZ_AUTH.signOut();
-          // Redirect away from admin panel if on it
-          if (window.location.pathname.includes('admin.html')) {
-            window.location.href = 'index.html';
-          }
+          // Always redirect to homepage on sign-out
+          window.location.href = 'index.html';
         };
       }
+
     } else {
-      // ── Signed out ──────────────────────────────────────────
-      uploadLink.href = 'auth.html?redirect=upload';
+      // ── Signed out ────────────────────────────────────────────
+      // Show "Upload Mods" and "Sign In" links
+      if (uploadLi) uploadLi.style.display = '';
+      if (uploadLink) uploadLink.href = 'auth.html?redirect=upload';
       signinLink.style.display = '';
       if (userPill) userPill.style.display = 'none';
     }
