@@ -221,13 +221,20 @@
 
           <div class="form-field form-field--full" id="field-img">
             <label class="form-label" for="f-img">
-              Cover Image URL <span>(optional)</span>
+              Cover Image <span>(Upload file or enter URL)</span>
             </label>
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px;">
+              <input type="file" id="f-img-file" accept="image/*" style="display:none;" />
+              <button type="button" class="btn btn--sm" id="btn-pick-img" onclick="document.getElementById('f-img-file').click()">
+                📁 Upload Image File
+              </button>
+              <span id="img-upload-status" style="font-size:.85rem;color:var(--gray-600);font-weight:700;"></span>
+            </div>
             <input
               type="url"
               class="input"
               id="f-img"
-              placeholder="https://example.com/cover.jpg"
+              placeholder="https://example.com/cover.jpg or uploaded image URL"
               autocomplete="off"
             />
             <span class="form-error" id="err-img" role="alert">If provided, the cover image URL must start with http:// or https://.</span>
@@ -341,7 +348,9 @@
 <!-- ── Scripts ─────────────────────────────────────────────── -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="store.js?v=3"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js?v=2"></script>
+<script src="store.js?v=4"></script>
 <script src="firebase-config.js?v=2"></script>
 <script src="auth-nav.js"></script>
 <script>
@@ -363,8 +372,12 @@ window.TZ_AUTH.onChange(user => {
     window.location.href = './';
     return;
   }
-  // Admin confirmed → reveal panel
+  // Admin confirmed → reveal panel and load live mods from Supabase
   document.querySelector('.admin-layout').style.visibility = '';
+  Store.fetchFromRemote().then(() => {
+    renderOverview();
+    if (currentPanel === 'manage') renderManageTable();
+  });
 });
 
 // ── Sidebar Sign Out ───────────────────────────────────
@@ -531,6 +544,29 @@ function initManageSearch() {
 // ── Form ───────────────────────────────────────────────────
 function initModForm() {
   document.getElementById('mod-form').addEventListener('submit', handleFormSubmit);
+
+  // Live cover upload handler (uploads file to Supabase Storage bucket)
+  const fileInput = document.getElementById('f-img-file');
+  const statusEl = document.getElementById('img-upload-status');
+  if (fileInput) {
+    fileInput.addEventListener('change', async function (e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      statusEl.textContent = '⏳ Uploading to Supabase...';
+      try {
+        const publicUrl = await Store.uploadCover(file);
+        document.getElementById('f-img').value = publicUrl;
+        document.getElementById('img-preview').src = publicUrl;
+        document.getElementById('img-preview-wrap').style.display = '';
+        statusEl.textContent = '✅ Image uploaded!';
+        setTimeout(() => { statusEl.textContent = ''; }, 3500);
+      } catch (err) {
+        console.error('Image upload failed:', err);
+        statusEl.textContent = '❌ Upload failed: ' + (err.message || 'Error');
+      }
+    });
+  }
 }
 
 function resetForm() {
@@ -581,7 +617,7 @@ function cancelEdit() {
   document.getElementById('form-cancel-btn').style.display = 'none';
 }
 
-function handleFormSubmit(e) {
+async function handleFormSubmit(e) {
   e.preventDefault();
   if (!validateForm()) return;
 
@@ -596,10 +632,14 @@ function handleFormSubmit(e) {
     coverImage:  document.getElementById('f-img').value.trim(),
   };
 
+  const submitBtn = document.getElementById('form-submit-btn');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Saving...';
+
   if (editId) {
     // Edit existing
-    Store.update(editId, data);
-    showToast('✅ Mod updated successfully!');
+    await Store.update(editId, data);
+    showToast('✅ Mod updated successfully in Supabase!');
     showFormMsg('Mod updated!');
     document.getElementById('edit-id').value = '';
     document.getElementById('form-panel-title').textContent = 'New Mod';
@@ -615,15 +655,19 @@ function handleFormSubmit(e) {
       createdAt:  today(),
       ...data,
     };
-    Store.add(newMod);
-    showToast('✅ Mod published successfully!');
+    await Store.add(newMod);
+    showToast('🚀 Mod published live to Supabase!');
     showFormMsg('Mod published!');
     document.getElementById('mod-form').reset();
     document.getElementById('img-preview-wrap').style.display = 'none';
   }
 
-  // Refresh overview stats if visible
-  if (currentPanel === 'overview') renderOverview();
+  submitBtn.disabled = false;
+  submitBtn.textContent = editId ? 'Save Changes' : 'Publish Mod';
+
+  // Refresh overview stats and manage table
+  renderOverview();
+  if (currentPanel === 'manage') renderManageTable();
 }
 
 // ── Form Validation ────────────────────────────────────────
@@ -708,10 +752,12 @@ function closeDeleteModal() {
   document.getElementById('delete-modal').classList.remove('open');
 }
 
-function confirmDelete() {
+async function confirmDelete() {
   if (!pendingDeleteId) return;
-  Store.delete(pendingDeleteId);
+  const idToDelete = pendingDeleteId;
   closeDeleteModal();
+  showToast('🗑 Mod deleting...');
+  await Store.delete(idToDelete);
   showToast('🗑 Mod deleted.');
   renderOverview();
   if (currentPanel === 'manage') renderManageTable();

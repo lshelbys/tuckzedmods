@@ -138,7 +138,9 @@
 <!-- ── Scripts ─────────────────────────────────────────────── -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="store.js?v=3"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js?v=2"></script>
+<script src="store.js?v=4"></script>
 <script src="firebase-config.js?v=2"></script>
 <script src="auth-nav.js"></script>
 <script>
@@ -156,6 +158,14 @@ document.addEventListener('DOMContentLoaded', () => {
   renderGameCards();
   renderMods();
   initSearch();
+
+  // Fetch live mods from Supabase
+  if (window.TZ && window.TZ.Store && window.TZ.Store.fetchFromRemote) {
+    window.TZ.Store.fetchFromRemote().then(() => {
+      renderGameCards();
+      renderMods();
+    });
+  }
 
   // Handle URL hash navigation to section
   if (window.location.hash === '#mods') {
