@@ -6,7 +6,11 @@
 'use strict';
 
 // ── Constants ────────────────────────────────────────────────
-const STORAGE_KEY = 'tuckzed_mods_v1';
+const STORAGE_KEY = 'tuckzed_mods_v2';
+try {
+  localStorage.removeItem('tuckzed_mods_v1');
+  localStorage.removeItem('tuckzed_mods');
+} catch (_) {}
 
 const GAMES = {
   ac:     { id: 'ac',     name: 'Assetto Corsa',  icon: '🏎️', desc: 'Realistic simulation racing with thousands of car & track mods.' },
