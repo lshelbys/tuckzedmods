@@ -6,6 +6,17 @@
   <title>tuckzed mods — Game Mod Distribution Platform</title>
   <meta name="description" content="Download the best mods for Assetto Corsa and BeamNG.drive. Cars, tracks, maps, and physics overhauls curated by the tuckzed mods community." />
   <link rel="stylesheet" href="styles.css" />
+  <style>
+    .nav__user-label {
+      font-size: .8rem;
+      font-weight: 700;
+      padding: 6px 12px;
+      border: 2px solid var(--black);
+      border-radius: var(--radius-sm);
+      white-space: nowrap;
+    }
+    #nav-user-pill { display: flex; align-items: center; gap: 8px; }
+  </style>
 </head>
 <body>
 
@@ -15,9 +26,14 @@
     <div class="nav__inner">
       <a href="index.html" class="nav__logo" id="nav-logo">tuckzed <span>mods</span></a>
       <ul class="nav__links" role="list">
-        <li><a href="index.html" class="nav__link active" id="nav-home">Home</a></li>
+        <li><a href="index.html"      class="nav__link active" id="nav-home">Home</a></li>
         <li><a href="index.html#mods" class="nav__link" id="nav-browse">Browse</a></li>
-        <li><a href="admin.html" class="nav__link" id="nav-admin">Admin</a></li>
+        <li><a href="auth.html?redirect=upload" class="nav__link" id="nav-upload">Upload Mods</a></li>
+        <li><a href="auth.html" class="nav__link" id="nav-signin">Sign In</a></li>
+        <li id="nav-user-pill" style="display:none;">
+          <span class="nav__user-label" id="nav-user-label"></span>
+          <button class="btn btn--sm" id="nav-signout-btn">Sign Out</button>
+        </li>
       </ul>
     </div>
   </div>
@@ -36,7 +52,7 @@
       <button class="btn btn--primary" id="hero-browse-btn" onclick="document.getElementById('games').scrollIntoView({behavior:'smooth'})">
         Browse Mods
       </button>
-      <a href="admin.html" class="btn" id="hero-admin-btn">Admin Panel</a>
+      <a href="auth.html?redirect=upload" class="btn" id="hero-admin-btn">Upload Mods</a>
     </div>
   </div>
 </section>
@@ -115,7 +131,11 @@
 <div class="toast-container" aria-live="assertive" aria-atomic="true"></div>
 
 <!-- ── Scripts ─────────────────────────────────────────────── -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="store.js"></script>
+<script src="firebase-config.js"></script>
+<script src="auth-nav.js"></script>
 <script>
 'use strict';
 

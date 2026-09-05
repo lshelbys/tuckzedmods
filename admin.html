@@ -7,6 +7,17 @@
   <meta name="description" content="tuckzed mods admin dashboard — create, edit and delete mod listings." />
   <meta name="robots" content="noindex, nofollow" />
   <link rel="stylesheet" href="styles.css" />
+  <style>
+    .nav__user-label {
+      font-size: .8rem;
+      font-weight: 700;
+      padding: 6px 12px;
+      border: 2px solid var(--black);
+      border-radius: var(--radius-sm);
+      white-space: nowrap;
+    }
+    #nav-user-pill { display: flex; align-items: center; gap: 8px; }
+  </style>
 </head>
 <body>
 
@@ -16,9 +27,14 @@
     <div class="nav__inner">
       <a href="index.html" class="nav__logo" id="nav-logo">tuckzed <span>mods</span></a>
       <ul class="nav__links" role="list">
-        <li><a href="index.html" class="nav__link" id="nav-home">Home</a></li>
+        <li><a href="index.html"      class="nav__link" id="nav-home">Home</a></li>
         <li><a href="index.html#mods" class="nav__link" id="nav-browse">Browse</a></li>
-        <li><a href="admin.html" class="nav__link active" id="nav-admin">Admin</a></li>
+        <li><a href="admin.html"      class="nav__link active" id="nav-upload">Upload Mods</a></li>
+        <li><a href="auth.html" class="nav__link" id="nav-signin">Sign In</a></li>
+        <li id="nav-user-pill" style="display:none;">
+          <span class="nav__user-label" id="nav-user-label"></span>
+          <button class="btn btn--sm" id="nav-signout-btn">Sign Out</button>
+        </li>
       </ul>
     </div>
   </div>
@@ -53,6 +69,10 @@
         <span class="admin-nav-item__icon" aria-hidden="true">🌐</span>
         View Site
       </a>
+      <button class="admin-nav-item" id="sidebar-signout-btn" onclick="handleSidebarSignOut()">
+        <span class="admin-nav-item__icon" aria-hidden="true">🚪</span>
+        Sign Out
+      </button>
     </div>
   </aside>
 
@@ -313,9 +333,39 @@
 <div class="toast-container" aria-live="assertive" aria-atomic="true"></div>
 
 <!-- ── Scripts ─────────────────────────────────────────────── -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="store.js"></script>
+<script src="firebase-config.js"></script>
+<script src="auth-nav.js"></script>
 <script>
 'use strict';
+
+// ── Auth Guard ─────────────────────────────────────────
+// Hide admin content until Firebase confirms admin identity.
+document.querySelector('.admin-layout').style.visibility = 'hidden';
+
+window.TZ_AUTH.onChange(user => {
+  if (!user) {
+    // Not signed in → go to sign-in page
+    window.location.href = 'auth.html?redirect=upload';
+    return;
+  }
+  if (user.email.toLowerCase() !== window.TZ_AUTH.ADMIN_EMAIL.toLowerCase()) {
+    // Signed in but not admin → go home with notice
+    window.TZ?.showToast('Access restricted to admins.');
+    window.location.href = 'index.html';
+    return;
+  }
+  // Admin confirmed → reveal panel
+  document.querySelector('.admin-layout').style.visibility = '';
+});
+
+// ── Sidebar Sign Out ───────────────────────────────────
+async function handleSidebarSignOut() {
+  await window.TZ_AUTH.signOut();
+  window.location.href = 'index.html';
+}
 
 const { Store, GAMES, generateId, today, escapeHtml, showToast } = window.TZ;
 
