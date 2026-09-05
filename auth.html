@@ -134,15 +134,15 @@
     <a href="index.html" class="auth-card__logo" id="auth-logo">tuckzed <span>mods</span></a>
 
     <!-- Tabs -->
-    <div class="auth-tabs" role="tablist" aria-label="Authentication options">
+    <div class="auth-tabs" id="auth-tabs" role="tablist" aria-label="Authentication options">
       <button class="auth-tab active" id="tab-signin"   role="tab" aria-selected="true"  aria-controls="form-signin">Sign In</button>
       <button class="auth-tab"        id="tab-register" role="tab" aria-selected="false" aria-controls="form-register">Create Account</button>
     </div>
 
     <!-- ── Sign In Form ──────────────────────────────────────── -->
     <div class="auth-form active" id="form-signin" role="tabpanel" aria-labelledby="tab-signin">
-      <h1 class="auth-form__title">Welcome back</h1>
-      <p class="auth-form__sub">Sign in to your tuckzed mods account.</p>
+      <h1 class="auth-form__title" id="signin-title">Welcome back</h1>
+      <p class="auth-form__sub" id="signin-sub">Sign in to your tuckzed mods account.</p>
 
       <div class="auth-error" id="signin-error" role="alert"></div>
 
@@ -172,7 +172,7 @@
         <button type="submit" class="btn btn--primary auth-btn" id="signin-submit-btn">Sign In</button>
       </form>
 
-      <p class="auth-switch">
+      <p class="auth-switch" id="create-account-switch">
         Don't have an account?
         <button class="auth-switch__btn" id="go-to-register">Create one</button>
       </p>
@@ -295,6 +295,20 @@ document.addEventListener('DOMContentLoaded', function () {
       window.location.href = 'index.html';
     }
   });
+
+  // ── Admin-only mode (no Create Account) ────────────────────
+  var urlParams  = new URLSearchParams(window.location.search);
+  var isUpload   = urlParams.get('redirect') === 'upload';
+
+  if (isUpload) {
+    // Hide the Create Account tab bar entirely
+    document.getElementById('auth-tabs').style.display = 'none';
+    // Hide "Don't have an account? Create one"
+    document.getElementById('create-account-switch').style.display = 'none';
+    // Update title and subtitle
+    document.getElementById('signin-title').textContent = 'Admin Sign In';
+    document.getElementById('signin-sub').textContent   = 'Sign in with your admin credentials to access the upload panel.';
+  }
 
   // ── Tab switching ───────────────────────────────────────────
   function switchTab(tab) {
