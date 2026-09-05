@@ -6,6 +6,18 @@
 
 'use strict';
 
+// ── Clean URLs (strip .html from address bar) ───────────────
+(function cleanUrl() {
+  try {
+    var path = window.location.pathname;
+    if (path.endsWith('.html')) {
+      var clean = path.replace(/\.html$/, '');
+      if (clean.endsWith('/index')) clean = clean.slice(0, -6) || '/';
+      window.history.replaceState(null, '', clean + window.location.search + window.location.hash);
+    }
+  } catch (_) {}
+})();
+
 (function initAuthNav() {
 
   /**
@@ -44,10 +56,10 @@
           userLabel.setAttribute('role', 'button');
           userLabel.setAttribute('tabindex', '0');
           userLabel.onclick = function () {
-            window.location.href = 'admin.html';
+            window.location.href = 'admin';
           };
           userLabel.onkeydown = function (e) {
-            if (e.key === 'Enter' || e.key === ' ') window.location.href = 'admin.html';
+            if (e.key === 'Enter' || e.key === ' ') window.location.href = 'admin';
           };
         }
       } else {
@@ -59,10 +71,10 @@
           userLabel.setAttribute('role', 'button');
           userLabel.setAttribute('tabindex', '0');
           userLabel.onclick = function () {
-            window.location.href = 'profile.html';
+            window.location.href = 'profile';
           };
           userLabel.onkeydown = function (e) {
-            if (e.key === 'Enter' || e.key === ' ') window.location.href = 'profile.html';
+            if (e.key === 'Enter' || e.key === ' ') window.location.href = 'profile';
           };
         }
       }
@@ -73,7 +85,7 @@
           if (confirm('Are you sure you want to sign out?')) {
             await window.TZ_AUTH.signOut();
             // Always redirect to homepage on sign-out
-            window.location.href = 'index.html';
+            window.location.href = './';
           }
         };
       }
@@ -82,7 +94,7 @@
       // ── Signed out ────────────────────────────────────────────
       // Show "Upload Mods" and "Sign In" links
       if (uploadLi) uploadLi.style.display = '';
-      if (uploadLink) uploadLink.href = 'auth.html?redirect=upload';
+      if (uploadLink) uploadLink.href = 'auth?redirect=upload';
       signinLink.style.display = '';
       if (userPill) userPill.style.display = 'none';
     }

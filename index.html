@@ -24,12 +24,12 @@
 <nav class="nav" role="navigation" aria-label="Main navigation">
   <div class="container">
     <div class="nav__inner">
-      <a href="index.html" class="nav__logo" id="nav-logo">tuckzed <span>mods</span></a>
+      <a href="./" class="nav__logo" id="nav-logo">tuckzed <span>mods</span></a>
       <ul class="nav__links" role="list">
-        <li><a href="index.html"      class="nav__link active" id="nav-home">Home</a></li>
-        <li><a href="index.html#mods" class="nav__link" id="nav-browse">Browse</a></li>
-        <li><a href="auth.html?redirect=upload" class="nav__link" id="nav-upload">Upload Mods</a></li>
-        <li><a href="auth.html" class="nav__link" id="nav-signin">Sign In</a></li>
+        <li><a href="./"      class="nav__link active" id="nav-home">Home</a></li>
+        <li><a href="#mods"   class="nav__link" id="nav-browse">Browse</a></li>
+        <li><a href="auth?redirect=upload" class="nav__link" id="nav-upload">Upload Mods</a></li>
+        <li><a href="auth"    class="nav__link" id="nav-signin">Sign In</a></li>
         <li id="nav-user-pill" style="display:none;">
           <span class="nav__user-label" id="nav-user-label"></span>
           <button class="btn btn--sm" id="nav-signout-btn">Sign Out</button>
@@ -52,7 +52,7 @@
       <button class="btn btn--primary" id="hero-browse-btn" onclick="document.getElementById('games').scrollIntoView({behavior:'smooth'})">
         Browse Mods
       </button>
-      <a href="auth.html?redirect=upload" class="btn" id="hero-admin-btn">Upload Mods</a>
+      <a href="auth?redirect=upload" class="btn" id="hero-admin-btn">Upload Mods</a>
     </div>
   </div>
 </section>
@@ -117,10 +117,10 @@
     <div class="footer__inner">
       <span class="footer__brand">tuckzed mods</span>
       <nav class="footer__links" aria-label="Footer navigation">
-        <a href="index.html" class="footer__link" id="footer-home">Home</a>
-        <a href="index.html#games" class="footer__link" id="footer-games">Games</a>
-        <a href="index.html#mods" class="footer__link" id="footer-mods">Mods</a>
-        <a href="admin.html" class="footer__link" id="footer-admin">Admin</a>
+        <a href="./"      class="footer__link" id="footer-home">Home</a>
+        <a href="#games"  class="footer__link" id="footer-games">Games</a>
+        <a href="#mods"   class="footer__link" id="footer-mods">Mods</a>
+        <a href="admin"   class="footer__link" id="footer-admin">Admin</a>
       </nav>
       <span class="footer__copy">© 2024 tuckzed mods. Community-driven.</span>
     </div>
