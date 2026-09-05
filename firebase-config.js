@@ -20,12 +20,12 @@
  */
 
 const firebaseConfig = {
-  apiKey:            "REPLACE_WITH_YOUR_API_KEY",
-  authDomain:        "REPLACE_WITH_YOUR_PROJECT_ID.firebaseapp.com",
-  projectId:         "REPLACE_WITH_YOUR_PROJECT_ID",
-  storageBucket:     "REPLACE_WITH_YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "REPLACE_WITH_YOUR_MESSAGING_SENDER_ID",
-  appId:             "REPLACE_WITH_YOUR_APP_ID",
+  apiKey: "AIzaSyAz837f6qqdxCdhvz7oyzol50euDWYkSp4",
+  authDomain: "tuckzed-mods.firebaseapp.com",
+  projectId: "tuckzed-mods",
+  storageBucket: "tuckzed-mods.firebasestorage.app",
+  messagingSenderId: "808701107950",
+  appId: "1:808701107950:web:71fbec3ad45d0fdd165dff",
 };
 
 // The one and only admin email — changing this also requires
@@ -36,7 +36,7 @@ const ADMIN_EMAIL = 'admin@tuckzed.com';
 firebase.initializeApp(firebaseConfig);
 
 window.TZ_AUTH = {
-  auth:        firebase.auth(),
+  auth: firebase.auth(),
   ADMIN_EMAIL: ADMIN_EMAIL,
 
   /** Returns the currently signed-in Firebase user, or null */
