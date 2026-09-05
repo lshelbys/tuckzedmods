@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>tuckzed mods — Game Mod Distribution Platform</title>
+  <meta name="description" content="Download the best mods for Assetto Corsa and BeamNG.drive. Cars, tracks, maps, and physics overhauls curated by the tuckzed mods community." />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<!-- ── Navigation ──────────────────────────────────────────── -->
+<nav class="nav" role="navigation" aria-label="Main navigation">
+  <div class="container">
+    <div class="nav__inner">
+      <a href="index.html" class="nav__logo" id="nav-logo">tuckzed <span>mods</span></a>
+      <ul class="nav__links" role="list">
+        <li><a href="index.html" class="nav__link active" id="nav-home">Home</a></li>
+        <li><a href="index.html#mods" class="nav__link" id="nav-browse">Browse</a></li>
+        <li><a href="admin.html" class="nav__link" id="nav-admin">Admin</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- ── Hero ────────────────────────────────────────────────── -->
+<section class="hero" aria-labelledby="hero-title">
+  <div class="container">
+    <p class="hero__eyebrow">The definitive mod hub</p>
+    <h1 class="hero__title" id="hero-title">tuckzed mods</h1>
+    <p class="hero__sub">
+      Hand-picked, community-verified modifications for Assetto Corsa and BeamNG.drive.
+      Cars, tracks, maps, and physics overhauls — all in one place.
+    </p>
+    <div class="hero__actions">
+      <button class="btn btn--primary" id="hero-browse-btn" onclick="document.getElementById('games').scrollIntoView({behavior:'smooth'})">
+        Browse Mods
+      </button>
+      <a href="admin.html" class="btn" id="hero-admin-btn">Admin Panel</a>
+    </div>
+  </div>
+</section>
+
+<!-- ── Game Selection ───────────────────────────────────────── -->
+<section class="section section--bordered" id="games" aria-labelledby="games-title">
+  <div class="container">
+    <div class="section__header">
+      <h2 class="section__title" id="games-title">Choose a Game</h2>
+      <button class="btn btn--ghost btn--sm" id="clear-game-btn" style="display:none;" onclick="clearGameFilter()">
+        ✕ Clear filter
+      </button>
+    </div>
+    <div class="game-grid" id="game-grid" role="list">
+      <!-- Rendered by JS -->
+    </div>
+  </div>
+</section>
+
+<!-- ── Mod Showcase ─────────────────────────────────────────── -->
+<section class="section" id="mods" aria-labelledby="mods-title">
+  <div class="container">
+    <div class="section__header">
+      <h2 class="section__title" id="mods-title">
+        All Mods
+        <span id="mods-count"></span>
+      </h2>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar" role="search">
+      <div class="toolbar__search-wrap">
+        <span class="toolbar__search-icon" aria-hidden="true">🔍</span>
+        <input
+          type="search"
+          class="input toolbar__search"
+          id="search-input"
+          placeholder="Search mods by title or description…"
+          aria-label="Search mods"
+          autocomplete="off"
+        />
+      </div>
+      <div class="filter-group" role="group" aria-label="Category filters">
+        <button class="filter-btn active" id="filter-all" onclick="setCategory('all')">All</button>
+        <button class="filter-btn" id="filter-cars"    onclick="setCategory('Cars')">🚗 Cars</button>
+        <button class="filter-btn" id="filter-tracks"  onclick="setCategory('Tracks')">🏁 Tracks</button>
+        <button class="filter-btn" id="filter-maps"    onclick="setCategory('Maps')">🗺️ Maps</button>
+        <button class="filter-btn" id="filter-physics" onclick="setCategory('Physics')">⚙️ Physics</button>
+      </div>
+    </div>
+
+    <!-- Mod Grid -->
+    <div class="mod-grid" id="mod-grid" role="list" aria-live="polite" aria-label="Mod listings">
+      <!-- Rendered by JS -->
+    </div>
+  </div>
+</section>
+
+<!-- ── Footer ──────────────────────────────────────────────── -->
+<footer class="footer" role="contentinfo">
+  <div class="container">
+    <div class="footer__inner">
+      <span class="footer__brand">tuckzed mods</span>
+      <nav class="footer__links" aria-label="Footer navigation">
+        <a href="index.html" class="footer__link" id="footer-home">Home</a>
+        <a href="index.html#games" class="footer__link" id="footer-games">Games</a>
+        <a href="index.html#mods" class="footer__link" id="footer-mods">Mods</a>
+        <a href="admin.html" class="footer__link" id="footer-admin">Admin</a>
+      </nav>
+      <span class="footer__copy">© 2024 tuckzed mods. Community-driven.</span>
+    </div>
+  </div>
+</footer>
+
+<!-- ── Toast Container ──────────────────────────────────────── -->
+<div class="toast-container" aria-live="assertive" aria-atomic="true"></div>
+
+<!-- ── Scripts ─────────────────────────────────────────────── -->
+<script src="store.js"></script>
+<script>
+'use strict';
+
+// ── State ──────────────────────────────────────────────────
+const state = {
+  activeGame:     null,   // 'ac' | 'beamng' | null
+  activeCategory: 'all',
+  searchQuery:    '',
+};
+
+// ── Init ───────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  renderGameCards();
+  renderMods();
+  initSearch();
+
+  // Handle URL hash navigation to section
+  if (window.location.hash === '#mods') {
+    document.getElementById('mods').scrollIntoView({ behavior: 'smooth' });
+  }
+});
+
+// ── Game Cards ─────────────────────────────────────────────
+function renderGameCards() {
+  const { Store, GAMES } = window.TZ;
+  const counts = Store.countByGame();
+  const grid = document.getElementById('game-grid');
+
+  grid.innerHTML = Object.values(GAMES).map(game => `
+    <div
+      class="game-card${state.activeGame === game.id ? ' selected' : ''}"
+      id="game-card-${game.id}"
+      role="listitem button"
+      tabindex="0"
+      aria-pressed="${state.activeGame === game.id}"
+      onclick="toggleGame('${game.id}')"
+      onkeydown="if(event.key==='Enter'||event.key===' ')toggleGame('${game.id}')"
+    >
+      <div class="game-card__icon" aria-hidden="true">${game.icon}</div>
+      <div class="game-card__name">${game.name}</div>
+      <div class="game-card__desc">${game.desc}</div>
+      <div class="game-card__footer">
+        <span class="game-card__count">${counts[game.id] || 0} mods</span>
+        <span class="badge game-card__badge">Browse →</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleGame(gameId) {
+  state.activeGame = state.activeGame === gameId ? null : gameId;
+  renderGameCards();
+  renderMods();
+  updateModsTitle();
+  document.getElementById('clear-game-btn').style.display = state.activeGame ? '' : 'none';
+
+  // Scroll to mods section when a game is selected
+  if (state.activeGame) {
+    document.getElementById('mods').scrollIntoView({ behavior: 'smooth' });
+  }
+}
+
+function clearGameFilter() {
+  state.activeGame = null;
+  renderGameCards();
+  renderMods();
+  updateModsTitle();
+  document.getElementById('clear-game-btn').style.display = 'none';
+}
+
+function updateModsTitle() {
+  const { GAMES } = window.TZ;
+  const titleEl = document.getElementById('mods-title');
+  if (state.activeGame) {
+    titleEl.firstChild.textContent = GAMES[state.activeGame].name + ' Mods ';
+  } else {
+    titleEl.firstChild.textContent = 'All Mods ';
+  }
+}
+
+// ── Search ─────────────────────────────────────────────────
+function initSearch() {
+  const input = document.getElementById('search-input');
+  let timer;
+  input.addEventListener('input', () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      state.searchQuery = input.value.trim().toLowerCase();
+      renderMods();
+    }, 200);
+  });
+}
+
+// ── Category Filters ───────────────────────────────────────
+function setCategory(cat) {
+  state.activeCategory = cat;
+
+  // Update filter button states
+  const catMap = {
+    all: 'filter-all', Cars: 'filter-cars',
+    Tracks: 'filter-tracks', Maps: 'filter-maps', Physics: 'filter-physics',
+  };
+  Object.values(catMap).forEach(id => {
+    document.getElementById(id)?.classList.remove('active');
+  });
+  const activeId = catMap[cat];
+  if (activeId) document.getElementById(activeId)?.classList.add('active');
+
+  renderMods();
+}
+
+// ── Mod Rendering ──────────────────────────────────────────
+function renderMods() {
+  const { Store, GAMES, CATEGORY_ICONS, escapeHtml } = window.TZ;
+  const grid = document.getElementById('mod-grid');
+  const countEl = document.getElementById('mods-count');
+
+  let mods = Store.getAll();
+
+  // Filter by game
+  if (state.activeGame) {
+    mods = mods.filter(m => m.game === state.activeGame);
+  }
+  // Filter by category
+  if (state.activeCategory !== 'all') {
+    mods = mods.filter(m => m.category === state.activeCategory);
+  }
+  // Filter by search
+  if (state.searchQuery) {
+    mods = mods.filter(m =>
+      m.title.toLowerCase().includes(state.searchQuery) ||
+      m.description.toLowerCase().includes(state.searchQuery)
+    );
+  }
+
+  countEl.textContent = `${mods.length} ${mods.length === 1 ? 'mod' : 'mods'}`;
+
+  if (mods.length === 0) {
+    grid.innerHTML = `
+      <div class="empty-state" role="status">
+        <div class="empty-state__icon">🔍</div>
+        <div class="empty-state__title">No mods found</div>
+        <div class="empty-state__desc">Try adjusting your search or filters.</div>
+      </div>`;
+    return;
+  }
+
+  grid.innerHTML = mods.map((mod, i) => {
+    const game = GAMES[mod.game];
+    const icon = CATEGORY_ICONS[mod.category] || '📦';
+    const imgHtml = mod.coverImage
+      ? `<img src="${escapeHtml(mod.coverImage)}" alt="${escapeHtml(mod.title)} cover" class="mod-card__img" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'mod-card__img-placeholder\\'>${icon}</div>'" />`
+      : `<div class="mod-card__img-placeholder" aria-label="${escapeHtml(mod.category)} mod">${icon}</div>`;
+
+    return `
+      <article
+        class="mod-card"
+        id="mod-card-${mod.id}"
+        role="listitem"
+        style="animation-delay:${Math.min(i * 40, 400)}ms"
+        aria-label="${escapeHtml(mod.title)} — ${escapeHtml(mod.category)} mod for ${escapeHtml(game?.name || mod.game)}"
+      >
+        <div class="mod-card__img-wrap">${imgHtml}</div>
+        <div class="mod-card__body">
+          <div class="mod-card__tags">
+            <span class="badge badge--filled">${escapeHtml(game?.name || mod.game)}</span>
+            <span class="badge badge--gray">${escapeHtml(mod.category)}</span>
+          </div>
+          <h3 class="mod-card__title">${escapeHtml(mod.title)}</h3>
+          <p class="mod-card__desc">${escapeHtml(mod.description)}</p>
+          <div class="mod-card__meta">
+            <span class="mod-card__version">v${escapeHtml(mod.version)}</span>
+            <span>${escapeHtml(mod.createdAt)}</span>
+          </div>
+        </div>
+        <div class="mod-card__footer">
+          <a
+            href="${escapeHtml(mod.downloadUrl)}"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="btn btn--primary mod-card__dl-btn"
+            id="dl-btn-${mod.id}"
+            aria-label="Download ${escapeHtml(mod.title)}"
+          >
+            ⬇ Download
+          </a>
+        </div>
+      </article>`;
+  }).join('');
+}
+
+// ── Refresh on storage change (admin panel edits) ──────────
+window.addEventListener('storage', e => {
+  if (e.key === 'tuckzed_mods_v1') {
+    renderGameCards();
+    renderMods();
+  }
+});
+</script>
+</body>
+</html>
