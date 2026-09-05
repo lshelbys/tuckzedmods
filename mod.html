@@ -87,7 +87,6 @@
     .mod-gallery-section {
       max-width: 760px;
       margin: 0 auto 28px;
-    }
     .mod-preview-wrap {
       position: relative;
       width: 100%;
@@ -97,6 +96,31 @@
       overflow: hidden;
       background: #0d0e12;
       box-shadow: var(--shadow-md);
+      cursor: zoom-in;
+    }
+    .mod-expand-badge {
+      position: absolute;
+      top: 12px;
+      right: 14px;
+      background: rgba(0, 0, 0, 0.72);
+      color: #ffffff;
+      font-size: .75rem;
+      font-weight: 700;
+      padding: 5px 10px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      z-index: 9;
+      backdrop-filter: blur(4px);
+      border: 1px solid rgba(255,255,255,0.3);
+      cursor: pointer;
+      transition: background var(--transition), transform var(--transition);
+    }
+    .mod-expand-badge:hover {
+      background: rgba(0, 0, 0, 0.95);
+      border-color: #ffffff;
+      transform: scale(1.05);
     }
     .mod-preview-img {
       width: 100%;
@@ -104,6 +128,10 @@
       object-fit: cover;
       display: block;
       user-select: none;
+      transition: transform 250ms ease;
+    }
+    .mod-preview-wrap:hover .mod-preview-img {
+      transform: scale(1.02);
     }
     .mod-gallery-nav {
       position: absolute;
@@ -234,6 +262,108 @@
       color: var(--gray-600);
       margin: 0;
     }
+
+    /* ── Image Lightbox / Fullscreen Modal ────────────────────── */
+    .lightbox-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.94);
+      z-index: 99999;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(10px);
+      animation: fadeIn .2s ease;
+      touch-action: none;
+    }
+    .lightbox-overlay.open {
+      display: flex;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .lightbox-img-wrap {
+      position: relative;
+      max-width: 92vw;
+      max-height: 86vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .lightbox-img {
+      max-width: 92vw;
+      max-height: 84vh;
+      object-fit: contain;
+      border-radius: var(--radius-md);
+      box-shadow: 0 16px 50px rgba(0,0,0,0.9);
+      user-select: none;
+    }
+    .lightbox-close-btn {
+      position: absolute;
+      top: 20px;
+      right: 24px;
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(255, 255, 255, 0.4);
+      background: rgba(255, 255, 255, 0.15);
+      color: #fff;
+      font-size: 1.5rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background var(--transition), transform var(--transition);
+      z-index: 100000;
+    }
+    .lightbox-close-btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: scale(1.1);
+    }
+    .lightbox-nav-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(255, 255, 255, 0.4);
+      background: rgba(0, 0, 0, 0.65);
+      color: #fff;
+      font-size: 1.35rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background var(--transition), transform var(--transition);
+      z-index: 100000;
+      backdrop-filter: blur(4px);
+    }
+    .lightbox-nav-btn:hover {
+      background: rgba(0, 0, 0, 0.95);
+      border-color: #fff;
+      transform: translateY(-50%) scale(1.1);
+    }
+    .lightbox-nav-btn--prev { left: 24px; }
+    .lightbox-nav-btn--next { right: 24px; }
+    .lightbox-counter {
+      position: absolute;
+      bottom: 22px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.78);
+      color: #fff;
+      font-size: .85rem;
+      font-weight: 700;
+      padding: 6px 18px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.25);
+      letter-spacing: .05em;
+      z-index: 100000;
+    }
   </style>
 </head>
 <body>
@@ -300,13 +430,21 @@
 
         <!-- ── 2. IMAGES (MEDIUM SIZE, STARTING WITH COVER) ─────── -->
         <section class="mod-gallery-section" aria-label="Mod screenshots">
-          <div class="mod-preview-wrap" id="main-img-wrap">
+          <div class="mod-preview-wrap" id="main-img-wrap" onclick="openLightbox()" title="Click to expand image">
             <img id="main-img" src="" alt="Mod screenshot preview" class="mod-preview-img" />
+            <button
+              type="button"
+              class="mod-expand-badge"
+              onclick="event.stopPropagation(); openLightbox();"
+              aria-label="Expand image"
+            >
+              ⛶ Expand
+            </button>
             <button
               type="button"
               class="mod-gallery-nav mod-gallery-nav--prev"
               id="gallery-prev-btn"
-              onclick="prevImage()"
+              onclick="event.stopPropagation(); prevImage();"
               aria-label="Previous screenshot"
               style="display:none;"
             >◀</button>
@@ -314,7 +452,7 @@
               type="button"
               class="mod-gallery-nav mod-gallery-nav--next"
               id="gallery-next-btn"
-              onclick="nextImage()"
+              onclick="event.stopPropagation(); nextImage();"
               aria-label="Next screenshot"
               style="display:none;"
             >▶</button>
@@ -379,9 +517,18 @@
         <a href="auth" class="footer__link">Account</a>
       </nav>
       <span class="footer__copy">© 2026 tuckzed mods.</span>
-    </div>
-  </div>
 </footer>
+
+<!-- ── Image Lightbox / Fullscreen Modal ────────────────────── -->
+<div class="lightbox-overlay" id="lightbox-overlay" onclick="closeLightbox(event)" role="dialog" aria-modal="true" aria-label="Expanded mod screenshot">
+  <button type="button" class="lightbox-close-btn" onclick="closeLightbox()" aria-label="Close expanded view" title="Close (Esc)">✕</button>
+  <button type="button" class="lightbox-nav-btn lightbox-nav-btn--prev" id="lightbox-prev-btn" onclick="event.stopPropagation(); prevImage();" aria-label="Previous screenshot" title="Previous (←)">◀</button>
+  <button type="button" class="lightbox-nav-btn lightbox-nav-btn--next" id="lightbox-next-btn" onclick="event.stopPropagation(); nextImage();" aria-label="Next screenshot" title="Next (→)">▶</button>
+  <div class="lightbox-img-wrap" onclick="event.stopPropagation()">
+    <img id="lightbox-img" src="" alt="Expanded mod preview" class="lightbox-img" />
+  </div>
+  <div class="lightbox-counter" id="lightbox-counter">1 / 1</div>
+</div>
 
 <!-- ── Scripts ─────────────────────────────────────────────── -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -436,8 +583,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderMod(currentMod);
   }
 
-  // Keyboard navigation for image gallery
+  // Keyboard navigation for image gallery & lightbox
   document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && isLightboxOpen) {
+      closeLightbox();
+      return;
+    }
     if (galleryImages.length <= 1) return;
     if (e.key === 'ArrowLeft') prevImage();
     if (e.key === 'ArrowRight') nextImage();
@@ -555,6 +706,47 @@ function setupGallery() {
   }
 }
 
+let isLightboxOpen = false;
+
+function openLightbox() {
+  if (!galleryImages || galleryImages.length === 0) return;
+  isLightboxOpen = true;
+  document.getElementById('lightbox-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  updateLightbox();
+}
+window.openLightbox = openLightbox;
+
+function closeLightbox(e) {
+  if (e && e.target && e.target.closest('.lightbox-img-wrap')) return;
+  isLightboxOpen = false;
+  document.getElementById('lightbox-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+window.closeLightbox = closeLightbox;
+
+function updateLightbox() {
+  if (!isLightboxOpen) return;
+  const lbImg = document.getElementById('lightbox-img');
+  const lbCounter = document.getElementById('lightbox-counter');
+  const lbPrev = document.getElementById('lightbox-prev-btn');
+  const lbNext = document.getElementById('lightbox-next-btn');
+
+  const currentUrl = galleryImages[activeImageIndex];
+  if (currentUrl && lbImg) {
+    lbImg.src = currentUrl;
+  }
+  if (galleryImages.length > 1) {
+    if (lbCounter) lbCounter.textContent = `${activeImageIndex + 1} / ${galleryImages.length}`;
+    if (lbPrev) lbPrev.style.display = 'flex';
+    if (lbNext) lbNext.style.display = 'flex';
+  } else {
+    if (lbCounter) lbCounter.textContent = '1 / 1';
+    if (lbPrev) lbPrev.style.display = 'none';
+    if (lbNext) lbNext.style.display = 'none';
+  }
+}
+
 function updateMainImage() {
   const mainImg = document.getElementById('main-img');
   const counter = document.getElementById('gallery-counter');
@@ -580,6 +772,10 @@ function updateMainImage() {
       }
     }
   });
+
+  if (isLightboxOpen) {
+    updateLightbox();
+  }
 }
 
 function setImageIndex(idx) {
