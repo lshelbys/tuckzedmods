@@ -160,8 +160,21 @@ select.input { appearance: none; cursor: pointer; }
   font-weight: 700;
   transition: background var(--transition);
 }
-.nav__link:hover { background: var(--gray-50); }
+.nav__link:hover:not(.active) { background: var(--gray-50); }
 .nav__link.active {
+  background: var(--black);
+  color: var(--white);
+}
+.nav__user-label {
+  font-size: .8rem;
+  font-weight: 700;
+  padding: 6px 12px;
+  border: 2px solid var(--black);
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  transition: background var(--transition), color var(--transition);
+}
+.nav__user-label.active {
   background: var(--black);
   color: var(--white);
 }

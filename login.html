@@ -6,6 +6,13 @@
   <title>Sign In — tuckzed mods</title>
   <meta name="description" content="Sign in or create an account on tuckzed mods." />
   <meta name="robots" content="noindex, nofollow" />
+  <script>
+    if (window.location.pathname.endsWith('.html')) {
+      var clean = window.location.pathname.replace(/\.html$/, '');
+      if (clean.endsWith('/index')) clean = clean.slice(0, -6) || '/';
+      window.history.replaceState(null, '', clean + window.location.search + window.location.hash);
+    }
+  </script>
   <link rel="stylesheet" href="styles.css" />
   <style>
     .auth-page {
@@ -15,7 +22,12 @@
       justify-content: center;
       padding: 48px 24px;
       min-height: calc(100vh - 64px);
-      background: url('images/LOGINPAGE.png') center / cover no-repeat fixed;
+      background-image: url('images/LOGINPAGE.png?v=3') !important;
+      background-position: center !important;
+      background-size: cover !important;
+      background-repeat: no-repeat !important;
+      background-attachment: fixed !important;
+      background-color: var(--white) !important;
       position: relative;
     }
     .auth-card {
@@ -118,7 +130,6 @@
     <div class="nav__inner">
       <a href="./" class="nav__logo" id="nav-logo">tuckzed <span>mods</span></a>
       <ul class="nav__links" role="list">
-        <li><a href="./"      class="nav__link" id="nav-home">Home</a></li>
         <li><a href="./#mods" class="nav__link" id="nav-browse">Browse</a></li>
         <li><a href="auth?redirect=upload" class="nav__link" id="nav-upload">Upload Mods</a></li>
         <li><a href="auth"    class="nav__link active" id="nav-signin">Sign In</a></li>
@@ -293,8 +304,9 @@ document.addEventListener('DOMContentLoaded', function () {
     if (user.email.toLowerCase() === window.TZ_AUTH.ADMIN_EMAIL.toLowerCase()) {
       window.location.href = 'admin';
     } else if (redirect === 'upload') {
-      toast('Signed in! Upload access is for admins only.');
-      setTimeout(function () { window.location.href = './'; }, 1500);
+      window.TZ_AUTH.signOut().then(function () {
+        showAuthError('signin-error', 'Access denied. Only ' + window.TZ_AUTH.ADMIN_EMAIL + ' can access the admin panel.');
+      });
     } else {
       window.location.href = './';
     }
@@ -312,6 +324,9 @@ document.addEventListener('DOMContentLoaded', function () {
     // Update title and subtitle
     document.getElementById('signin-title').textContent = 'Admin Sign In';
     document.getElementById('signin-sub').textContent   = 'Sign in with your admin credentials to access the upload panel.';
+    // Update nav active highlighting
+    document.getElementById('nav-signin')?.classList.remove('active');
+    document.getElementById('nav-upload')?.classList.add('active');
   }
 
   // ── Tab switching ───────────────────────────────────────────
@@ -419,9 +434,22 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (!valid) return;
 
+    if (isUpload && email.toLowerCase() !== window.TZ_AUTH.ADMIN_EMAIL.toLowerCase()) {
+      showAuthError('signin-error', 'Access denied. Only ' + window.TZ_AUTH.ADMIN_EMAIL + ' can sign in to the admin panel.');
+      return;
+    }
+
     setLoading('signin-submit-btn', true, 'Sign In');
 
     window.TZ_AUTH.signIn(email, pass)
+      .then(function (cred) {
+        if (isUpload && cred.user.email.toLowerCase() !== window.TZ_AUTH.ADMIN_EMAIL.toLowerCase()) {
+          return window.TZ_AUTH.signOut().then(function () {
+            showAuthError('signin-error', 'Access denied. Only ' + window.TZ_AUTH.ADMIN_EMAIL + ' can sign in to the admin panel.');
+            setLoading('signin-submit-btn', false, 'Sign In');
+          });
+        }
+      })
       .catch(function (err) {
         showAuthError('signin-error', friendlyError(err.code));
         setLoading('signin-submit-btn', false, 'Sign In');

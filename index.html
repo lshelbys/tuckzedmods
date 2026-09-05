@@ -5,6 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>tuckzed mods — Game Mod Distribution Platform</title>
   <meta name="description" content="Download the best mods for Assetto Corsa and BeamNG.drive. Cars, tracks, maps, and physics overhauls curated by the tuckzed mods community." />
+  <script>
+    if (window.location.pathname.endsWith('.html')) {
+      var clean = window.location.pathname.replace(/\.html$/, '');
+      if (clean.endsWith('/index')) clean = clean.slice(0, -6) || '/';
+      window.history.replaceState(null, '', clean + window.location.search + window.location.hash);
+    }
+  </script>
   <link rel="stylesheet" href="styles.css" />
   <style>
     .nav__user-label {
@@ -26,7 +33,6 @@
     <div class="nav__inner">
       <a href="./" class="nav__logo" id="nav-logo">tuckzed <span>mods</span></a>
       <ul class="nav__links" role="list">
-        <li><a href="./"      class="nav__link active" id="nav-home">Home</a></li>
         <li><a href="#mods"   class="nav__link" id="nav-browse">Browse</a></li>
         <li><a href="auth?redirect=upload" class="nav__link" id="nav-upload">Upload Mods</a></li>
         <li><a href="auth"    class="nav__link" id="nav-signin">Sign In</a></li>

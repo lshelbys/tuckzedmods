@@ -6,6 +6,13 @@
   <title>My Profile — tuckzed mods</title>
   <meta name="description" content="Manage your tuckzed mods account — update username, email and password." />
   <meta name="robots" content="noindex, nofollow" />
+  <script>
+    if (window.location.pathname.endsWith('.html')) {
+      var clean = window.location.pathname.replace(/\.html$/, '');
+      if (clean.endsWith('/index')) clean = clean.slice(0, -6) || '/';
+      window.history.replaceState(null, '', clean + window.location.search + window.location.hash);
+    }
+  </script>
   <link rel="stylesheet" href="styles.css" />
   <style>
     .profile-page {
@@ -144,7 +151,6 @@
     <div class="nav__inner">
       <a href="./" class="nav__logo" id="nav-logo">tuckzed <span>mods</span></a>
       <ul class="nav__links" role="list">
-        <li><a href="./"      class="nav__link" id="nav-home">Home</a></li>
         <li><a href="./#mods" class="nav__link" id="nav-browse">Browse</a></li>
         <li><a href="auth?redirect=upload" class="nav__link" id="nav-upload">Upload Mods</a></li>
         <li><a href="auth"    class="nav__link" id="nav-signin">Sign In</a></li>

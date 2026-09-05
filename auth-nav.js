@@ -98,10 +98,52 @@
       signinLink.style.display = '';
       if (userPill) userPill.style.display = 'none';
     }
+
+    updateNavHighlight();
   }
+
+  /**
+   * Highlights the nav button corresponding to the current page
+   */
+  function updateNavHighlight() {
+    var rawPath = window.location.pathname.replace(/^\/+|\/+$/g, '').replace(/\.html$/, '');
+    var search  = window.location.search || '';
+    var hash    = window.location.hash || '';
+    var isUpload = search.indexOf('redirect=upload') !== -1;
+
+    var browseLink = document.getElementById('nav-browse');
+    var uploadLink = document.getElementById('nav-upload');
+    var signinLink = document.getElementById('nav-signin');
+    var userLabel  = document.getElementById('nav-user-label');
+
+    // Clear all active states first
+    if (browseLink) browseLink.classList.remove('active');
+    if (uploadLink) uploadLink.classList.remove('active');
+    if (signinLink) signinLink.classList.remove('active');
+    if (userLabel)  userLabel.classList.remove('active');
+
+    if (rawPath === 'admin') {
+      if (userLabel)  userLabel.classList.add('active');
+      if (uploadLink) uploadLink.classList.add('active');
+    } else if (isUpload) {
+      if (uploadLink) uploadLink.classList.add('active');
+    } else if (rawPath === 'auth' || rawPath === 'login') {
+      if (signinLink) signinLink.classList.add('active');
+    } else if (rawPath === 'profile') {
+      if (userLabel)  userLabel.classList.add('active');
+    } else if (!rawPath || rawPath === 'index') {
+      if (hash === '#mods') {
+        if (browseLink) browseLink.classList.add('active');
+      }
+    }
+  }
+
+  // Listen for hash changes (e.g. clicking Browse)
+  window.addEventListener('hashchange', updateNavHighlight);
 
   // Wait for Firebase to load, then attach the listener
   function attachListener() {
+    updateNavHighlight();
     if (window.TZ_AUTH && window.TZ_AUTH.onChange) {
       window.TZ_AUTH.onChange(applyNavState);
     } else {
