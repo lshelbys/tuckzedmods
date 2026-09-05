@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Profile — tuckzed mods</title>
+  <meta name="description" content="Manage your tuckzed mods account — update username, email and password." />
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .profile-page {
+      flex: 1;
+      padding: 56px 0;
+      background: var(--gray-50);
+    }
+    .profile-grid {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      gap: 28px;
+      align-items: start;
+    }
+
+    /* ── Sidebar ─────────────────────────────────────── */
+    .profile-sidebar {
+      background: var(--white);
+      border: 2px solid var(--black);
+      border-radius: var(--radius-lg);
+      padding: 32px 24px;
+      text-align: center;
+    }
+    .profile-avatar {
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      border: 3px solid var(--black);
+      background: var(--black);
+      color: var(--white);
+      font-size: 2rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+    }
+    .profile-sidebar__name {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .profile-sidebar__email {
+      font-size: .8rem;
+      color: var(--gray-600);
+      word-break: break-all;
+      margin-bottom: 20px;
+    }
+    .profile-sidebar__joined {
+      font-size: .75rem;
+      color: var(--gray-400);
+      padding-top: 16px;
+      border-top: 1.5px solid var(--gray-100);
+    }
+
+    /* ── Cards ───────────────────────────────────────── */
+    .profile-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+    .profile-card {
+      background: var(--white);
+      border: 2px solid var(--black);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+    }
+    .profile-card__title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .profile-card__sub {
+      font-size: .83rem;
+      color: var(--gray-600);
+      margin-bottom: 24px;
+    }
+    .profile-card__divider {
+      border: none;
+      border-top: 1.5px solid var(--gray-100);
+      margin: 0 0 24px;
+    }
+
+    /* ── Field rows ──────────────────────────────────── */
+    .profile-fields { display: flex; flex-direction: column; gap: 16px; margin-bottom: 20px; }
+
+    .profile-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .profile-status {
+      font-size: .83rem;
+      font-weight: 700;
+      padding: 7px 14px;
+      border: 2px solid var(--black);
+      border-radius: var(--radius-sm);
+      display: none;
+    }
+    .profile-status.show { display: inline-block; }
+    .profile-status--success { background: var(--gray-50); }
+    .profile-status--error   { background: var(--white); }
+
+    /* ── Password wrap ───────────────────────────────── */
+    .pw-wrap { position: relative; }
+    .pw-toggle {
+      position: absolute; right: 12px; top: 50%;
+      transform: translateY(-50%);
+      background: none; border: none; cursor: pointer;
+      font-size: 1rem; padding: 0; color: var(--gray-600);
+    }
+    .pw-wrap .input { padding-right: 40px; }
+
+    /* ── Danger zone ─────────────────────────────────── */
+    .profile-card--danger { border-color: var(--black); }
+    .profile-card--danger .profile-card__title { color: var(--black); }
+
+    .nav__user-label {
+      font-size: .8rem; font-weight: 700;
+      padding: 6px 12px;
+      border: 2px solid var(--black);
+      border-radius: var(--radius-sm);
+      white-space: nowrap;
+    }
+    #nav-user-pill { display: flex; align-items: center; gap: 8px; }
+
+    @media (max-width: 768px) {
+      .profile-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Navigation ──────────────────────────────────────────── -->
+<nav class="nav" role="navigation" aria-label="Main navigation">
+  <div class="container">
+    <div class="nav__inner">
+      <a href="index.html" class="nav__logo" id="nav-logo">tuckzed <span>mods</span></a>
+      <ul class="nav__links" role="list">
+        <li><a href="index.html"      class="nav__link" id="nav-home">Home</a></li>
+        <li><a href="index.html#mods" class="nav__link" id="nav-browse">Browse</a></li>
+        <li><a href="auth.html?redirect=upload" class="nav__link" id="nav-upload">Upload Mods</a></li>
+        <li><a href="auth.html" class="nav__link" id="nav-signin">Sign In</a></li>
+        <li id="nav-user-pill" style="display:none;">
+          <span class="nav__user-label" id="nav-user-label"></span>
+          <button class="btn btn--sm" id="nav-signout-btn">Sign Out</button>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- ── Profile Page ─────────────────────────────────────────── -->
+<main class="profile-page" role="main" id="profile-main" style="display:none;">
+  <div class="container">
+    <div class="profile-grid">
+
+      <!-- Sidebar -->
+      <aside class="profile-sidebar" aria-label="Profile summary">
+        <div class="profile-avatar" id="profile-avatar" aria-hidden="true">?</div>
+        <div class="profile-sidebar__name"  id="sidebar-name">Loading…</div>
+        <div class="profile-sidebar__email" id="sidebar-email"></div>
+        <div class="profile-sidebar__joined" id="sidebar-joined"></div>
+      </aside>
+
+      <!-- Cards -->
+      <div class="profile-cards">
+
+        <!-- ── Username ──────────────────────────────── -->
+        <section class="profile-card" aria-labelledby="card-username-title">
+          <h2 class="profile-card__title" id="card-username-title">Username</h2>
+          <p class="profile-card__sub">Update your display name across the site.</p>
+          <hr class="profile-card__divider" />
+          <form id="form-username" novalidate>
+            <div class="profile-fields">
+              <div class="form-field" id="field-username">
+                <label class="form-label" for="f-username">New Username</label>
+                <input type="text" class="input" id="f-username"
+                  placeholder="e.g. speedracer99"
+                  maxlength="30"
+                  autocomplete="username" />
+                <span class="form-error" role="alert">Username must be 3–30 characters.</span>
+              </div>
+            </div>
+            <div class="profile-actions">
+              <button type="submit" class="btn btn--primary btn--sm" id="btn-username">Save Username</button>
+              <span class="profile-status" id="status-username" role="status"></span>
+            </div>
+          </form>
+        </section>
+
+        <!-- ── Email ─────────────────────────────────── -->
+        <section class="profile-card" aria-labelledby="card-email-title">
+          <h2 class="profile-card__title" id="card-email-title">Email Address</h2>
+          <p class="profile-card__sub">Changing your email requires your current password to verify it's you.</p>
+          <hr class="profile-card__divider" />
+          <form id="form-email" novalidate>
+            <div class="profile-fields">
+              <div class="form-field" id="field-new-email">
+                <label class="form-label" for="f-new-email">New Email Address</label>
+                <input type="email" class="input" id="f-new-email"
+                  placeholder="new@example.com"
+                  autocomplete="email" />
+                <span class="form-error" role="alert">Please enter a valid email address.</span>
+              </div>
+              <div class="form-field" id="field-email-pass">
+                <label class="form-label" for="f-email-pass">Current Password</label>
+                <div class="pw-wrap">
+                  <input type="password" class="input" id="f-email-pass"
+                    placeholder="Confirm with your password"
+                    autocomplete="current-password" />
+                  <button type="button" class="pw-toggle" id="tog-email-pass" aria-label="Toggle password">👁</button>
+                </div>
+                <span class="form-error" role="alert">Please enter your current password.</span>
+              </div>
+            </div>
+            <div class="profile-actions">
+              <button type="submit" class="btn btn--primary btn--sm" id="btn-email">Update Email</button>
+              <span class="profile-status" id="status-email" role="status"></span>
+            </div>
+          </form>
+        </section>
+
+        <!-- ── Password ───────────────────────────────── -->
+        <section class="profile-card" aria-labelledby="card-password-title">
+          <h2 class="profile-card__title" id="card-password-title">Password</h2>
+          <p class="profile-card__sub">Choose a strong password of at least 6 characters.</p>
+          <hr class="profile-card__divider" />
+          <form id="form-password" novalidate>
+            <div class="profile-fields">
+              <div class="form-field" id="field-cur-pass">
+                <label class="form-label" for="f-cur-pass">Current Password</label>
+                <div class="pw-wrap">
+                  <input type="password" class="input" id="f-cur-pass"
+                    placeholder="Your current password"
+                    autocomplete="current-password" />
+                  <button type="button" class="pw-toggle" id="tog-cur-pass" aria-label="Toggle password">👁</button>
+                </div>
+                <span class="form-error" role="alert">Please enter your current password.</span>
+              </div>
+              <div class="form-field" id="field-new-pass">
+                <label class="form-label" for="f-new-pass">New Password <span>(min. 6 characters)</span></label>
+                <div class="pw-wrap">
+                  <input type="password" class="input" id="f-new-pass"
+                    placeholder="Choose a new password"
+                    autocomplete="new-password" />
+                  <button type="button" class="pw-toggle" id="tog-new-pass" aria-label="Toggle password">👁</button>
+                </div>
+                <span class="form-error" role="alert">New password must be at least 6 characters.</span>
+              </div>
+              <div class="form-field" id="field-conf-pass">
+                <label class="form-label" for="f-conf-pass">Confirm New Password</label>
+                <div class="pw-wrap">
+                  <input type="password" class="input" id="f-conf-pass"
+                    placeholder="Repeat new password"
+                    autocomplete="new-password" />
+                  <button type="button" class="pw-toggle" id="tog-conf-pass" aria-label="Toggle password">👁</button>
+                </div>
+                <span class="form-error" role="alert">Passwords do not match.</span>
+              </div>
+            </div>
+            <div class="profile-actions">
+              <button type="submit" class="btn btn--primary btn--sm" id="btn-password">Change Password</button>
+              <span class="profile-status" id="status-password" role="status"></span>
+            </div>
+          </form>
+        </section>
+
+      </div><!-- /.profile-cards -->
+    </div><!-- /.profile-grid -->
+  </div>
+</main>
+
+<!-- ── Footer ──────────────────────────────────────────────── -->
+<footer class="footer" role="contentinfo">
+  <div class="container">
+    <div class="footer__inner">
+      <span class="footer__brand">tuckzed mods</span>
+      <nav class="footer__links" aria-label="Footer navigation">
+        <a href="index.html"      class="footer__link" id="footer-home">Home</a>
+        <a href="index.html#mods" class="footer__link" id="footer-mods">Browse</a>
+      </nav>
+      <span class="footer__copy">© 2024 tuckzed mods.</span>
+    </div>
+  </div>
+</footer>
+
+<!-- ── Toast ────────────────────────────────────────────────── -->
+<div class="toast-container" aria-live="assertive" aria-atomic="true"></div>
+
+<!-- ── Firebase SDKs ────────────────────────────────────────── -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="store.js"></script>
+<script src="firebase-config.js?v=2"></script>
+<script src="auth-nav.js"></script>
+
+<script>
+'use strict';
+
+document.addEventListener('DOMContentLoaded', function () {
+
+  var auth = window.TZ_AUTH;
+
+  // ── Auth guard: must be signed-in non-admin user ──────────
+  auth.onChange(function (user) {
+    if (!user) {
+      window.location.href = 'auth.html';
+      return;
+    }
+    if (user.email.toLowerCase() === auth.ADMIN_EMAIL.toLowerCase()) {
+      // Admin has no profile page — redirect to admin panel
+      window.location.href = 'admin.html';
+      return;
+    }
+    // Valid regular user
+    document.getElementById('profile-main').style.display = '';
+    populateSidebar(user);
+    prefillForms(user);
+  });
+
+  // ── Populate sidebar ───────────────────────────────────────
+  function populateSidebar(user) {
+    var name   = user.displayName || user.email.split('@')[0];
+    var letter = name.charAt(0).toUpperCase();
+
+    document.getElementById('profile-avatar').textContent  = letter;
+    document.getElementById('sidebar-name').textContent    = name;
+    document.getElementById('sidebar-email').textContent   = user.email;
+
+    var created = user.metadata && user.metadata.creationTime
+      ? new Date(user.metadata.creationTime).toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' })
+      : '';
+    document.getElementById('sidebar-joined').textContent = created ? 'Member since ' + created : '';
+  }
+
+  // ── Pre-fill forms ─────────────────────────────────────────
+  function prefillForms(user) {
+    document.getElementById('f-username').value  = user.displayName || '';
+    document.getElementById('f-new-email').value = user.email || '';
+  }
+
+  // ── Password toggle helper ─────────────────────────────────
+  function bindToggle(inputId, btnId) {
+    document.getElementById(btnId).addEventListener('click', function () {
+      var inp = document.getElementById(inputId);
+      var btn = document.getElementById(btnId);
+      if (inp.type === 'password') {
+        inp.type = 'text'; btn.textContent = '🙈';
+      } else {
+        inp.type = 'password'; btn.textContent = '👁';
+      }
+    });
+  }
+  bindToggle('f-email-pass', 'tog-email-pass');
+  bindToggle('f-cur-pass',   'tog-cur-pass');
+  bindToggle('f-new-pass',   'tog-new-pass');
+  bindToggle('f-conf-pass',  'tog-conf-pass');
+
+  // ── Field error helpers ────────────────────────────────────
+  function setErr(id)  { document.getElementById(id).classList.add('error'); }
+  function clrErr(id)  { document.getElementById(id).classList.remove('error'); }
+  function isEmail(s)  { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s); }
+
+  // ── Status message helpers ─────────────────────────────────
+  function showStatus(id, msg, type) {
+    var el = document.getElementById(id);
+    el.textContent = msg;
+    el.className   = 'profile-status show profile-status--' + type;
+    setTimeout(function () { el.classList.remove('show'); }, 4000);
+  }
+
+  function setLoading(btnId, loading, label) {
+    var btn = document.getElementById(btnId);
+    btn.disabled    = loading;
+    btn.textContent = loading ? 'Saving…' : label;
+  }
+
+  // ── Firebase friendly errors ───────────────────────────────
+  function friendlyErr(code) {
+    var map = {
+      'auth/wrong-password':          'Current password is incorrect.',
+      'auth/invalid-credential':      'Current password is incorrect.',
+      'auth/email-already-in-use':    'That email is already in use.',
+      'auth/invalid-email':           'Please enter a valid email.',
+      'auth/requires-recent-login':   'Please sign out and sign back in, then try again.',
+      'auth/weak-password':           'Password must be at least 6 characters.',
+      'auth/too-many-requests':       'Too many attempts. Please try again later.',
+      'auth/network-request-failed':  'Network error. Check your connection.',
+    };
+    return map[code] || 'Something went wrong. Please try again.';
+  }
+
+  // ── Re-authenticate helper ─────────────────────────────────
+  function reauth(currentPassword) {
+    var user       = firebase.auth().currentUser;
+    var credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPassword);
+    return user.reauthenticateWithCredential(credential);
+  }
+
+  // ── 1. Username form ───────────────────────────────────────
+  document.getElementById('form-username').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var username = document.getElementById('f-username').value.trim();
+
+    if (!username || username.length < 3) { setErr('field-username'); return; }
+    clrErr('field-username');
+
+    setLoading('btn-username', true, 'Save Username');
+
+    firebase.auth().currentUser.updateProfile({ displayName: username })
+      .then(function () {
+        showStatus('status-username', '✓ Username updated!', 'success');
+        window.TZ.showToast('Username updated!');
+        // Refresh sidebar
+        populateSidebar(firebase.auth().currentUser);
+        // Refresh nav label
+        var navLabel = document.getElementById('nav-user-label');
+        if (navLabel) navLabel.textContent = username;
+      })
+      .catch(function (err) {
+        showStatus('status-username', friendlyErr(err.code), 'error');
+      })
+      .finally(function () {
+        setLoading('btn-username', false, 'Save Username');
+      });
+  });
+
+  // ── 2. Email form ──────────────────────────────────────────
+  document.getElementById('form-email').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var newEmail = document.getElementById('f-new-email').value.trim();
+    var curPass  = document.getElementById('f-email-pass').value;
+    var valid    = true;
+
+    if (!newEmail || !isEmail(newEmail)) { setErr('field-new-email');  valid = false; }
+    else clrErr('field-new-email');
+
+    if (!curPass) { setErr('field-email-pass'); valid = false; }
+    else clrErr('field-email-pass');
+
+    if (!valid) return;
+
+    setLoading('btn-email', true, 'Update Email');
+
+    reauth(curPass)
+      .then(function () {
+        return firebase.auth().currentUser.updateEmail(newEmail);
+      })
+      .then(function () {
+        showStatus('status-email', '✓ Email updated!', 'success');
+        window.TZ.showToast('Email address updated!');
+        document.getElementById('f-email-pass').value = '';
+        populateSidebar(firebase.auth().currentUser);
+      })
+      .catch(function (err) {
+        showStatus('status-email', friendlyErr(err.code), 'error');
+      })
+      .finally(function () {
+        setLoading('btn-email', false, 'Update Email');
+      });
+  });
+
+  // ── 3. Password form ───────────────────────────────────────
+  document.getElementById('form-password').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var curPass  = document.getElementById('f-cur-pass').value;
+    var newPass  = document.getElementById('f-new-pass').value;
+    var confPass = document.getElementById('f-conf-pass').value;
+    var valid    = true;
+
+    if (!curPass) { setErr('field-cur-pass');  valid = false; }
+    else clrErr('field-cur-pass');
+
+    if (!newPass || newPass.length < 6) { setErr('field-new-pass');  valid = false; }
+    else clrErr('field-new-pass');
+
+    if (newPass !== confPass) { setErr('field-conf-pass'); valid = false; }
+    else clrErr('field-conf-pass');
+
+    if (!valid) return;
+
+    setLoading('btn-password', true, 'Change Password');
+
+    reauth(curPass)
+      .then(function () {
+        return firebase.auth().currentUser.updatePassword(newPass);
+      })
+      .then(function () {
+        showStatus('status-password', '✓ Password changed!', 'success');
+        window.TZ.showToast('Password changed successfully!');
+        document.getElementById('form-password').reset();
+      })
+      .catch(function (err) {
+        showStatus('status-password', friendlyErr(err.code), 'error');
+      })
+      .finally(function () {
+        setLoading('btn-password', false, 'Change Password');
+      });
+  });
+
+}); // end DOMContentLoaded
+</script>
+</body>
+</html>

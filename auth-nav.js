@@ -51,11 +51,19 @@
           };
         }
       } else {
-        // Regular user: show username, no link
+        // Regular user: label links to their profile page
         if (userLabel) {
           userLabel.textContent  = user.email.split('@')[0];
-          userLabel.style.cursor = 'default';
-          userLabel.onclick      = null;
+          userLabel.style.cursor = 'pointer';
+          userLabel.title        = 'My Profile';
+          userLabel.setAttribute('role', 'button');
+          userLabel.setAttribute('tabindex', '0');
+          userLabel.onclick = function () {
+            window.location.href = 'profile.html';
+          };
+          userLabel.onkeydown = function (e) {
+            if (e.key === 'Enter' || e.key === ' ') window.location.href = 'profile.html';
+          };
         }
       }
 
