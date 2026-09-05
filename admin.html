@@ -612,7 +612,9 @@ function renderImageGallery() {
 
 function setAsCover(idx) {
   if (currentImages[idx]) {
-    coverId = currentImages[idx].id;
+    const item = currentImages.splice(idx, 1)[0];
+    currentImages.unshift(item);
+    coverId = item.id;
     renderImageGallery();
   }
 }
