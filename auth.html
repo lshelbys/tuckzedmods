@@ -8,7 +8,6 @@
   <meta name="robots" content="noindex, nofollow" />
   <link rel="stylesheet" href="styles.css" />
   <style>
-    /* ── Auth Page Styles ──────────────────────────────────── */
     .auth-page {
       flex: 1;
       display: flex;
@@ -17,7 +16,6 @@
       padding: 48px 24px;
       background: var(--gray-50);
     }
-
     .auth-card {
       background: var(--white);
       border: 2px solid var(--black);
@@ -27,12 +25,12 @@
       max-width: 440px;
       box-shadow: var(--shadow-lg);
     }
-
     .auth-card__logo {
       font-size: 1.3rem;
       font-weight: 700;
       margin-bottom: 28px;
       display: block;
+      color: var(--black);
     }
     .auth-card__logo span { font-weight: 400; }
 
@@ -52,7 +50,7 @@
       font-size: .875rem;
       font-weight: 700;
       cursor: pointer;
-      transition: background var(--transition), color var(--transition);
+      transition: background 150ms ease, color 150ms ease;
     }
     .auth-tab + .auth-tab { border-left: 2px solid var(--black); }
     .auth-tab.active { background: var(--black); color: var(--white); }
@@ -61,66 +59,14 @@
     .auth-form { display: none; }
     .auth-form.active { display: block; }
 
-    .auth-form__title {
-      font-size: 1.4rem;
-      font-weight: 700;
-      margin-bottom: 6px;
-    }
-    .auth-form__sub {
-      font-size: .875rem;
-      color: var(--gray-600);
-      margin-bottom: 28px;
-    }
+    .auth-form__title { font-size: 1.4rem; font-weight: 700; margin-bottom: 6px; }
+    .auth-form__sub   { font-size: .875rem; color: var(--gray-600); margin-bottom: 28px; }
 
     .auth-fields { display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px; }
 
-    .auth-btn {
-      width: 100%;
-      justify-content: center;
-      padding: 12px;
-      font-size: 1rem;
-      margin-bottom: 16px;
-    }
+    .auth-btn { width: 100%; justify-content: center; padding: 12px; font-size: 1rem; margin-bottom: 16px; }
 
-    .auth-divider {
-      text-align: center;
-      color: var(--gray-400);
-      font-size: .8rem;
-      font-weight: 700;
-      margin: 16px 0;
-      position: relative;
-    }
-    .auth-divider::before, .auth-divider::after {
-      content: '';
-      position: absolute;
-      top: 50%;
-      width: calc(50% - 28px);
-      height: 1.5px;
-      background: var(--gray-200);
-    }
-    .auth-divider::before { left: 0; }
-    .auth-divider::after  { right: 0; }
-
-    .auth-switch {
-      text-align: center;
-      font-size: .83rem;
-      color: var(--gray-600);
-      margin-top: 8px;
-    }
-    .auth-switch button {
-      background: none;
-      border: none;
-      font-family: var(--font);
-      font-size: .83rem;
-      font-weight: 700;
-      color: var(--black);
-      cursor: pointer;
-      text-decoration: underline;
-      padding: 0;
-    }
-
-    .auth-error {
-      background: var(--gray-50);
+    .auth-error, .auth-success {
       border: 2px solid var(--black);
       border-radius: var(--radius-sm);
       padding: 10px 14px;
@@ -129,40 +75,35 @@
       margin-bottom: 16px;
       display: none;
     }
-    .auth-error.show { display: block; }
+    .auth-error  { background: var(--gray-50); }
+    .auth-success { background: var(--gray-50); text-align: center; }
+    .auth-error.show, .auth-success.show { display: block; }
 
-    .auth-success {
-      background: var(--gray-50);
-      border: 2px solid var(--black);
-      border-radius: var(--radius-sm);
-      padding: 10px 14px;
-      font-size: .83rem;
-      font-weight: 700;
-      margin-bottom: 16px;
-      text-align: center;
-      display: none;
+    .auth-switch { text-align: center; font-size: .83rem; color: var(--gray-600); margin-top: 8px; }
+    .auth-switch__btn {
+      background: none; border: none;
+      font-family: var(--font); font-size: .83rem; font-weight: 700;
+      color: var(--black); cursor: pointer; text-decoration: underline; padding: 0;
     }
-    .auth-success.show { display: block; }
 
     .password-wrap { position: relative; }
     .password-toggle {
-      position: absolute;
-      right: 12px;
-      top: 50%;
-      transform: translateY(-50%);
-      background: none;
-      border: none;
-      cursor: pointer;
-      font-size: 1rem;
-      padding: 0;
-      line-height: 1;
-      color: var(--gray-600);
+      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; cursor: pointer; font-size: 1rem;
+      padding: 0; line-height: 1; color: var(--gray-600);
     }
     .password-wrap .input { padding-right: 40px; }
 
-    @media (max-width: 480px) {
-      .auth-card { padding: 32px 24px; }
+    .nav__user-label {
+      font-size: .8rem; font-weight: 700;
+      padding: 6px 12px;
+      border: 2px solid var(--black);
+      border-radius: var(--radius-sm);
+      white-space: nowrap;
     }
+    #nav-user-pill { display: flex; align-items: center; gap: 8px; }
+
+    @media (max-width: 480px) { .auth-card { padding: 32px 24px; } }
   </style>
 </head>
 <body>
@@ -177,7 +118,7 @@
         <li><a href="index.html#mods" class="nav__link" id="nav-browse">Browse</a></li>
         <li><a href="auth.html"       class="nav__link" id="nav-upload">Upload Mods</a></li>
         <li><a href="auth.html"       class="nav__link active" id="nav-signin">Sign In</a></li>
-        <li id="nav-user-pill" style="display:none; align-items:center; gap:8px;">
+        <li id="nav-user-pill" style="display:none;">
           <span class="nav__user-label" id="nav-user-label"></span>
           <button class="btn btn--sm" id="nav-signout-btn">Sign Out</button>
         </li>
@@ -186,7 +127,7 @@
   </div>
 </nav>
 
-<!-- ── Auth Page ────────────────────────────────────────────── -->
+<!-- ── Auth Card ────────────────────────────────────────────── -->
 <main class="auth-page" role="main">
   <div class="auth-card">
 
@@ -194,22 +135,8 @@
 
     <!-- Tabs -->
     <div class="auth-tabs" role="tablist" aria-label="Authentication options">
-      <button
-        class="auth-tab active"
-        id="tab-signin"
-        role="tab"
-        aria-selected="true"
-        aria-controls="form-signin"
-        onclick="switchTab('signin')"
-      >Sign In</button>
-      <button
-        class="auth-tab"
-        id="tab-register"
-        role="tab"
-        aria-selected="false"
-        aria-controls="form-register"
-        onclick="switchTab('register')"
-      >Create Account</button>
+      <button class="auth-tab active" id="tab-signin"   role="tab" aria-selected="true"  aria-controls="form-signin">Sign In</button>
+      <button class="auth-tab"        id="tab-register" role="tab" aria-selected="false" aria-controls="form-register">Create Account</button>
     </div>
 
     <!-- ── Sign In Form ──────────────────────────────────────── -->
@@ -224,43 +151,30 @@
 
           <div class="form-field" id="si-field-email">
             <label class="form-label" for="si-email">Email</label>
-            <input
-              type="email"
-              class="input"
-              id="si-email"
+            <input type="email" class="input" id="si-email"
               placeholder="you@example.com"
-              autocomplete="email"
-              aria-required="true"
-            />
+              autocomplete="email" />
             <span class="form-error" id="si-err-email" role="alert">Please enter a valid email.</span>
           </div>
 
           <div class="form-field" id="si-field-password">
             <label class="form-label" for="si-password">Password</label>
             <div class="password-wrap">
-              <input
-                type="password"
-                class="input"
-                id="si-password"
+              <input type="password" class="input" id="si-password"
                 placeholder="Your password"
-                autocomplete="current-password"
-                aria-required="true"
-              />
-              <button type="button" class="password-toggle" id="si-pw-toggle" aria-label="Toggle password visibility" onclick="togglePassword('si-password', 'si-pw-toggle')">👁</button>
+                autocomplete="current-password" />
+              <button type="button" class="password-toggle" id="si-pw-toggle" aria-label="Toggle password visibility">👁</button>
             </div>
             <span class="form-error" id="si-err-password" role="alert">Please enter your password.</span>
           </div>
 
         </div>
-
-        <button type="submit" class="btn btn--primary auth-btn" id="signin-submit-btn">
-          Sign In
-        </button>
+        <button type="submit" class="btn btn--primary auth-btn" id="signin-submit-btn">Sign In</button>
       </form>
 
       <p class="auth-switch">
         Don't have an account?
-        <button onclick="switchTab('register')" id="go-to-register">Create one</button>
+        <button class="auth-switch__btn" id="go-to-register">Create one</button>
       </p>
     </div>
 
@@ -269,37 +183,36 @@
       <h1 class="auth-form__title">Create account</h1>
       <p class="auth-form__sub">Join the tuckzed mods community.</p>
 
-      <div class="auth-error" id="register-error" role="alert"></div>
+      <div class="auth-error"   id="register-error"   role="alert"></div>
       <div class="auth-success" id="register-success" role="status"></div>
 
       <form id="register-form" novalidate>
         <div class="auth-fields">
 
+          <div class="form-field" id="reg-field-username">
+            <label class="form-label" for="reg-username">Username</label>
+            <input type="text" class="input" id="reg-username"
+              placeholder="e.g. speedracer99"
+              maxlength="30"
+              autocomplete="username" />
+            <span class="form-error" id="reg-err-username" role="alert">Please enter a username (3–30 characters).</span>
+          </div>
+
           <div class="form-field" id="reg-field-email">
             <label class="form-label" for="reg-email">Email</label>
-            <input
-              type="email"
-              class="input"
-              id="reg-email"
+            <input type="email" class="input" id="reg-email"
               placeholder="you@example.com"
-              autocomplete="email"
-              aria-required="true"
-            />
+              autocomplete="email" />
             <span class="form-error" id="reg-err-email" role="alert">Please enter a valid email.</span>
           </div>
 
           <div class="form-field" id="reg-field-password">
             <label class="form-label" for="reg-password">Password <span>(min. 6 characters)</span></label>
             <div class="password-wrap">
-              <input
-                type="password"
-                class="input"
-                id="reg-password"
+              <input type="password" class="input" id="reg-password"
                 placeholder="Choose a strong password"
-                autocomplete="new-password"
-                aria-required="true"
-              />
-              <button type="button" class="password-toggle" id="reg-pw-toggle" aria-label="Toggle password visibility" onclick="togglePassword('reg-password', 'reg-pw-toggle')">👁</button>
+                autocomplete="new-password" />
+              <button type="button" class="password-toggle" id="reg-pw-toggle" aria-label="Toggle password visibility">👁</button>
             </div>
             <span class="form-error" id="reg-err-password" role="alert">Password must be at least 6 characters.</span>
           </div>
@@ -307,29 +220,21 @@
           <div class="form-field" id="reg-field-confirm">
             <label class="form-label" for="reg-confirm">Confirm Password</label>
             <div class="password-wrap">
-              <input
-                type="password"
-                class="input"
-                id="reg-confirm"
+              <input type="password" class="input" id="reg-confirm"
                 placeholder="Repeat your password"
-                autocomplete="new-password"
-                aria-required="true"
-              />
-              <button type="button" class="password-toggle" id="reg-confirm-toggle" aria-label="Toggle confirm password visibility" onclick="togglePassword('reg-confirm', 'reg-confirm-toggle')">👁</button>
+                autocomplete="new-password" />
+              <button type="button" class="password-toggle" id="reg-confirm-toggle" aria-label="Toggle confirm visibility">👁</button>
             </div>
             <span class="form-error" id="reg-err-confirm" role="alert">Passwords do not match.</span>
           </div>
 
         </div>
-
-        <button type="submit" class="btn btn--primary auth-btn" id="register-submit-btn">
-          Create Account
-        </button>
+        <button type="submit" class="btn btn--primary auth-btn" id="register-submit-btn">Create Account</button>
       </form>
 
       <p class="auth-switch">
         Already have an account?
-        <button onclick="switchTab('signin')" id="go-to-signin">Sign in</button>
+        <button class="auth-switch__btn" id="go-to-signin">Sign in</button>
       </p>
     </div>
 
@@ -350,10 +255,10 @@
   </div>
 </footer>
 
-<!-- ── Toast Container ──────────────────────────────────────── -->
+<!-- ── Toast ────────────────────────────────────────────────── -->
 <div class="toast-container" aria-live="assertive" aria-atomic="true"></div>
 
-<!-- ── Firebase SDKs ────────────────────────────────────────── -->
+<!-- ── Firebase SDKs (must load before config) ──────────────── -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="store.js"></script>
@@ -363,165 +268,197 @@
 <script>
 'use strict';
 
-const { showToast } = window.TZ;
+/* ──────────────────────────────────────────────────────────────
+   All logic is inside DOMContentLoaded so:
+   - The DOM is ready
+   - Firebase SDKs are loaded
+   - window.TZ_AUTH is defined
+   ────────────────────────────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', function () {
 
-// ── Redirect if already signed in ─────────────────────────
-window.TZ_AUTH.onChange(user => {
-  if (!user) return;
-
-  const params   = new URLSearchParams(window.location.search);
-  const redirect = params.get('redirect');
-
-  if (user.email.toLowerCase() === window.TZ_AUTH.ADMIN_EMAIL.toLowerCase()) {
-    // Admin → always go to admin panel
-    window.location.href = 'admin.html';
-  } else if (redirect === 'upload') {
-    // Regular user trying to upload → stay on page but show message
-    showToast('Signed in! Upload access is for admins only.');
-    setTimeout(() => { window.location.href = 'index.html'; }, 1500);
-  } else {
-    window.location.href = 'index.html';
+  // ── Helper: show toast ──────────────────────────────────────
+  function toast(msg) {
+    window.TZ && window.TZ.showToast(msg);
   }
-});
 
-// ── Tab switching ──────────────────────────────────────────
-function switchTab(tab) {
-  const forms = { signin: 'form-signin', register: 'form-register' };
-  const tabs  = { signin: 'tab-signin',  register: 'tab-register'  };
-
-  Object.keys(forms).forEach(key => {
-    document.getElementById(forms[key]).classList.toggle('active', key === tab);
-    document.getElementById(tabs[key]).classList.toggle('active',  key === tab);
-    document.getElementById(tabs[key]).setAttribute('aria-selected', key === tab);
+  // ── Redirect if already signed in ──────────────────────────
+  window.TZ_AUTH.onChange(function (user) {
+    if (!user) return;
+    var params   = new URLSearchParams(window.location.search);
+    var redirect = params.get('redirect');
+    if (user.email.toLowerCase() === window.TZ_AUTH.ADMIN_EMAIL.toLowerCase()) {
+      window.location.href = 'admin.html';
+    } else if (redirect === 'upload') {
+      toast('Signed in! Upload access is for admins only.');
+      setTimeout(function () { window.location.href = 'index.html'; }, 1500);
+    } else {
+      window.location.href = 'index.html';
+    }
   });
 
-  // Clear errors on tab switch
-  clearAllErrors();
-}
+  // ── Tab switching ───────────────────────────────────────────
+  function switchTab(tab) {
+    var isSignIn = tab === 'signin';
 
-// ── Password visibility toggle ─────────────────────────────
-function togglePassword(inputId, btnId) {
-  const input = document.getElementById(inputId);
-  const btn   = document.getElementById(btnId);
-  if (input.type === 'password') {
-    input.type = 'text';
-    btn.textContent = '🙈';
-    btn.setAttribute('aria-label', 'Hide password');
-  } else {
-    input.type = 'password';
-    btn.textContent = '👁';
-    btn.setAttribute('aria-label', 'Show password');
-  }
-}
+    document.getElementById('form-signin').classList.toggle('active', isSignIn);
+    document.getElementById('form-register').classList.toggle('active', !isSignIn);
+    document.getElementById('tab-signin').classList.toggle('active', isSignIn);
+    document.getElementById('tab-register').classList.toggle('active', !isSignIn);
+    document.getElementById('tab-signin').setAttribute('aria-selected', isSignIn);
+    document.getElementById('tab-register').setAttribute('aria-selected', !isSignIn);
 
-// ── Error helpers ──────────────────────────────────────────
-function showAuthError(id, msg) {
-  const el = document.getElementById(id);
-  el.textContent = msg;
-  el.classList.add('show');
-}
-function hideAuthError(id) { document.getElementById(id).classList.remove('show'); }
-function clearAllErrors() {
-  ['signin-error', 'register-error'].forEach(hideAuthError);
-  ['si-field-email','si-field-password','reg-field-email','reg-field-password','reg-field-confirm']
-    .forEach(f => document.getElementById(f)?.classList.remove('error'));
-}
-
-function setFieldErr(id) { document.getElementById(id)?.classList.add('error'); }
-function clrFieldErr(id) { document.getElementById(id)?.classList.remove('error'); }
-
-// ── Firebase error messages ────────────────────────────────
-function friendlyError(code) {
-  const map = {
-    'auth/user-not-found':       'No account found with that email.',
-    'auth/wrong-password':       'Incorrect password. Please try again.',
-    'auth/invalid-email':        'That email address is not valid.',
-    'auth/email-already-in-use': 'An account with this email already exists.',
-    'auth/weak-password':        'Password must be at least 6 characters.',
-    'auth/too-many-requests':    'Too many attempts. Please try again later.',
-    'auth/network-request-failed': 'Network error. Check your connection.',
-    'auth/invalid-credential':   'Incorrect email or password.',
-    'auth/configuration-not-found': '⚠️ Firebase not configured yet. See firebase-config.js for setup instructions.',
-  };
-  return map[code] || 'Something went wrong. Please try again.';
-}
-
-// ── Set button loading state ───────────────────────────────
-function setLoading(btnId, loading, originalText) {
-  const btn = document.getElementById(btnId);
-  btn.disabled = loading;
-  btn.textContent = loading ? 'Please wait…' : originalText;
-}
-
-// ── Sign In ────────────────────────────────────────────────
-document.getElementById('signin-form').addEventListener('submit', async e => {
-  e.preventDefault();
-  hideAuthError('signin-error');
-  let valid = true;
-
-  const email = document.getElementById('si-email').value.trim();
-  const pass  = document.getElementById('si-password').value;
-
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    setFieldErr('si-field-email'); valid = false;
-  } else clrFieldErr('si-field-email');
-
-  if (!pass) {
-    setFieldErr('si-field-password'); valid = false;
-  } else clrFieldErr('si-field-password');
-
-  if (!valid) return;
-
-  setLoading('signin-submit-btn', true, 'Sign In');
-  try {
-    await window.TZ_AUTH.signIn(email, pass);
-    // onAuthStateChanged redirect fires automatically above
-  } catch (err) {
-    showAuthError('signin-error', friendlyError(err.code));
-    setLoading('signin-submit-btn', false, 'Sign In');
-  }
-});
-
-// ── Register ───────────────────────────────────────────────
-document.getElementById('register-form').addEventListener('submit', async e => {
-  e.preventDefault();
-  hideAuthError('register-error');
-  document.getElementById('register-success').classList.remove('show');
-  let valid = true;
-
-  const email   = document.getElementById('reg-email').value.trim();
-  const pass    = document.getElementById('reg-password').value;
-  const confirm = document.getElementById('reg-confirm').value;
-
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    setFieldErr('reg-field-email'); valid = false;
-  } else clrFieldErr('reg-field-email');
-
-  if (!pass || pass.length < 6) {
-    setFieldErr('reg-field-password'); valid = false;
-  } else clrFieldErr('reg-field-password');
-
-  if (pass !== confirm) {
-    setFieldErr('reg-field-confirm'); valid = false;
-  } else clrFieldErr('reg-field-confirm');
-
-  if (!valid) return;
-
-  // Prevent registering with admin email
-  if (email.toLowerCase() === window.TZ_AUTH.ADMIN_EMAIL.toLowerCase()) {
-    showAuthError('register-error', 'That email is reserved.');
-    return;
+    // Clear all errors on tab switch
+    clearAllErrors();
   }
 
-  setLoading('register-submit-btn', true, 'Create Account');
-  try {
-    await window.TZ_AUTH.signUp(email, pass);
-    // Redirect handled by onAuthStateChanged
-  } catch (err) {
-    showAuthError('register-error', friendlyError(err.code));
-    setLoading('register-submit-btn', false, 'Create Account');
+  document.getElementById('tab-signin').addEventListener('click',   function () { switchTab('signin'); });
+  document.getElementById('tab-register').addEventListener('click', function () { switchTab('register'); });
+  document.getElementById('go-to-register').addEventListener('click', function () { switchTab('register'); });
+  document.getElementById('go-to-signin').addEventListener('click',   function () { switchTab('signin'); });
+
+  // ── Password toggles ────────────────────────────────────────
+  function bindToggle(inputId, btnId) {
+    var btn   = document.getElementById(btnId);
+    var input = document.getElementById(inputId);
+    btn.addEventListener('click', function () {
+      if (input.type === 'password') {
+        input.type = 'text';
+        btn.textContent = '🙈';
+        btn.setAttribute('aria-label', 'Hide password');
+      } else {
+        input.type = 'password';
+        btn.textContent = '👁';
+        btn.setAttribute('aria-label', 'Show password');
+      }
+    });
   }
-});
+
+  bindToggle('si-password', 'si-pw-toggle');
+  bindToggle('reg-password', 'reg-pw-toggle');
+  bindToggle('reg-confirm',  'reg-confirm-toggle');
+
+  // ── Error / field helpers ───────────────────────────────────
+  function showAuthError(id, msg) {
+    var el = document.getElementById(id);
+    el.textContent = msg;
+    el.classList.add('show');
+  }
+  function hideAuthError(id) {
+    document.getElementById(id).classList.remove('show');
+  }
+  function setFieldErr(id)  { document.getElementById(id) && document.getElementById(id).classList.add('error'); }
+  function clrFieldErr(id)  { document.getElementById(id) && document.getElementById(id).classList.remove('error'); }
+
+  function clearAllErrors() {
+    ['signin-error', 'register-error'].forEach(hideAuthError);
+    ['si-field-email','si-field-password',
+     'reg-field-username','reg-field-email','reg-field-password','reg-field-confirm']
+      .forEach(clrFieldErr);
+  }
+
+  // ── Firebase error → friendly message ──────────────────────
+  function friendlyError(code) {
+    var map = {
+      'auth/user-not-found':          'No account found with that email.',
+      'auth/wrong-password':          'Incorrect password. Please try again.',
+      'auth/invalid-email':           'That email address is not valid.',
+      'auth/invalid-credential':      'Incorrect email or password.',
+      'auth/email-already-in-use':    'An account with this email already exists.',
+      'auth/weak-password':           'Password must be at least 6 characters.',
+      'auth/too-many-requests':       'Too many attempts. Please try again later.',
+      'auth/network-request-failed':  'Network error. Check your connection.',
+      'auth/configuration-not-found': 'Firebase is not configured yet.',
+    };
+    return map[code] || ('Error: ' + (code || 'Something went wrong.'));
+  }
+
+  // ── Button loading state ────────────────────────────────────
+  function setLoading(btnId, loading, text) {
+    var btn = document.getElementById(btnId);
+    btn.disabled = loading;
+    btn.textContent = loading ? 'Please wait…' : text;
+  }
+
+  // ── Validate email format ───────────────────────────────────
+  function isEmail(str) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(str);
+  }
+
+  // ── SIGN IN ─────────────────────────────────────────────────
+  document.getElementById('signin-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    hideAuthError('signin-error');
+    var valid = true;
+
+    var email = document.getElementById('si-email').value.trim();
+    var pass  = document.getElementById('si-password').value;
+
+    if (!email || !isEmail(email)) { setFieldErr('si-field-email');    valid = false; }
+    else                           { clrFieldErr('si-field-email'); }
+
+    if (!pass)                     { setFieldErr('si-field-password');  valid = false; }
+    else                           { clrFieldErr('si-field-password'); }
+
+    if (!valid) return;
+
+    setLoading('signin-submit-btn', true, 'Sign In');
+
+    window.TZ_AUTH.signIn(email, pass)
+      .catch(function (err) {
+        showAuthError('signin-error', friendlyError(err.code));
+        setLoading('signin-submit-btn', false, 'Sign In');
+      });
+  });
+
+  // ── REGISTER ────────────────────────────────────────────────
+  document.getElementById('register-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    hideAuthError('register-error');
+    document.getElementById('register-success').classList.remove('show');
+    var valid = true;
+
+    var username = document.getElementById('reg-username').value.trim();
+    var email    = document.getElementById('reg-email').value.trim();
+    var pass     = document.getElementById('reg-password').value;
+    var confirm  = document.getElementById('reg-confirm').value;
+
+    if (!username || username.length < 3) { setFieldErr('reg-field-username'); valid = false; }
+    else                                  { clrFieldErr('reg-field-username'); }
+
+    if (!email || !isEmail(email))        { setFieldErr('reg-field-email');    valid = false; }
+    else                                  { clrFieldErr('reg-field-email'); }
+
+    if (!pass || pass.length < 6)         { setFieldErr('reg-field-password'); valid = false; }
+    else                                  { clrFieldErr('reg-field-password'); }
+
+    if (!pass || pass !== confirm)        { setFieldErr('reg-field-confirm');  valid = false; }
+    else                                  { clrFieldErr('reg-field-confirm'); }
+
+    if (!valid) return;
+
+    // Block the admin email from being registered
+    if (email.toLowerCase() === window.TZ_AUTH.ADMIN_EMAIL.toLowerCase()) {
+      showAuthError('register-error', 'That email address is reserved.');
+      return;
+    }
+
+    setLoading('register-submit-btn', true, 'Create Account');
+
+    window.TZ_AUTH.signUp(email, pass)
+      .then(function (cred) {
+        // Save the username as Firebase display name
+        return cred.user.updateProfile({ displayName: username });
+      })
+      .then(function () {
+        // onAuthStateChanged will handle the redirect
+      })
+      .catch(function (err) {
+        showAuthError('register-error', friendlyError(err.code));
+        setLoading('register-submit-btn', false, 'Create Account');
+      });
+  });
+
+}); // end DOMContentLoaded
 </script>
 </body>
 </html>
