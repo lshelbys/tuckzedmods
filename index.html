@@ -262,6 +262,20 @@ function setCategory(cat) {
   renderMods();
 }
 
+// ── Helpers ────────────────────────────────────────────────
+function truncateWords(text, limit = 40) {
+  if (!text) return '';
+  const words = text.trim().split(/\s+/);
+  if (words.length <= limit) return text;
+  return words.slice(0, limit).join(' ') + '…';
+}
+
+function goToMod(id, e) {
+  if (e && e.target && e.target.closest('.mod-card__dl-btn')) return;
+  window.location.href = `mod?id=${encodeURIComponent(id)}`;
+}
+window.goToMod = goToMod;
+
 // ── Mod Rendering ──────────────────────────────────────────
 function renderMods() {
   const { Store, GAMES, CATEGORY_ICONS, escapeHtml } = window.TZ;
@@ -313,8 +327,11 @@ function renderMods() {
         class="mod-card"
         id="mod-card-${mod.id}"
         role="listitem"
+        tabindex="0"
         style="animation-delay:${Math.min(i * 40, 400)}ms"
         aria-label="${escapeHtml(mod.title)} — ${escapeHtml(mod.category)} mod for ${escapeHtml(game?.name || mod.game)}"
+        onclick="goToMod('${mod.id}', event)"
+        onkeydown="if(event.key==='Enter')goToMod('${mod.id}', event)"
       >
         <div class="mod-card__img-wrap">${imgHtml}${imgBadge}</div>
         <div class="mod-card__body">
@@ -323,7 +340,7 @@ function renderMods() {
             <span class="badge badge--gray">${escapeHtml(mod.category)}</span>
           </div>
           <h3 class="mod-card__title">${escapeHtml(mod.title)}</h3>
-          <p class="mod-card__desc">${escapeHtml(mod.description)}</p>
+          <p class="mod-card__desc">${escapeHtml(truncateWords(mod.description, 40))}</p>
           <div class="mod-card__meta">
             <span class="mod-card__version">v${escapeHtml(mod.version)}</span>
             <span>${escapeHtml(mod.createdAt)}</span>

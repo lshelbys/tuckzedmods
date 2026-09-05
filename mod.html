@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mod Details — tuckzed mods</title>
+  <meta name="description" content="View mod details, screenshots, and download links on tuckzed mods." />
+  <script>
+    if (window.location.pathname.endsWith('.html')) {
+      var clean = window.location.pathname.replace(/\.html$/, '');
+      if (clean.endsWith('/index')) clean = clean.slice(0, -6) || '/';
+      window.history.replaceState(null, '', clean + window.location.search + window.location.hash);
+    }
+  </script>
+  <link rel="stylesheet" href="styles.css?v=5" />
+  <style>
+    .nav__user-label {
+      font-size: .8rem;
+      font-weight: 700;
+      padding: 6px 12px;
+      border: 2px solid var(--black);
+      border-radius: var(--radius-sm);
+      white-space: nowrap;
+    }
+    #nav-user-pill { display: flex; align-items: center; gap: 8px; }
+  </style>
+</head>
+<body>
+
+<!-- ── Navigation ──────────────────────────────────────────── -->
+<nav class="nav" role="navigation" aria-label="Main navigation">
+  <div class="container">
+    <div class="nav__inner">
+      <a href="./" class="nav__logo" id="nav-logo">tuckzed <span>mods</span></a>
+      <ul class="nav__links" role="list">
+        <li><a href="./#mods" class="nav__link" id="nav-browse">Browse</a></li>
+        <li><a href="auth?redirect=upload" class="nav__link" id="nav-upload">Upload Mods</a></li>
+        <li><a href="auth" class="nav__link" id="nav-signin">Sign In</a></li>
+        <li id="nav-user-pill" style="display:none;">
+          <span class="nav__user-label" id="nav-user-label"></span>
+          <button class="btn btn--sm" id="nav-signout-btn">Sign Out</button>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- ── Main Mod Content ────────────────────────────────────── -->
+<main class="mod-detail-wrap" id="mod-detail-main">
+  <div class="container">
+
+    <!-- Back button -->
+    <a href="./#mods" class="mod-detail-back" id="back-btn">
+      ← Back to all mods
+    </a>
+
+    <!-- Loading State -->
+    <div id="mod-loading" style="text-align:center;padding:64px 0;">
+      <p style="font-weight:700;font-size:1.1rem;color:var(--gray-600);">⏳ Loading mod details...</p>
+    </div>
+
+    <!-- Error / Not Found State -->
+    <div id="mod-not-found" class="empty-state" style="display:none;" role="alert">
+      <div class="empty-state__icon">🔍</div>
+      <h1 class="empty-state__title">Mod Not Found</h1>
+      <p class="empty-state__desc">The mod you are looking for may have been removed or does not exist.</p>
+      <div style="margin-top:20px;">
+        <a href="./#mods" class="btn btn--primary">Browse All Mods</a>
+      </div>
+    </div>
+
+    <!-- Mod Details Content -->
+    <div id="mod-content" style="display:none;">
+      <div class="mod-detail-grid">
+
+        <!-- Left Column: Gallery & Description -->
+        <div class="mod-detail__main-col">
+          <!-- Gallery / Media Preview -->
+          <div class="mod-detail__main-img-wrap" id="main-img-wrap">
+            <img id="main-img" src="" alt="Mod screenshot" class="mod-detail__main-img" />
+            <button type="button" class="mod-detail__nav-btn mod-detail__nav-btn--prev" id="gallery-prev-btn" onclick="prevImage()" aria-label="Previous screenshot" style="display:none;">
+              ◀
+            </button>
+            <button type="button" class="mod-detail__nav-btn mod-detail__nav-btn--next" id="gallery-next-btn" onclick="nextImage()" aria-label="Next screenshot" style="display:none;">
+              ▶
+            </button>
+            <div class="mod-detail__counter" id="gallery-counter" style="display:none;"></div>
+          </div>
+
+          <!-- Thumbnails Row -->
+          <div class="mod-detail__thumbs" id="gallery-thumbs" style="display:none;" role="tablist" aria-label="Mod screenshots">
+            <!-- Rendered by JS -->
+          </div>
+
+          <!-- Description Card -->
+          <div class="mod-detail__desc-card">
+            <h2 class="mod-detail__desc-title">About This Mod</h2>
+            <div class="mod-detail__desc-content" id="mod-description"></div>
+          </div>
+        </div>
+
+        <!-- Right Column: Metadata & Download Card -->
+        <aside class="mod-detail__sidebar">
+          <div class="mod-detail__info-card">
+            <!-- Badges -->
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
+              <span class="badge badge--filled" id="mod-game-badge"></span>
+              <span class="badge badge--gray" id="mod-cat-badge"></span>
+            </div>
+
+            <!-- Mod Title -->
+            <h1 class="mod-detail__title" id="mod-title"></h1>
+
+            <!-- Download Button -->
+            <a href="#" target="_blank" rel="noopener noreferrer" class="btn btn--primary mod-detail__dl-btn" id="mod-dl-btn">
+              ⬇ Download Mod
+            </a>
+
+            <!-- Quick Admin Edit button if admin is viewing -->
+            <div id="admin-edit-wrap" style="display:none;margin-top:10px;">
+              <a href="admin" class="btn btn--sm" style="width:100%;justify-content:center;">
+                ✏️ Edit in Admin Panel
+              </a>
+            </div>
+
+            <!-- Mod Meta details -->
+            <div class="mod-detail__meta-list">
+              <div class="mod-detail__meta-item">
+                <span class="mod-detail__meta-label">Game</span>
+                <span class="mod-detail__meta-val" id="mod-game-name"></span>
+              </div>
+              <div class="mod-detail__meta-item">
+                <span class="mod-detail__meta-label">Category</span>
+                <span class="mod-detail__meta-val" id="mod-cat-name"></span>
+              </div>
+              <div class="mod-detail__meta-item">
+                <span class="mod-detail__meta-label">Version</span>
+                <span class="mod-detail__meta-val" id="mod-version"></span>
+              </div>
+              <div class="mod-detail__meta-item">
+                <span class="mod-detail__meta-label">Release Date</span>
+                <span class="mod-detail__meta-val" id="mod-date"></span>
+              </div>
+              <div class="mod-detail__meta-item">
+                <span class="mod-detail__meta-label">Author</span>
+                <span class="mod-detail__meta-val" id="mod-author"></span>
+              </div>
+              <div class="mod-detail__meta-item" id="meta-images-row">
+                <span class="mod-detail__meta-label">Screenshots</span>
+                <span class="mod-detail__meta-val" id="mod-images-count"></span>
+              </div>
+            </div>
+
+            <p style="font-size:.78rem;color:var(--gray-500);text-align:center;margin:0;">
+              Verified mod download for tuckzed mods community.
+            </p>
+          </div>
+        </aside>
+
+      </div><!-- /.mod-detail-grid -->
+
+      <!-- More Mods from same game -->
+      <section style="margin-top:64px;padding-top:40px;border-top:2px solid var(--black);" id="related-section">
+        <h2 style="font-size:1.4rem;font-weight:700;margin-bottom:24px;">More Mods You Might Like</h2>
+        <div class="mod-grid" id="related-grid">
+          <!-- Rendered by JS -->
+        </div>
+      </section>
+
+    </div><!-- /#mod-content -->
+
+  </div><!-- /.container -->
+</main>
+
+<!-- ── Footer ──────────────────────────────────────────────── -->
+<footer class="footer" role="contentinfo">
+  <div class="container">
+    <div class="footer__inner">
+      <span class="footer__brand">tuckzed mods</span>
+      <nav class="footer__links" aria-label="Footer navigation">
+        <a href="./#mods" class="footer__link">Browse</a>
+        <a href="auth" class="footer__link">Account</a>
+      </nav>
+      <span class="footer__copy">© 2026 tuckzed mods.</span>
+    </div>
+  </div>
+</footer>
+
+<!-- ── Toast Container ──────────────────────────────────────── -->
+<div class="toast-container" aria-live="assertive" aria-atomic="true"></div>
+
+<!-- ── Scripts ─────────────────────────────────────────────── -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js?v=2"></script>
+<script src="store.js?v=5"></script>
+<script src="firebase-config.js?v=2"></script>
+<script src="auth-nav.js"></script>
+
+<script>
+'use strict';
+
+let currentMod = null;
+let galleryImages = [];
+let activeImageIndex = 0;
+
+function truncateWords(text, limit = 40) {
+  if (!text) return '';
+  const words = text.trim().split(/\s+/);
+  if (words.length <= limit) return text;
+  return words.slice(0, limit).join(' ') + '…';
+}
+
+function goToMod(id, e) {
+  if (e && e.target && e.target.closest('.mod-card__dl-btn')) return;
+  window.location.href = `mod?id=${encodeURIComponent(id)}`;
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const params = new URLSearchParams(window.location.search);
+  const modId = params.get('id');
+
+  if (!modId) {
+    showNotFound();
+    return;
+  }
+
+  // Check local cache first
+  const { Store } = window.TZ;
+  currentMod = Store.getById(modId);
+
+  // If not found in cache, or to ensure fresh data, fetch from Supabase
+  if (Store.fetchFromRemote) {
+    await Store.fetchFromRemote();
+    currentMod = Store.getById(modId);
+  }
+
+  if (!currentMod) {
+    showNotFound();
+  } else {
+    renderMod(currentMod);
+  }
+
+  // Keyboard navigation for image gallery
+  document.addEventListener('keydown', e => {
+    if (galleryImages.length <= 1) return;
+    if (e.key === 'ArrowLeft') prevImage();
+    if (e.key === 'ArrowRight') nextImage();
+  });
+
+  // Check if viewing user is Admin
+  if (window.TZ_AUTH && window.TZ_AUTH.onChange) {
+    window.TZ_AUTH.onChange(user => {
+      const editWrap = document.getElementById('admin-edit-wrap');
+      if (editWrap && user && user.email.toLowerCase() === window.TZ_AUTH.ADMIN_EMAIL.toLowerCase()) {
+        editWrap.style.display = 'block';
+      }
+    });
+  }
+});
+
+function showNotFound() {
+  document.getElementById('mod-loading').style.display = 'none';
+  document.getElementById('mod-content').style.display = 'none';
+  document.getElementById('mod-not-found').style.display = 'block';
+}
+
+function renderMod(mod) {
+  const { GAMES, CATEGORY_ICONS, escapeHtml } = window.TZ;
+  const game = GAMES[mod.game];
+  const catIcon = CATEGORY_ICONS[mod.category] || '📦';
+
+  // Page title
+  document.title = `${mod.title} — tuckzed mods`;
+
+  // Badges & Titles
+  document.getElementById('mod-game-badge').textContent = game ? game.name : mod.game;
+  document.getElementById('mod-cat-badge').textContent = `${catIcon} ${mod.category}`;
+  document.getElementById('mod-title').textContent = mod.title;
+
+  // Metadata
+  document.getElementById('mod-game-name').textContent = game ? game.name : mod.game;
+  document.getElementById('mod-cat-name').textContent = mod.category;
+  document.getElementById('mod-version').textContent = 'v' + mod.version;
+  document.getElementById('mod-date').textContent = mod.createdAt;
+  document.getElementById('mod-author').textContent = mod.createdBy || 'admin';
+
+  // Description
+  document.getElementById('mod-description').textContent = mod.description;
+
+  // Download Link
+  const dlBtn = document.getElementById('mod-dl-btn');
+  dlBtn.href = mod.downloadUrl || '#';
+  if (!mod.downloadUrl) {
+    dlBtn.classList.add('disabled');
+    dlBtn.textContent = 'No Download Link';
+  }
+
+  // Images Setup
+  galleryImages = [];
+  if (Array.isArray(mod.images) && mod.images.length > 0) {
+    galleryImages = [...mod.images];
+  } else if (mod.coverImage) {
+    galleryImages = [mod.coverImage];
+  }
+
+  // Ensure cover is first or active
+  activeImageIndex = 0;
+  if (mod.coverImage && galleryImages.includes(mod.coverImage)) {
+    activeImageIndex = galleryImages.indexOf(mod.coverImage);
+  }
+
+  document.getElementById('mod-images-count').textContent = galleryImages.length;
+
+  setupGallery();
+  renderRelatedMods(mod);
+
+  // Show content
+  document.getElementById('mod-loading').style.display = 'none';
+  document.getElementById('mod-content').style.display = 'block';
+}
+
+function setupGallery() {
+  const mainImg = document.getElementById('main-img');
+  const prevBtn = document.getElementById('gallery-prev-btn');
+  const nextBtn = document.getElementById('gallery-next-btn');
+  const counter = document.getElementById('gallery-counter');
+  const thumbs = document.getElementById('gallery-thumbs');
+
+  if (galleryImages.length === 0) {
+    mainImg.src = 'https://placehold.co/1280x720?text=No+Preview+Available';
+    prevBtn.style.display = 'none';
+    nextBtn.style.display = 'none';
+    counter.style.display = 'none';
+    thumbs.style.display = 'none';
+    return;
+  }
+
+  updateMainImage();
+
+  if (galleryImages.length > 1) {
+    prevBtn.style.display = 'flex';
+    nextBtn.style.display = 'flex';
+    counter.style.display = 'block';
+    thumbs.style.display = 'flex';
+
+    thumbs.innerHTML = galleryImages.map((url, idx) => `
+      <button
+        type="button"
+        class="mod-detail__thumb-btn ${idx === activeImageIndex ? 'active' : ''}"
+        id="thumb-btn-${idx}"
+        onclick="setImageIndex(${idx})"
+        aria-label="View screenshot ${idx + 1}"
+      >
+        <img src="${window.TZ.escapeHtml(url)}" alt="Thumbnail ${idx + 1}" class="mod-detail__thumb-img" onerror="this.src='https://placehold.co/200x120?text=Image'" />
+      </button>
+    `).join('');
+  } else {
+    prevBtn.style.display = 'none';
+    nextBtn.style.display = 'none';
+    counter.style.display = 'none';
+    thumbs.style.display = 'none';
+  }
+}
+
+function updateMainImage() {
+  const mainImg = document.getElementById('main-img');
+  const counter = document.getElementById('gallery-counter');
+  const currentUrl = galleryImages[activeImageIndex];
+
+  if (currentUrl) {
+    mainImg.src = currentUrl;
+    mainImg.alt = `${currentMod ? currentMod.title : 'Mod'} screenshot ${activeImageIndex + 1}`;
+  }
+
+  if (counter && galleryImages.length > 1) {
+    counter.textContent = `${activeImageIndex + 1} / ${galleryImages.length}`;
+  }
+
+  // Update active thumbnail
+  galleryImages.forEach((_, idx) => {
+    const btn = document.getElementById(`thumb-btn-${idx}`);
+    if (btn) {
+      if (idx === activeImageIndex) {
+        btn.classList.add('active');
+        btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      } else {
+        btn.classList.remove('active');
+      }
+    }
+  });
+}
+
+function setImageIndex(idx) {
+  if (idx >= 0 && idx < galleryImages.length) {
+    activeImageIndex = idx;
+    updateMainImage();
+  }
+}
+window.setImageIndex = setImageIndex;
+
+function prevImage() {
+  if (galleryImages.length <= 1) return;
+  activeImageIndex = (activeImageIndex - 1 + galleryImages.length) % galleryImages.length;
+  updateMainImage();
+}
+window.prevImage = prevImage;
+
+function nextImage() {
+  if (galleryImages.length <= 1) return;
+  activeImageIndex = (activeImageIndex + 1) % galleryImages.length;
+  updateMainImage();
+}
+window.nextImage = nextImage;
+window.goToMod = goToMod;
+
+function renderRelatedMods(mod) {
+  const { Store, GAMES, CATEGORY_ICONS, escapeHtml } = window.TZ;
+  const relatedGrid = document.getElementById('related-grid');
+  const relatedSection = document.getElementById('related-section');
+
+  const allMods = Store.getAll();
+  const related = allMods
+    .filter(m => m.id !== mod.id && (m.game === mod.game || m.category === mod.category))
+    .slice(0, 3);
+
+  if (related.length === 0) {
+    relatedSection.style.display = 'none';
+    return;
+  }
+
+  relatedSection.style.display = 'block';
+  relatedGrid.innerHTML = related.map((m, i) => {
+    const game = GAMES[m.game];
+    const icon = CATEGORY_ICONS[m.category] || '📦';
+    const imgHtml = m.coverImage
+      ? `<img src="${escapeHtml(m.coverImage)}" alt="${escapeHtml(m.title)} cover" class="mod-card__img" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'mod-card__img-placeholder\\'>${icon}</div>'" />`
+      : `<div class="mod-card__img-placeholder">${icon}</div>`;
+    const imgBadge = (Array.isArray(m.images) && m.images.length > 1)
+      ? `<span style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,0.78);color:#fff;font-size:0.7rem;font-weight:700;padding:2px 7px;border-radius:4px;z-index:2;">📷 ${m.images.length}</span>`
+      : '';
+
+    return `
+      <article
+        class="mod-card"
+        id="rel-card-${m.id}"
+        role="listitem"
+        tabindex="0"
+        onclick="goToMod('${m.id}', event)"
+        onkeydown="if(event.key==='Enter')goToMod('${m.id}', event)"
+      >
+        <div class="mod-card__img-wrap">${imgHtml}${imgBadge}</div>
+        <div class="mod-card__body">
+          <div class="mod-card__tags">
+            <span class="badge badge--filled">${escapeHtml(game?.name || m.game)}</span>
+            <span class="badge badge--gray">${escapeHtml(m.category)}</span>
+          </div>
+          <h3 class="mod-card__title">${escapeHtml(m.title)}</h3>
+          <p class="mod-card__desc">${escapeHtml(truncateWords(m.description, 40))}</p>
+          <div class="mod-card__meta">
+            <span class="mod-card__version">v${escapeHtml(m.version)}</span>
+            <span>${escapeHtml(m.createdAt)}</span>
+          </div>
+        </div>
+        <div class="mod-card__footer">
+          <a
+            href="${escapeHtml(m.downloadUrl)}"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="btn btn--primary mod-card__dl-btn"
+            id="rel-dl-btn-${m.id}"
+          >
+            ⬇ Download
+          </a>
+        </div>
+      </article>
+    `;
+  }).join('');
+}
+</script>
+</body>
+</html>
