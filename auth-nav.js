@@ -70,9 +70,11 @@
       // Sign Out handler
       if (signoutBtn) {
         signoutBtn.onclick = async function () {
-          await window.TZ_AUTH.signOut();
-          // Always redirect to homepage on sign-out
-          window.location.href = 'index.html';
+          if (confirm('Are you sure you want to sign out?')) {
+            await window.TZ_AUTH.signOut();
+            // Always redirect to homepage on sign-out
+            window.location.href = 'index.html';
+          }
         };
       }
 
