@@ -13,7 +13,7 @@
       window.history.replaceState(null, '', clean + window.location.search + window.location.hash);
     }
   </script>
-  <link rel="stylesheet" href="styles.css?v=5" />
+  <link rel="stylesheet" href="styles.css?v=7" />
   <style>
     .nav__user-label {
       font-size: .8rem;
@@ -357,7 +357,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js?v=2"></script>
-<script src="store.js?v=5"></script>
+<script src="store.js?v=7"></script>
 <script src="firebase-config.js?v=2"></script>
 <script src="auth-nav.js"></script>
 <script>
@@ -556,8 +556,8 @@ function autoExpandDesc(el) {
 }
 
 // ── Multi-Image Gallery State & Functions ──────────────────
-let currentImages = []; // Array of image URLs
-let coverImage = '';    // Designated cover image URL
+let currentImages = []; // Array of { id, preview, file, url }
+let coverId = null;     // ID of designated cover image
 
 function renderImageGallery() {
   const grid = document.getElementById('img-gallery-grid');
@@ -572,11 +572,11 @@ function renderImageGallery() {
     pickBtn.disabled = currentImages.length >= 10;
   }
 
-  // Ensure coverImage points to a valid image in currentImages
-  if (currentImages.length > 0 && (!coverImage || !currentImages.includes(coverImage))) {
-    coverImage = currentImages[0];
+  // Ensure coverId is valid
+  if (currentImages.length > 0 && (!coverId || !currentImages.some(item => item.id === coverId))) {
+    coverId = currentImages[0].id;
   } else if (currentImages.length === 0) {
-    coverImage = '';
+    coverId = null;
   }
 
   if (currentImages.length === 0) {
@@ -586,14 +586,16 @@ function renderImageGallery() {
   }
 
   empty.style.display = 'none';
-  grid.innerHTML = currentImages.map((url, idx) => {
-    const isCover = (url === coverImage);
+  grid.innerHTML = currentImages.map((item, idx) => {
+    const isCover = (item.id === coverId);
+    const isPending = !!item.file;
     return `
       <div class="image-card ${isCover ? 'is-cover' : ''}" id="img-card-${idx}">
         <div class="image-card__thumb-wrap">
-          <img src="${escapeHtml(url)}" alt="Mod image ${idx + 1}" class="image-card__thumb" onerror="this.src='https://placehold.co/600x400?text=Broken+Image'" />
+          <img src="${escapeHtml(item.preview)}" alt="Mod image ${idx + 1}" class="image-card__thumb" onerror="this.src='https://placehold.co/600x400?text=Broken+Image'" />
           ${isCover ? '<span class="image-card__badge">★ COVER</span>' : ''}
           <span class="image-card__order">#${idx + 1}</span>
+          ${isPending ? '<span style="position:absolute;bottom:6px;left:6px;background:rgba(0,0,0,0.72);color:#fff;font-size:.65rem;padding:2px 6px;border-radius:3px;font-weight:700;">💾 Pending</span>' : ''}
         </div>
         <div class="image-card__controls">
           <button type="button" class="btn btn--sm" title="Move Left" onclick="moveImage(${idx}, -1)" ${idx === 0 ? 'disabled' : ''}>◀</button>
@@ -610,7 +612,7 @@ function renderImageGallery() {
 
 function setAsCover(idx) {
   if (currentImages[idx]) {
-    coverImage = currentImages[idx];
+    coverId = currentImages[idx].id;
     renderImageGallery();
   }
 }
@@ -625,10 +627,14 @@ function moveImage(idx, delta) {
 }
 
 function removeImage(idx) {
-  const removedUrl = currentImages[idx];
+  const item = currentImages[idx];
+  if (!item) return;
+  if (item.file && item.preview && item.preview.startsWith('blob:')) {
+    URL.revokeObjectURL(item.preview);
+  }
   currentImages.splice(idx, 1);
-  if (coverImage === removedUrl) {
-    coverImage = currentImages[0] || '';
+  if (coverId === item.id) {
+    coverId = currentImages[0] ? currentImages[0].id : null;
   }
   renderImageGallery();
 }
@@ -645,18 +651,23 @@ function addImageFromUrl() {
     showToast('⚠️ Maximum 10 images allowed per mod.');
     return;
   }
-  currentImages.push(url);
-  if (!coverImage) coverImage = url;
+  const item = {
+    id: 'img_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+    preview: url,
+    file: null,
+    url: url
+  };
+  currentImages.push(item);
+  if (!coverId) coverId = item.id;
   input.value = '';
   renderImageGallery();
 }
 
 function initModGallery() {
-  // Multi-file upload to Supabase Storage
+  // Image file picker: loads into memory immediately, uploads ONLY on publish
   const fileInput = document.getElementById('f-img-files');
-  const statusEl = document.getElementById('img-upload-status');
   if (fileInput) {
-    fileInput.addEventListener('change', async function (e) {
+    fileInput.addEventListener('change', function (e) {
       const files = Array.from(e.target.files || []);
       if (!files.length) return;
 
@@ -667,36 +678,26 @@ function initModGallery() {
         return;
       }
 
-      const toUpload = files.slice(0, remainingSlots);
+      const toAdd = files.slice(0, remainingSlots);
       if (files.length > remainingSlots) {
-        showToast(`⚠️ Uploading ${remainingSlots} images to stay within the 10-image limit.`);
+        showToast(`⚠️ Only adding ${remainingSlots} image(s) to stay within the 10-image limit.`);
       }
 
-      statusEl.style.display = 'block';
-      statusEl.style.color = 'var(--black)';
-      let successCount = 0;
+      toAdd.forEach(file => {
+        const previewUrl = URL.createObjectURL(file);
+        const item = {
+          id: 'img_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+          preview: previewUrl,
+          file: file,
+          url: null
+        };
+        currentImages.push(item);
+        if (!coverId) coverId = item.id;
+      });
 
-      for (let i = 0; i < toUpload.length; i++) {
-        const file = toUpload[i];
-        statusEl.textContent = `⏳ Uploading ${i + 1} of ${toUpload.length} (${file.name})...`;
-        try {
-          const publicUrl = await Store.uploadImage(file);
-          currentImages.push(publicUrl);
-          if (!coverImage) coverImage = publicUrl;
-          successCount++;
-          renderImageGallery();
-        } catch (err) {
-          console.error('Image upload failed:', err);
-          showToast(`❌ Failed to upload "${file.name}": ${err.message || 'Error'}`);
-        }
-      }
-
-      statusEl.textContent = `✅ Successfully uploaded ${successCount} image(s)!`;
-      setTimeout(() => {
-        statusEl.style.display = 'none';
-        statusEl.textContent = '';
-      }, 4000);
       fileInput.value = '';
+      renderImageGallery();
+      showToast(`📷 Added ${toAdd.length} image(s). They will be saved to Supabase when you publish.`);
     });
   }
 
@@ -717,8 +718,16 @@ function initModForm() {
 function resetForm() {
   const form = document.getElementById('mod-form');
   form.reset();
+
+  // Revoke any pending object URLs to prevent memory leaks
+  currentImages.forEach(item => {
+    if (item.file && item.preview && item.preview.startsWith('blob:')) {
+      URL.revokeObjectURL(item.preview);
+    }
+  });
+
   currentImages = [];
-  coverImage = '';
+  coverId = null;
   renderImageGallery();
 
   const descEl = document.getElementById('f-desc');
@@ -739,6 +748,13 @@ function openEdit(id) {
   const mod = Store.getById(id);
   if (!mod) { showToast('Mod not found.'); return; }
 
+  // Revoke any previous pending blobs
+  currentImages.forEach(item => {
+    if (item.file && item.preview && item.preview.startsWith('blob:')) {
+      URL.revokeObjectURL(item.preview);
+    }
+  });
+
   document.getElementById('edit-id').value = id;
   document.getElementById('f-title').value    = mod.title;
   document.getElementById('f-version').value  = mod.version;
@@ -751,15 +767,29 @@ function openEdit(id) {
 
   document.getElementById('f-dl').value = mod.downloadUrl;
 
-  // Load images
-  if (Array.isArray(mod.images) && mod.images.length > 0) {
-    currentImages = [...mod.images];
-  } else if (mod.coverImage) {
-    currentImages = [mod.coverImage];
+  // Load existing remote images
+  currentImages = [];
+  const existingUrls = (Array.isArray(mod.images) && mod.images.length > 0)
+    ? mod.images
+    : (mod.coverImage ? [mod.coverImage] : []);
+
+  existingUrls.forEach(url => {
+    currentImages.push({
+      id: 'img_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+      preview: url,
+      file: null,
+      url: url
+    });
+  });
+
+  // Identify cover
+  if (mod.coverImage) {
+    const found = currentImages.find(item => item.url === mod.coverImage);
+    coverId = found ? found.id : (currentImages[0] ? currentImages[0].id : null);
   } else {
-    currentImages = [];
+    coverId = currentImages[0] ? currentImages[0].id : null;
   }
-  coverImage = mod.coverImage || (currentImages[0] || '');
+
   renderImageGallery();
 
   document.getElementById('form-panel-title').textContent = 'Edit Mod';
@@ -782,7 +812,39 @@ async function handleFormSubmit(e) {
   if (!validateForm()) return;
 
   const editId = document.getElementById('edit-id').value;
-  const chosenCover = coverImage || (currentImages[0] || '');
+  const submitBtn = document.getElementById('form-submit-btn');
+  submitBtn.disabled = true;
+
+  // ── Step 1: Upload any pending images to Supabase Storage ONLY now upon publishing
+  const pendingItems = currentImages.filter(item => item.file && !item.url);
+  if (pendingItems.length > 0) {
+    submitBtn.textContent = `Saving images (0 / ${pendingItems.length})...`;
+    for (let i = 0; i < pendingItems.length; i++) {
+      const item = pendingItems[i];
+      submitBtn.textContent = `Uploading image ${i + 1} of ${pendingItems.length}...`;
+      try {
+        const publicUrl = await Store.uploadImage(item.file);
+        item.url = publicUrl;
+        if (item.preview && item.preview.startsWith('blob:')) {
+          URL.revokeObjectURL(item.preview);
+        }
+        item.preview = publicUrl;
+      } catch (err) {
+        console.error('Image upload failed:', err);
+        showToast(`❌ Failed to upload image: ${err.message || 'Error'}`);
+        submitBtn.disabled = false;
+        submitBtn.textContent = editId ? 'Save Changes' : 'Publish Mod';
+        return;
+      }
+    }
+  }
+
+  submitBtn.textContent = 'Publishing mod...';
+
+  // ── Step 2: Assemble final URLs
+  const finalImageUrls = currentImages.map(item => item.url).filter(Boolean);
+  const coverItem = currentImages.find(item => item.id === coverId);
+  const finalCoverUrl = (coverItem && coverItem.url) ? coverItem.url : (finalImageUrls[0] || '');
 
   const data = {
     title:       document.getElementById('f-title').value.trim(),
@@ -791,13 +853,9 @@ async function handleFormSubmit(e) {
     category:    document.getElementById('f-category').value,
     description: document.getElementById('f-desc').value.trim(),
     downloadUrl: document.getElementById('f-dl').value.trim(),
-    coverImage:  chosenCover,
-    images:      currentImages,
+    coverImage:  finalCoverUrl,
+    images:      finalImageUrls,
   };
-
-  const submitBtn = document.getElementById('form-submit-btn');
-  submitBtn.disabled = true;
-  submitBtn.textContent = 'Saving...';
 
   if (editId) {
     // Edit existing
