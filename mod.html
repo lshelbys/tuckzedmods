@@ -266,18 +266,27 @@
     /* ── Image Lightbox / Fullscreen Modal ────────────────────── */
     .lightbox-overlay {
       position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.94);
-      z-index: 99999;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.95);
+      z-index: 999999 !important;
       display: none;
       align-items: center;
       justify-content: center;
       backdrop-filter: blur(10px);
-      animation: fadeIn .2s ease;
+      -webkit-backdrop-filter: blur(10px);
+      animation: fadeIn .18s ease;
       touch-action: none;
+      box-sizing: border-box;
     }
     .lightbox-overlay.open {
-      display: flex;
+      display: flex !important;
+      visibility: visible !important;
+      opacity: 1 !important;
     }
     @keyframes fadeIn {
       from { opacity: 0; }
@@ -285,30 +294,34 @@
     }
     .lightbox-img-wrap {
       position: relative;
-      max-width: 92vw;
-      max-height: 86vh;
+      max-width: 90vw;
+      max-height: 85vh;
       display: flex;
       align-items: center;
       justify-content: center;
+      z-index: 1000000;
     }
     .lightbox-img {
-      max-width: 92vw;
-      max-height: 84vh;
+      max-width: 90vw;
+      max-height: 82vh;
+      width: auto;
+      height: auto;
       object-fit: contain;
       border-radius: var(--radius-md);
-      box-shadow: 0 16px 50px rgba(0,0,0,0.9);
+      box-shadow: 0 16px 50px rgba(0,0,0,0.95);
       user-select: none;
+      display: block;
     }
     .lightbox-close-btn {
       position: absolute;
       top: 20px;
       right: 24px;
-      width: 46px;
-      height: 46px;
+      width: 48px;
+      height: 48px;
       border-radius: 50%;
       border: 1.5px solid rgba(255, 255, 255, 0.4);
       background: rgba(255, 255, 255, 0.15);
-      color: #fff;
+      color: #ffffff;
       font-size: 1.5rem;
       font-weight: 700;
       display: flex;
@@ -316,35 +329,35 @@
       justify-content: center;
       cursor: pointer;
       transition: background var(--transition), transform var(--transition);
-      z-index: 100000;
+      z-index: 1000005 !important;
     }
     .lightbox-close-btn:hover {
-      background: rgba(255, 255, 255, 0.3);
+      background: rgba(255, 255, 255, 0.35);
       transform: scale(1.1);
     }
     .lightbox-nav-btn {
       position: absolute;
       top: 50%;
       transform: translateY(-50%);
-      width: 52px;
-      height: 52px;
+      width: 54px;
+      height: 54px;
       border-radius: 50%;
       border: 1.5px solid rgba(255, 255, 255, 0.4);
-      background: rgba(0, 0, 0, 0.65);
-      color: #fff;
-      font-size: 1.35rem;
+      background: rgba(0, 0, 0, 0.7);
+      color: #ffffff;
+      font-size: 1.4rem;
       font-weight: 700;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
       transition: background var(--transition), transform var(--transition);
-      z-index: 100000;
+      z-index: 1000005 !important;
       backdrop-filter: blur(4px);
     }
     .lightbox-nav-btn:hover {
       background: rgba(0, 0, 0, 0.95);
-      border-color: #fff;
+      border-color: #ffffff;
       transform: translateY(-50%) scale(1.1);
     }
     .lightbox-nav-btn--prev { left: 24px; }
@@ -354,15 +367,16 @@
       bottom: 22px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(0, 0, 0, 0.78);
-      color: #fff;
+      background: rgba(0, 0, 0, 0.8);
+      color: #ffffff;
       font-size: .85rem;
       font-weight: 700;
       padding: 6px 18px;
       border-radius: 999px;
       border: 1px solid rgba(255,255,255,0.25);
       letter-spacing: .05em;
-      z-index: 100000;
+      z-index: 1000005 !important;
+      pointer-events: none;
     }
   </style>
 </head>
@@ -430,12 +444,13 @@
 
         <!-- ── 2. IMAGES (MEDIUM SIZE, STARTING WITH COVER) ─────── -->
         <section class="mod-gallery-section" aria-label="Mod screenshots">
-          <div class="mod-preview-wrap" id="main-img-wrap" onclick="openLightbox()" title="Click to expand image">
+          <div class="mod-preview-wrap" id="main-img-wrap" title="Click to expand image">
             <img id="main-img" src="" alt="Mod screenshot preview" class="mod-preview-img" />
             <button
               type="button"
               class="mod-expand-badge"
-              onclick="event.stopPropagation(); openLightbox();"
+              id="gallery-expand-btn"
+              onclick="event.stopPropagation(); openLightbox(event);"
               aria-label="Expand image"
             >
               ⛶ Expand
@@ -517,18 +532,9 @@
         <a href="auth" class="footer__link">Account</a>
       </nav>
       <span class="footer__copy">© 2026 tuckzed mods.</span>
-</footer>
-
-<!-- ── Image Lightbox / Fullscreen Modal ────────────────────── -->
-<div class="lightbox-overlay" id="lightbox-overlay" onclick="closeLightbox(event)" role="dialog" aria-modal="true" aria-label="Expanded mod screenshot">
-  <button type="button" class="lightbox-close-btn" onclick="closeLightbox()" aria-label="Close expanded view" title="Close (Esc)">✕</button>
-  <button type="button" class="lightbox-nav-btn lightbox-nav-btn--prev" id="lightbox-prev-btn" onclick="event.stopPropagation(); prevImage();" aria-label="Previous screenshot" title="Previous (←)">◀</button>
-  <button type="button" class="lightbox-nav-btn lightbox-nav-btn--next" id="lightbox-next-btn" onclick="event.stopPropagation(); nextImage();" aria-label="Next screenshot" title="Next (→)">▶</button>
-  <div class="lightbox-img-wrap" onclick="event.stopPropagation()">
-    <img id="lightbox-img" src="" alt="Expanded mod preview" class="lightbox-img" />
+    </div>
   </div>
-  <div class="lightbox-counter" id="lightbox-counter">1 / 1</div>
-</div>
+</footer>
 
 <!-- ── Scripts ─────────────────────────────────────────────── -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -583,6 +589,60 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderMod(currentMod);
   }
 
+  // Explicit click listeners for image expansion
+  const expandBtn = document.getElementById('gallery-expand-btn');
+  if (expandBtn) {
+    expandBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      openLightbox(e);
+    });
+  }
+
+  const mainWrap = document.getElementById('main-img-wrap');
+  if (mainWrap) {
+    mainWrap.addEventListener('click', (e) => {
+      if (e.target && e.target.closest('.mod-gallery-nav')) return;
+      e.preventDefault();
+      openLightbox(e);
+    });
+  }
+
+  // Lightbox overlay controls
+  const lbCloseBtn = document.getElementById('lightbox-close-btn');
+  if (lbCloseBtn) {
+    lbCloseBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      closeLightbox();
+    });
+  }
+
+  const lbOverlay = document.getElementById('lightbox-overlay');
+  if (lbOverlay) {
+    lbOverlay.addEventListener('click', (e) => {
+      closeLightbox(e);
+    });
+  }
+
+  const lbPrevBtn = document.getElementById('lightbox-prev-btn');
+  if (lbPrevBtn) {
+    lbPrevBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      prevImage();
+    });
+  }
+
+  const lbNextBtn = document.getElementById('lightbox-next-btn');
+  if (lbNextBtn) {
+    lbNextBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      nextImage();
+    });
+  }
+
   // Keyboard navigation for image gallery & lightbox
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && isLightboxOpen) {
@@ -629,15 +689,27 @@ function renderMod(mod) {
 
   // 2. Images (Starting with the Cover Image)
   galleryImages = [];
-  const rawImages = (Array.isArray(mod.images) && mod.images.length > 0)
-    ? mod.images
-    : (mod.coverImage ? [mod.coverImage] : []);
+  let rawImages = [];
+  if (Array.isArray(mod.images)) {
+    rawImages = mod.images.filter(img => typeof img === 'string' && img.trim().length > 0);
+  } else if (typeof mod.images === 'string' && mod.images.trim()) {
+    try {
+      const parsed = JSON.parse(mod.images);
+      if (Array.isArray(parsed)) {
+        rawImages = parsed.filter(img => typeof img === 'string' && img.trim().length > 0);
+      } else if (typeof parsed === 'string' && parsed.trim()) {
+        rawImages = [parsed.trim()];
+      }
+    } catch (_) {
+      rawImages = [mod.images.trim()];
+    }
+  }
 
-  // Ensure cover image is placed at index 0
-  if (mod.coverImage) {
-    const withoutCover = rawImages.filter(img => img !== mod.coverImage);
-    galleryImages = [mod.coverImage, ...withoutCover];
-  } else {
+  const cover = mod.coverImage || mod.cover_image || mod.image || (rawImages[0] || '');
+  if (cover) {
+    const withoutCover = rawImages.filter(img => img !== cover);
+    galleryImages = [cover, ...withoutCover];
+  } else if (rawImages.length > 0) {
     galleryImages = [...rawImages];
   }
 
@@ -676,6 +748,7 @@ function setupGallery() {
     nextBtn.style.display = 'none';
     counter.style.display = 'none';
     thumbs.style.display = 'none';
+    galleryImages = [mainImg.src];
     return;
   }
 
@@ -707,20 +780,61 @@ function setupGallery() {
 }
 
 let isLightboxOpen = false;
+let lightboxOpenTimestamp = 0;
 
-function openLightbox() {
-  if (!galleryImages || galleryImages.length === 0) return;
+function openLightbox(e) {
+  if (e) {
+    if (typeof e.stopPropagation === 'function') e.stopPropagation();
+    if (typeof e.preventDefault === 'function') e.preventDefault();
+  }
+
+  // Guaranteed fallback: If galleryImages is empty, use current main-img src
+  if (!galleryImages || galleryImages.length === 0) {
+    const mainImg = document.getElementById('main-img');
+    if (mainImg && mainImg.src) {
+      galleryImages = [mainImg.src];
+      activeImageIndex = 0;
+    } else {
+      return;
+    }
+  }
+
+  if (activeImageIndex < 0 || activeImageIndex >= galleryImages.length) {
+    activeImageIndex = 0;
+  }
+
   isLightboxOpen = true;
-  document.getElementById('lightbox-overlay').classList.add('open');
+  lightboxOpenTimestamp = Date.now();
+
+  const overlay = document.getElementById('lightbox-overlay');
+  if (overlay) {
+    overlay.classList.add('open');
+    overlay.setAttribute('aria-hidden', 'false');
+  }
   document.body.style.overflow = 'hidden';
   updateLightbox();
 }
 window.openLightbox = openLightbox;
 
 function closeLightbox(e) {
-  if (e && e.target && e.target.closest('.lightbox-img-wrap')) return;
+  // Prevent immediate accidental close within 250ms of opening
+  if (Date.now() - lightboxOpenTimestamp < 250) {
+    return;
+  }
+
+  if (e) {
+    // If click is inside image or navigation controls, do not close
+    if (e.target && (e.target.closest('.lightbox-img-wrap') || e.target.closest('.lightbox-nav-btn') || e.target.closest('.lightbox-counter'))) {
+      return;
+    }
+  }
+
   isLightboxOpen = false;
-  document.getElementById('lightbox-overlay').classList.remove('open');
+  const overlay = document.getElementById('lightbox-overlay');
+  if (overlay) {
+    overlay.classList.remove('open');
+    overlay.setAttribute('aria-hidden', 'true');
+  }
   document.body.style.overflow = '';
 }
 window.closeLightbox = closeLightbox;
@@ -732,11 +846,20 @@ function updateLightbox() {
   const lbPrev = document.getElementById('lightbox-prev-btn');
   const lbNext = document.getElementById('lightbox-next-btn');
 
-  const currentUrl = galleryImages[activeImageIndex];
+  if (!galleryImages || galleryImages.length === 0) {
+    const mainImg = document.getElementById('main-img');
+    if (mainImg && mainImg.src) galleryImages = [mainImg.src];
+  }
+
+  const currentUrl = (galleryImages && galleryImages[activeImageIndex])
+    ? galleryImages[activeImageIndex]
+    : (document.getElementById('main-img')?.src || '');
+
   if (currentUrl && lbImg) {
     lbImg.src = currentUrl;
   }
-  if (galleryImages.length > 1) {
+
+  if (galleryImages && galleryImages.length > 1) {
     if (lbCounter) lbCounter.textContent = `${activeImageIndex + 1} / ${galleryImages.length}`;
     if (lbPrev) lbPrev.style.display = 'flex';
     if (lbNext) lbNext.style.display = 'flex';
@@ -864,5 +987,17 @@ function renderRelatedMods(mod) {
   }).join('');
 }
 </script>
+
+<!-- ── Image Lightbox / Fullscreen Modal ────────────────────── -->
+<div class="lightbox-overlay" id="lightbox-overlay" role="dialog" aria-modal="true" aria-label="Expanded mod screenshot">
+  <button type="button" class="lightbox-close-btn" id="lightbox-close-btn" aria-label="Close expanded view" title="Close (Esc)">✕</button>
+  <button type="button" class="lightbox-nav-btn lightbox-nav-btn--prev" id="lightbox-prev-btn" aria-label="Previous screenshot" title="Previous (←)">◀</button>
+  <button type="button" class="lightbox-nav-btn lightbox-nav-btn--next" id="lightbox-next-btn" aria-label="Next screenshot" title="Next (→)">▶</button>
+  <div class="lightbox-img-wrap" id="lightbox-img-wrap">
+    <img id="lightbox-img" src="" alt="Expanded mod preview" class="lightbox-img" />
+  </div>
+  <div class="lightbox-counter" id="lightbox-counter">1 / 1</div>
+</div>
+
 </body>
 </html>
