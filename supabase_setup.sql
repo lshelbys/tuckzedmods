@@ -14,9 +14,13 @@ CREATE TABLE IF NOT EXISTS public.mods (
   category TEXT NOT NULL,     -- 'Cars', 'Tracks', 'Maps', 'Physics'
   download_url TEXT DEFAULT '',
   cover_image TEXT DEFAULT '',
+  images JSONB DEFAULT '[]'::jsonb,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   created_by TEXT DEFAULT 'admin'
 );
+
+-- If the table already exists, ensure the `images` column is added:
+ALTER TABLE public.mods ADD COLUMN IF NOT EXISTS images JSONB DEFAULT '[]'::jsonb;
 
 -- 2. Enable Row Level Security (RLS)
 ALTER TABLE public.mods ENABLE ROW LEVEL SECURITY;

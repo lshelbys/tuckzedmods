@@ -41,6 +41,15 @@ const Store = {
 
   /** Map database row (snake_case) to client mod object (camelCase) */
   rowToMod(row) {
+    let images = [];
+    if (Array.isArray(row.images)) {
+      images = row.images;
+    } else if (typeof row.images === 'string') {
+      try { images = JSON.parse(row.images); } catch (_) {}
+    }
+    if (images.length === 0 && row.cover_image) {
+      images = [row.cover_image];
+    }
     return {
       id: row.id,
       title: row.title,
@@ -49,15 +58,20 @@ const Store = {
       game: row.game,
       category: row.category,
       downloadUrl: row.download_url || '',
-      coverImage: row.cover_image || '',
+      coverImage: row.cover_image || (images[0] || ''),
+      images: images,
       createdAt: row.created_at ? row.created_at.slice(0, 10) : today(),
       createdBy: row.created_by || 'admin'
     };
   },
 
   /** Map client mod object to database row */
-  modToRow(mod) {
-    return {
+  modToRow(mod, includeImages = true) {
+    const images = Array.isArray(mod.images) && mod.images.length > 0
+      ? mod.images
+      : (mod.coverImage ? [mod.coverImage] : []);
+
+    const row = {
       id: mod.id,
       title: mod.title,
       description: mod.description || '',
@@ -65,10 +79,14 @@ const Store = {
       game: mod.game,
       category: mod.category,
       download_url: mod.downloadUrl || '',
-      cover_image: mod.coverImage || '',
+      cover_image: mod.coverImage || (images[0] || ''),
       created_at: mod.createdAt ? new Date(mod.createdAt).toISOString() : new Date().toISOString(),
       created_by: mod.createdBy || 'admin'
     };
+    if (includeImages) {
+      row.images = images;
+    }
+    return row;
   },
 
   /** Load mods synchronously from localStorage cache */
@@ -92,6 +110,32 @@ const Store = {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(mods));
     } catch (_) {}
+  },
+
+  /** Extract bucket path from full public URL */
+  extractStorageFilename(url) {
+    if (!url || typeof url !== 'string') return null;
+    const match = url.match(/\/mod-covers\/([^?#]+)/);
+    return match ? decodeURIComponent(match[1]) : null;
+  },
+
+  /** Delete image files from Supabase Storage */
+  async deleteStorageFiles(fileUrls) {
+    const sb = this.getSb();
+    if (!sb || !fileUrls || !fileUrls.length) return;
+
+    const files = fileUrls
+      .map(u => this.extractStorageFilename(u))
+      .filter(Boolean);
+
+    if (files.length > 0) {
+      try {
+        const { error } = await sb.storage.from('mod-covers').remove(files);
+        if (error) console.warn('Supabase storage remove error:', error);
+      } catch (err) {
+        console.warn('Supabase storage remove exception:', err);
+      }
+    }
   },
 
   /** Fetch fresh mods from Supabase, updates local cache, and returns mods */
@@ -129,9 +173,16 @@ const Store = {
     const sb = this.getSb();
     if (sb) {
       try {
-        const row = this.modToRow(mod);
+        const row = this.modToRow(mod, true);
         const { error } = await sb.from('mods').insert([row]);
-        if (error) console.error('Supabase insert error:', error);
+        if (error) {
+          if (error.code === '42703' || error.code === 'PGRST204' || (error.message && error.message.includes('images'))) {
+            const fallbackRow = this.modToRow(mod, false);
+            await sb.from('mods').insert([fallbackRow]);
+          } else {
+            console.error('Supabase insert error:', error);
+          }
+        }
       } catch (err) {
         console.error('Supabase add exception:', err);
       }
@@ -144,15 +195,32 @@ const Store = {
     const mods = this.getAll();
     const idx = mods.findIndex(m => m.id === id);
     if (idx === -1) return null;
+
+    const oldMod = mods[idx];
     mods[idx] = { ...mods[idx], ...data };
     this.save(mods);
+
+    // Delete any removed images from Supabase Storage so no orphaned files remain
+    const oldImages = [oldMod.coverImage, ...(oldMod.images || [])].filter(Boolean);
+    const newImages = new Set([mods[idx].coverImage, ...(mods[idx].images || [])].filter(Boolean));
+    const removedImages = oldImages.filter(img => !newImages.has(img));
+    if (removedImages.length > 0) {
+      this.deleteStorageFiles(removedImages);
+    }
 
     const sb = this.getSb();
     if (sb) {
       try {
-        const row = this.modToRow(mods[idx]);
+        const row = this.modToRow(mods[idx], true);
         const { error } = await sb.from('mods').update(row).eq('id', id);
-        if (error) console.error('Supabase update error:', error);
+        if (error) {
+          if (error.code === '42703' || error.code === 'PGRST204' || (error.message && error.message.includes('images'))) {
+            const fallbackRow = this.modToRow(mods[idx], false);
+            await sb.from('mods').update(fallbackRow).eq('id', id);
+          } else {
+            console.error('Supabase update error:', error);
+          }
+        }
       } catch (err) {
         console.error('Supabase update exception:', err);
       }
@@ -160,11 +228,20 @@ const Store = {
     return mods[idx];
   },
 
-  /** Delete a mod (persists to Supabase and cache) */
+  /** Delete a mod (persists to Supabase and cache, and cleans all images from Storage) */
   async delete(id) {
+    const mod = this.getById(id);
+    if (mod) {
+      // 1. Delete all images belonging to this mod from Supabase Storage
+      const imagesToDelete = [mod.coverImage, ...(mod.images || [])].filter(Boolean);
+      await this.deleteStorageFiles(imagesToDelete);
+    }
+
+    // 2. Remove from local cache
     const mods = this.getAll().filter(m => m.id !== id);
     this.save(mods);
 
+    // 3. Delete from database
     const sb = this.getSb();
     if (sb) {
       try {
@@ -176,14 +253,14 @@ const Store = {
     }
   },
 
-  /** Upload cover image file to Supabase Storage */
-  async uploadCover(file) {
+  /** Upload image file to Supabase Storage (max 10MB) */
+  async uploadImage(file) {
     const sb = this.getSb();
     if (!sb) throw new Error('Supabase is not configured.');
-    
-    // Create unique filename
-    const ext = file.name.split('.').pop();
-    const filename = 'cover-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7) + '.' + ext;
+
+    const ext = (file.name.split('.').pop() || 'png').toLowerCase();
+    const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_').slice(0, 30);
+    const filename = 'img-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7) + '-' + safeName;
 
     const { data, error } = await sb.storage.from('mod-covers').upload(filename, file, {
       cacheControl: '3600',
@@ -193,6 +270,11 @@ const Store = {
 
     const { data: pubData } = sb.storage.from('mod-covers').getPublicUrl(filename);
     return pubData.publicUrl;
+  },
+
+  /** Alias for backwards compatibility */
+  async uploadCover(file) {
+    return this.uploadImage(file);
   },
 
   /** Count mods per game */

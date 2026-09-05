@@ -13,7 +13,7 @@
       window.history.replaceState(null, '', clean + window.location.search + window.location.hash);
     }
   </script>
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=5" />
   <style>
     .nav__user-label {
       font-size: .8rem;
@@ -197,9 +197,8 @@
               id="f-desc"
               rows="4"
               placeholder="Describe what this mod adds, changes, or improves…"
-              maxlength="600"
               aria-required="true"
-              style="resize:vertical"
+              oninput="autoExpandDesc(this)"
             ></textarea>
             <span class="form-error" id="err-desc" role="alert">Please enter a description.</span>
           </div>
@@ -220,39 +219,47 @@
           </div>
 
           <div class="form-field form-field--full" id="field-img">
-            <label class="form-label" for="f-img">
-              Cover Image <span>(Upload file or enter URL)</span>
+            <label class="form-label" for="f-img-files">
+              Mod Images <span id="img-count-badge" style="font-weight:700;color:var(--gray-600);">(0 / 10 max)</span>
             </label>
-            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px;">
-              <input type="file" id="f-img-file" accept="image/*" style="display:none;" />
-              <button type="button" class="btn btn--sm" id="btn-pick-img" onclick="document.getElementById('f-img-file').click()">
-                📁 Upload Image File
+            <p style="font-size:.85rem;color:var(--gray-600);margin-bottom:10px;">
+              Upload up to 10 images from your computer or enter an image URL. Reorder images and choose which one is the cover.
+            </p>
+
+            <!-- Upload / Add controls -->
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">
+              <input type="file" id="f-img-files" accept="image/*" multiple style="display:none;" />
+              <button type="button" class="btn btn--secondary btn--sm" id="btn-pick-imgs" onclick="document.getElementById('f-img-files').click()">
+                📁 Upload Images from Computer
               </button>
-              <span id="img-upload-status" style="font-size:.85rem;color:var(--gray-600);font-weight:700;"></span>
+              <div style="display:flex;gap:6px;flex:1;min-width:260px;">
+                <input
+                  type="url"
+                  class="input"
+                  id="f-img-url-input"
+                  placeholder="Or paste image URL (https://...)"
+                  style="padding:6px 12px;font-size:.85rem;"
+                  onkeydown="if(event.key==='Enter'){event.preventDefault();addImageFromUrl();}"
+                />
+                <button type="button" class="btn btn--ghost btn--sm" onclick="addImageFromUrl()">
+                  ➕ Add URL
+                </button>
+              </div>
             </div>
-            <input
-              type="url"
-              class="input"
-              id="f-img"
-              placeholder="https://example.com/cover.jpg or uploaded image URL"
-              autocomplete="off"
-            />
-            <span class="form-error" id="err-img" role="alert">If provided, the cover image URL must start with http:// or https://.</span>
+
+            <!-- Upload progress & status message -->
+            <div id="img-upload-status" style="font-size:.85rem;font-weight:700;margin-bottom:8px;display:none;"></div>
+
+            <!-- Gallery Grid -->
+            <div class="image-gallery-grid" id="img-gallery-grid">
+              <!-- Rendered by JS -->
+            </div>
+            <div id="img-gallery-empty" style="padding:20px;border:2px dashed var(--gray-300);border-radius:var(--radius-sm);text-align:center;color:var(--gray-500);font-size:.85rem;">
+              📷 No images added yet. Upload up to 10 images to showcase your mod.
+            </div>
           </div>
 
         </div><!-- /.form-grid -->
-
-        <!-- Preview -->
-        <div id="img-preview-wrap" style="margin-bottom:20px;display:none;">
-          <p class="form-label" style="margin-bottom:8px;">Cover Preview</p>
-          <img
-            id="img-preview"
-            src=""
-            alt="Cover preview"
-            style="max-width:320px;border:2px solid var(--black);border-radius:var(--radius-sm);object-fit:cover;aspect-ratio:16/9;"
-            onerror="document.getElementById('img-preview-wrap').style.display='none'"
-          />
-        </div>
 
         <div class="form-actions">
           <button type="submit" class="btn btn--primary" id="form-submit-btn">
@@ -350,7 +357,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js?v=2"></script>
-<script src="store.js?v=4"></script>
+<script src="store.js?v=5"></script>
 <script src="firebase-config.js?v=2"></script>
 <script src="auth-nav.js"></script>
 <script>
@@ -418,7 +425,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderOverview();
   initModForm();
   initManageSearch();
-  initImgPreview();
+  initModGallery();
 
   // Modal close on overlay click
   document.getElementById('delete-modal').addEventListener('click', e => {
@@ -541,43 +548,187 @@ function initManageSearch() {
   });
 }
 
-// ── Form ───────────────────────────────────────────────────
-function initModForm() {
-  document.getElementById('mod-form').addEventListener('submit', handleFormSubmit);
+// ── Description Auto-expansion ──────────────────────────────
+function autoExpandDesc(el) {
+  if (!el) return;
+  el.style.height = 'auto';
+  el.style.height = Math.max(el.scrollHeight, 120) + 'px';
+}
 
-  // Live cover upload handler (uploads file to Supabase Storage bucket)
-  const fileInput = document.getElementById('f-img-file');
+// ── Multi-Image Gallery State & Functions ──────────────────
+let currentImages = []; // Array of image URLs
+let coverImage = '';    // Designated cover image URL
+
+function renderImageGallery() {
+  const grid = document.getElementById('img-gallery-grid');
+  const empty = document.getElementById('img-gallery-empty');
+  const countBadge = document.getElementById('img-count-badge');
+  const pickBtn = document.getElementById('btn-pick-imgs');
+
+  if (countBadge) {
+    countBadge.textContent = `(${currentImages.length} / 10 max)`;
+  }
+  if (pickBtn) {
+    pickBtn.disabled = currentImages.length >= 10;
+  }
+
+  // Ensure coverImage points to a valid image in currentImages
+  if (currentImages.length > 0 && (!coverImage || !currentImages.includes(coverImage))) {
+    coverImage = currentImages[0];
+  } else if (currentImages.length === 0) {
+    coverImage = '';
+  }
+
+  if (currentImages.length === 0) {
+    grid.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+
+  empty.style.display = 'none';
+  grid.innerHTML = currentImages.map((url, idx) => {
+    const isCover = (url === coverImage);
+    return `
+      <div class="image-card ${isCover ? 'is-cover' : ''}" id="img-card-${idx}">
+        <div class="image-card__thumb-wrap">
+          <img src="${escapeHtml(url)}" alt="Mod image ${idx + 1}" class="image-card__thumb" onerror="this.src='https://placehold.co/600x400?text=Broken+Image'" />
+          ${isCover ? '<span class="image-card__badge">★ COVER</span>' : ''}
+          <span class="image-card__order">#${idx + 1}</span>
+        </div>
+        <div class="image-card__controls">
+          <button type="button" class="btn btn--sm" title="Move Left" onclick="moveImage(${idx}, -1)" ${idx === 0 ? 'disabled' : ''}>◀</button>
+          <button type="button" class="btn btn--sm" title="Move Right" onclick="moveImage(${idx}, 1)" ${idx === currentImages.length - 1 ? 'disabled' : ''}>▶</button>
+          <button type="button" class="btn btn--sm btn--danger" title="Remove image" onclick="removeImage(${idx})">🗑</button>
+        </div>
+        <button type="button" class="image-card__cover-btn" onclick="setAsCover(${idx})">
+          ${isCover ? '✓ Main Cover' : 'Set as Cover'}
+        </button>
+      </div>
+    `;
+  }).join('');
+}
+
+function setAsCover(idx) {
+  if (currentImages[idx]) {
+    coverImage = currentImages[idx];
+    renderImageGallery();
+  }
+}
+
+function moveImage(idx, delta) {
+  const newIdx = idx + delta;
+  if (newIdx < 0 || newIdx >= currentImages.length) return;
+  const temp = currentImages[idx];
+  currentImages[idx] = currentImages[newIdx];
+  currentImages[newIdx] = temp;
+  renderImageGallery();
+}
+
+function removeImage(idx) {
+  const removedUrl = currentImages[idx];
+  currentImages.splice(idx, 1);
+  if (coverImage === removedUrl) {
+    coverImage = currentImages[0] || '';
+  }
+  renderImageGallery();
+}
+
+function addImageFromUrl() {
+  const input = document.getElementById('f-img-url-input');
+  const url = input.value.trim();
+  if (!url) return;
+  if (!isValidUrl(url)) {
+    showToast('⚠️ Please enter a valid URL starting with http:// or https://');
+    return;
+  }
+  if (currentImages.length >= 10) {
+    showToast('⚠️ Maximum 10 images allowed per mod.');
+    return;
+  }
+  currentImages.push(url);
+  if (!coverImage) coverImage = url;
+  input.value = '';
+  renderImageGallery();
+}
+
+function initModGallery() {
+  // Multi-file upload to Supabase Storage
+  const fileInput = document.getElementById('f-img-files');
   const statusEl = document.getElementById('img-upload-status');
   if (fileInput) {
     fileInput.addEventListener('change', async function (e) {
-      const file = e.target.files[0];
-      if (!file) return;
+      const files = Array.from(e.target.files || []);
+      if (!files.length) return;
 
-      statusEl.textContent = '⏳ Uploading to Supabase...';
-      try {
-        const publicUrl = await Store.uploadCover(file);
-        document.getElementById('f-img').value = publicUrl;
-        document.getElementById('img-preview').src = publicUrl;
-        document.getElementById('img-preview-wrap').style.display = '';
-        statusEl.textContent = '✅ Image uploaded!';
-        setTimeout(() => { statusEl.textContent = ''; }, 3500);
-      } catch (err) {
-        console.error('Image upload failed:', err);
-        statusEl.textContent = '❌ Upload failed: ' + (err.message || 'Error');
+      const remainingSlots = 10 - currentImages.length;
+      if (remainingSlots <= 0) {
+        showToast('⚠️ Maximum 10 images allowed per mod.');
+        fileInput.value = '';
+        return;
       }
+
+      const toUpload = files.slice(0, remainingSlots);
+      if (files.length > remainingSlots) {
+        showToast(`⚠️ Uploading ${remainingSlots} images to stay within the 10-image limit.`);
+      }
+
+      statusEl.style.display = 'block';
+      statusEl.style.color = 'var(--black)';
+      let successCount = 0;
+
+      for (let i = 0; i < toUpload.length; i++) {
+        const file = toUpload[i];
+        statusEl.textContent = `⏳ Uploading ${i + 1} of ${toUpload.length} (${file.name})...`;
+        try {
+          const publicUrl = await Store.uploadImage(file);
+          currentImages.push(publicUrl);
+          if (!coverImage) coverImage = publicUrl;
+          successCount++;
+          renderImageGallery();
+        } catch (err) {
+          console.error('Image upload failed:', err);
+          showToast(`❌ Failed to upload "${file.name}": ${err.message || 'Error'}`);
+        }
+      }
+
+      statusEl.textContent = `✅ Successfully uploaded ${successCount} image(s)!`;
+      setTimeout(() => {
+        statusEl.style.display = 'none';
+        statusEl.textContent = '';
+      }, 4000);
+      fileInput.value = '';
     });
   }
+
+  // Also hook up auto-expansion for description
+  const descEl = document.getElementById('f-desc');
+  if (descEl) {
+    descEl.addEventListener('input', () => autoExpandDesc(descEl));
+  }
+
+  renderImageGallery();
+}
+
+// ── Form ───────────────────────────────────────────────────
+function initModForm() {
+  document.getElementById('mod-form').addEventListener('submit', handleFormSubmit);
 }
 
 function resetForm() {
   const form = document.getElementById('mod-form');
   form.reset();
+  currentImages = [];
+  coverImage = '';
+  renderImageGallery();
+
+  const descEl = document.getElementById('f-desc');
+  if (descEl) descEl.style.height = 'auto';
+
   document.getElementById('edit-id').value = '';
   document.getElementById('form-panel-title').textContent = 'New Mod';
   document.getElementById('form-panel-sub').textContent = 'Fill in the details below to publish a new mod.';
   document.getElementById('form-submit-btn').textContent = 'Publish Mod';
   document.getElementById('form-cancel-btn').style.display = 'none';
-  document.getElementById('img-preview-wrap').style.display = 'none';
 
   // Clear field errors
   ['title','version','game','category','desc','dl','img'].forEach(clearFieldError);
@@ -593,19 +744,28 @@ function openEdit(id) {
   document.getElementById('f-version').value  = mod.version;
   document.getElementById('f-game').value     = mod.game;
   document.getElementById('f-category').value = mod.category;
-  document.getElementById('f-desc').value     = mod.description;
-  document.getElementById('f-dl').value       = mod.downloadUrl;
-  document.getElementById('f-img').value      = mod.coverImage || '';
+  
+  const descEl = document.getElementById('f-desc');
+  descEl.value = mod.description || '';
+  autoExpandDesc(descEl);
+
+  document.getElementById('f-dl').value = mod.downloadUrl;
+
+  // Load images
+  if (Array.isArray(mod.images) && mod.images.length > 0) {
+    currentImages = [...mod.images];
+  } else if (mod.coverImage) {
+    currentImages = [mod.coverImage];
+  } else {
+    currentImages = [];
+  }
+  coverImage = mod.coverImage || (currentImages[0] || '');
+  renderImageGallery();
 
   document.getElementById('form-panel-title').textContent = 'Edit Mod';
   document.getElementById('form-panel-sub').textContent   = 'Update the details below and save changes.';
   document.getElementById('form-submit-btn').textContent  = 'Save Changes';
   document.getElementById('form-cancel-btn').style.display = '';
-
-  if (mod.coverImage) {
-    document.getElementById('img-preview').src = mod.coverImage;
-    document.getElementById('img-preview-wrap').style.display = '';
-  }
 
   ['title','version','game','category','desc','dl','img'].forEach(clearFieldError);
   hideFormMsg();
@@ -622,6 +782,8 @@ async function handleFormSubmit(e) {
   if (!validateForm()) return;
 
   const editId = document.getElementById('edit-id').value;
+  const chosenCover = coverImage || (currentImages[0] || '');
+
   const data = {
     title:       document.getElementById('f-title').value.trim(),
     version:     document.getElementById('f-version').value.trim(),
@@ -629,7 +791,8 @@ async function handleFormSubmit(e) {
     category:    document.getElementById('f-category').value,
     description: document.getElementById('f-desc').value.trim(),
     downloadUrl: document.getElementById('f-dl').value.trim(),
-    coverImage:  document.getElementById('f-img').value.trim(),
+    coverImage:  chosenCover,
+    images:      currentImages,
   };
 
   const submitBtn = document.getElementById('form-submit-btn');
@@ -641,13 +804,7 @@ async function handleFormSubmit(e) {
     await Store.update(editId, data);
     showToast('✅ Mod updated successfully in Supabase!');
     showFormMsg('Mod updated!');
-    document.getElementById('edit-id').value = '';
-    document.getElementById('form-panel-title').textContent = 'New Mod';
-    document.getElementById('form-panel-sub').textContent = 'Fill in the details below to publish a new mod.';
-    document.getElementById('form-submit-btn').textContent = 'Publish Mod';
-    document.getElementById('form-cancel-btn').style.display = 'none';
-    document.getElementById('mod-form').reset();
-    document.getElementById('img-preview-wrap').style.display = 'none';
+    resetForm();
   } else {
     // Create new
     const newMod = {
@@ -658,8 +815,7 @@ async function handleFormSubmit(e) {
     await Store.add(newMod);
     showToast('🚀 Mod published live to Supabase!');
     showFormMsg('Mod published!');
-    document.getElementById('mod-form').reset();
-    document.getElementById('img-preview-wrap').style.display = 'none';
+    resetForm();
   }
 
   submitBtn.disabled = false;
@@ -692,8 +848,10 @@ function validateForm() {
   const dl = document.getElementById('f-dl').value.trim();
   if (!dl || !isValidUrl(dl)) { setFieldError('dl'); valid = false; } else clearFieldError('dl');
 
-  const img = document.getElementById('f-img').value.trim();
-  if (img && !isValidUrl(img)) { setFieldError('img'); valid = false; } else clearFieldError('img');
+  if (currentImages.length > 10) {
+    showToast('⚠️ Maximum 10 images allowed per mod.');
+    valid = false;
+  }
 
   return valid;
 }
@@ -715,25 +873,6 @@ function showFormMsg(text) {
 }
 function hideFormMsg() {
   document.getElementById('form-msg').classList.remove('show');
-}
-
-// ── Cover Image Preview ────────────────────────────────────
-function initImgPreview() {
-  let timer;
-  document.getElementById('f-img').addEventListener('input', e => {
-    clearTimeout(timer);
-    timer = setTimeout(() => {
-      const url = e.target.value.trim();
-      const wrap = document.getElementById('img-preview-wrap');
-      const img  = document.getElementById('img-preview');
-      if (url && isValidUrl(url)) {
-        img.src = url;
-        wrap.style.display = '';
-      } else {
-        wrap.style.display = 'none';
-      }
-    }, 500);
-  });
 }
 
 // ── Delete Modal ───────────────────────────────────────────

@@ -12,7 +12,7 @@
       window.history.replaceState(null, '', clean + window.location.search + window.location.hash);
     }
   </script>
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=5" />
   <style>
     .nav__user-label {
       font-size: .8rem;
@@ -140,7 +140,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js?v=2"></script>
-<script src="store.js?v=4"></script>
+<script src="store.js?v=5"></script>
 <script src="firebase-config.js?v=2"></script>
 <script src="auth-nav.js"></script>
 <script>
@@ -304,6 +304,9 @@ function renderMods() {
     const imgHtml = mod.coverImage
       ? `<img src="${escapeHtml(mod.coverImage)}" alt="${escapeHtml(mod.title)} cover" class="mod-card__img" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'mod-card__img-placeholder\\'>${icon}</div>'" />`
       : `<div class="mod-card__img-placeholder" aria-label="${escapeHtml(mod.category)} mod">${icon}</div>`;
+    const imgBadge = (Array.isArray(mod.images) && mod.images.length > 1)
+      ? `<span style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,0.78);color:#fff;font-size:0.7rem;font-weight:700;padding:2px 7px;border-radius:4px;z-index:2;letter-spacing:0.02em;">📷 ${mod.images.length}</span>`
+      : '';
 
     return `
       <article
@@ -313,7 +316,7 @@ function renderMods() {
         style="animation-delay:${Math.min(i * 40, 400)}ms"
         aria-label="${escapeHtml(mod.title)} — ${escapeHtml(mod.category)} mod for ${escapeHtml(game?.name || mod.game)}"
       >
-        <div class="mod-card__img-wrap">${imgHtml}</div>
+        <div class="mod-card__img-wrap">${imgHtml}${imgBadge}</div>
         <div class="mod-card__body">
           <div class="mod-card__tags">
             <span class="badge badge--filled">${escapeHtml(game?.name || mod.game)}</span>
