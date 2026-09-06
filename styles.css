@@ -666,7 +666,7 @@ textarea.input {
 .table-wrap {
   border: 2px solid var(--black);
   border-radius: var(--radius-md);
-  overflow: hidden;
+  overflow-x: auto;
 }
 .table {
   width: 100%;
@@ -761,6 +761,7 @@ textarea.input {
 
 /* ── Responsive ─────────────────────────────────────────────── */
 @media (max-width: 768px) {
+  .container { padding: 0 16px; }
   .admin-layout { flex-direction: column; }
   .admin-sidebar {
     width: 100%; height: auto;
@@ -771,8 +772,9 @@ textarea.input {
   }
   .admin-sidebar__section { display: flex; gap: 8px; flex-wrap: wrap; }
   .admin-sidebar__label { display: none; }
-  .admin-nav-item { width: auto; }
-  .admin-main { padding: 24px 20px; }
+  .admin-nav-item { width: auto; background: var(--gray-50); border: 2px solid var(--gray-200); padding: 8px 14px; border-radius: 999px; }
+  .admin-nav-item.active { background: var(--black); border-color: var(--black); color: var(--white); }
+  .admin-main { padding: 24px 16px; }
   .nav__links { gap: 0; }
   .nav__link { padding: 8px 10px; font-size: .8rem; }
   .nav__logo { font-size: 1.1rem; }
@@ -784,7 +786,16 @@ textarea.input {
   .toolbar { flex-direction: column; }
   .toolbar__search-wrap { width: 100%; }
   .mod-grid { grid-template-columns: 1fr; }
-  .stat-grid { grid-template-columns: 1fr 1fr; }
+  .stat-grid { grid-template-columns: 1fr; }
+  .game-grid { grid-template-columns: 1fr; }
+  
+  .mod-detail__desc-card, .mod-detail__info-card, .mod-detail__social-card {
+    padding: 20px 16px;
+  }
+  .lightbox-nav-btn { width: 44px; height: 44px; font-size: 1.2rem; }
+  .lightbox-nav-btn--prev { left: 12px; }
+  .lightbox-nav-btn--next { right: 12px; }
+  .lightbox-close-btn { top: 12px; right: 12px; width: 40px; height: 40px; font-size: 1.2rem; }
 }
 
 /* ── Mod Detail Page ────────────────────────────────────────── */
