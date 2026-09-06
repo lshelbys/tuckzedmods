@@ -830,7 +830,11 @@ textarea.input {
 }
 @media (max-width: 960px) {
   .mod-detail-grid {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column-reverse;
+  }
+  .mod-detail__sidebar {
+    width: 100%;
   }
 }
 .mod-detail__main-img-wrap {
