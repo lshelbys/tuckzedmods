@@ -24,6 +24,13 @@
     }
     #nav-user-pill { display: flex; align-items: center; gap: 8px; }
   </style>
+  <!-- Open Graph Meta Tags -->
+  <meta property="og:title" content="tuckzed mods — Game Mod Distribution Platform" />
+  <meta property="og:description" content="Download the best mods for Assetto Corsa and BeamNG.drive. Cars, tracks, maps, and physics overhauls curated by the tuckzed mods community." />
+  <meta property="og:image" content="https://lshelbys.github.io/tuckzedmods/images/PREVIEW.png" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <script>if(localStorage.getItem('theme')==='dark') document.documentElement.setAttribute('data-theme', 'dark');</script>
 </head>
 <body>
 
@@ -108,6 +115,12 @@
         <button class="filter-btn" id="filter-maps"    onclick="setCategory('Maps')">🗺️ Maps</button>
         <button class="filter-btn" id="filter-physics" onclick="setCategory('Physics')">⚙️ Physics</button>
       </div>
+      <div class="filter-group" style="margin-left:auto;">
+        <select class="input" id="sort-select" style="padding:8px 12px; font-weight:700; width:auto; height:100%; border-radius:999px;" onchange="setSort(this.value)">
+          <option value="newest">Sort by: Newest</option>
+          <option value="popular">Sort by: Most Popular</option>
+        </select>
+      </div>
     </div>
 
     <!-- Mod Grid -->
@@ -151,6 +164,7 @@ const state = {
   activeGame:     null,   // 'ac' | 'beamng' | null
   activeCategory: 'all',
   searchQuery:    '',
+  sort:           'newest',
 };
 
 // ── Init ───────────────────────────────────────────────────
@@ -262,6 +276,20 @@ function setCategory(cat) {
   renderMods();
 }
 
+function setSort(val) {
+  state.sort = val;
+  renderMods();
+}
+
+function handleDownload(e, id, url) {
+  e.preventDefault();
+  e.stopPropagation();
+  window.TZ.Store.incrementDownloads(id);
+  window.open(url, '_blank');
+  // Re-render to show updated count after a short delay
+  setTimeout(renderMods, 1500);
+}
+
 // ── Helpers ────────────────────────────────────────────────
 function truncateWords(text, limit = 40) {
   if (!text) return '';
@@ -298,6 +326,13 @@ function renderMods() {
       m.title.toLowerCase().includes(state.searchQuery) ||
       m.description.toLowerCase().includes(state.searchQuery)
     );
+  }
+
+  // Sort
+  if (state.sort === 'popular') {
+    mods.sort((a, b) => (b.downloads || 0) - (a.downloads || 0));
+  } else {
+    // Newest is default from store (already sorted by created_at)
   }
 
   countEl.textContent = `${mods.length} ${mods.length === 1 ? 'mod' : 'mods'}`;
@@ -344,19 +379,19 @@ function renderMods() {
           <div class="mod-card__meta">
             <span class="mod-card__version">v${escapeHtml(mod.version)}</span>
             <span>${escapeHtml(mod.createdAt)}</span>
+            <span style="margin-left:auto; font-weight:700; color:var(--gray-600);">⬇ ${mod.downloads || 0}</span>
           </div>
         </div>
         <div class="mod-card__footer">
-          <a
-            href="${escapeHtml(mod.downloadUrl)}"
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            type="button"
+            onclick="handleDownload(event, '${mod.id}', '${escapeHtml(mod.downloadUrl)}')"
             class="btn btn--primary mod-card__dl-btn"
             id="dl-btn-${mod.id}"
             aria-label="Download ${escapeHtml(mod.title)}"
           >
             ⬇ Download
-          </a>
+          </button>
         </div>
       </article>`;
   }).join('');

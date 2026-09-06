@@ -58,6 +58,7 @@ const Store = {
       game: row.game,
       category: row.category,
       downloadUrl: row.download_url || '',
+      downloads: row.downloads || 0,
       coverImage: row.cover_image || (images[0] || ''),
       images: images,
       createdAt: row.created_at ? row.created_at.slice(0, 10) : today(),
@@ -79,6 +80,7 @@ const Store = {
       game: mod.game,
       category: mod.category,
       download_url: mod.downloadUrl || '',
+      downloads: mod.downloads || 0,
       cover_image: mod.coverImage || (images[0] || ''),
       created_at: mod.createdAt ? new Date(mod.createdAt).toISOString() : new Date().toISOString(),
       created_by: mod.createdBy || 'admin'
@@ -284,6 +286,46 @@ const Store = {
       return acc;
     }, {});
   },
+
+  /** Increment downloads counter */
+  async incrementDownloads(id) {
+    const sb = this.getSb();
+    if (!sb) return;
+    try {
+      const mod = this.getById(id);
+      if (mod) {
+        const newDls = (mod.downloads || 0) + 1;
+        await sb.from('mods').update({ downloads: newDls }).eq('id', id);
+        mod.downloads = newDls;
+        this.save(this.getAll());
+      }
+    } catch(e) { console.error('Increment downloads error:', e); }
+  },
+
+  /** Add a comment */
+  async addComment(modId, username, text) {
+    const sb = this.getSb();
+    if (!sb) return null;
+    const user = window.TZ_AUTH ? window.TZ_AUTH.getUser() : null;
+    const userEmail = user ? user.email : 'anonymous';
+    const { data, error } = await sb.from('mod_comments').insert([{
+      mod_id: modId,
+      user_email: userEmail,
+      username: username,
+      comment: text
+    }]).select().single();
+    if (error) { console.error('Add comment error:', error); return null; }
+    return data;
+  },
+
+  /** Get comments for a mod */
+  async getComments(modId) {
+    const sb = this.getSb();
+    if (!sb) return [];
+    const { data, error } = await sb.from('mod_comments').select('*').eq('mod_id', modId).order('created_at', { ascending: true });
+    if (error) { console.error('Get comments error:', error); return []; }
+    return data || [];
+  }
 };
 
 // ── Utilities ────────────────────────────────────────────────

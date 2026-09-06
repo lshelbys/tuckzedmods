@@ -25,6 +25,13 @@
     }
     #nav-user-pill { display: flex; align-items: center; gap: 8px; }
   </style>
+  <!-- Open Graph Meta Tags -->
+  <meta property="og:title" content="tuckzed mods — Game Mod Distribution Platform" />
+  <meta property="og:description" content="Download the best mods for Assetto Corsa and BeamNG.drive. Cars, tracks, maps, and physics overhauls curated by the tuckzed mods community." />
+  <meta property="og:image" content="https://lshelbys.github.io/tuckzedmods/images/PREVIEW.png" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <script>if(localStorage.getItem('theme')==='dark') document.documentElement.setAttribute('data-theme', 'dark');</script>
 </head>
 <body>
 
@@ -685,22 +692,49 @@ function initModGallery() {
         showToast(`⚠️ Only adding ${remainingSlots} image(s) to stay within the 10-image limit.`);
       }
 
-      toAdd.forEach(file => {
-        const previewUrl = URL.createObjectURL(file);
-        const item = {
-          id: 'img_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
-          preview: previewUrl,
-          file: file,
-          url: null
-        };
-        currentImages.push(item);
-        if (!coverId) coverId = item.id;
-      });
+      async function compressImage(file) {
+        return new Promise((resolve) => {
+          const img = new Image();
+          const objUrl = URL.createObjectURL(file);
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let { width, height } = img;
+            const MAX_WIDTH = 1920;
+            if (width > MAX_WIDTH) {
+              height = Math.round((height * MAX_WIDTH) / width);
+              width = MAX_WIDTH;
+            }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            canvas.toBlob(blob => {
+              URL.revokeObjectURL(objUrl);
+              const compressedFile = new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' });
+              resolve(compressedFile);
+            }, 'image/jpeg', 0.82);
+          };
+          img.src = objUrl;
+        });
+      }
 
-      fileInput.value = '';
-      renderImageGallery();
-      showToast(`📷 Added ${toAdd.length} image(s). They will be saved to Supabase when you publish.`);
-    });
+      Promise.all(toAdd.map(compressImage)).then(compressedFiles => {
+        compressedFiles.forEach(file => {
+          const previewUrl = URL.createObjectURL(file);
+          const item = {
+            id: 'img_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+            preview: previewUrl,
+            file: file,
+            url: null
+          };
+          currentImages.push(item);
+          if (!coverId) coverId = item.id;
+        });
+
+        fileInput.value = '';
+        renderImageGallery();
+        showToast(`📷 Added and compressed ${compressedFiles.length} image(s).`);
+      });
   }
 
   // Also hook up auto-expansion for description

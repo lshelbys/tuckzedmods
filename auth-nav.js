@@ -151,9 +151,41 @@
     }
   }
 
+  // ── Inject Dark Mode Toggle ───────────────────────────────
+  function initThemeToggle() {
+    const navLinks = document.querySelector('.nav__links');
+    if (!navLinks) return;
+    const li = document.createElement('li');
+    const btn = document.createElement('button');
+    btn.className = 'btn btn--sm';
+    btn.style.cssText = 'padding:4px 8px; font-size:1.2rem; background:transparent; border:none; box-shadow:none; cursor:pointer; margin-left: 8px;';
+    
+    function updateIcon() {
+      btn.textContent = document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙';
+    }
+    updateIcon();
+    
+    btn.onclick = () => {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      if (isDark) {
+        document.documentElement.removeAttribute('data-theme');
+        localStorage.setItem('theme', 'light');
+      } else {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        localStorage.setItem('theme', 'dark');
+      }
+      updateIcon();
+    };
+    
+    li.appendChild(btn);
+    navLinks.appendChild(li);
+  }
+  
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', attachListener);
+    document.addEventListener('DOMContentLoaded', () => { attachListener(); initThemeToggle(); });
   } else {
     attachListener();
+    initThemeToggle();
   }
+
 })();
