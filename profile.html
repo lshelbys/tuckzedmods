@@ -13,7 +13,7 @@
       window.history.replaceState(null, '', clean + window.location.search + window.location.hash);
     }
   </script>
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=7" />
   <style>
     .profile-page {
       flex: 1;
@@ -303,7 +303,9 @@
 <!-- ── Firebase SDKs ────────────────────────────────────────── -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="store.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js?v=2"></script>
+<script src="store.js?v=7"></script>
 <script src="firebase-config.js?v=2"></script>
 <script src="auth-nav.js"></script>
 

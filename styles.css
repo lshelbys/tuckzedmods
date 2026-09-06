@@ -12,8 +12,11 @@
   --gray-50:    #F4F4F4;
   --gray-100:   #E5E5E5;
   --gray-200:   #CCCCCC;
+  --gray-300:   #B0B0B0;
   --gray-400:   #888888;
   --gray-600:   #555555;
+  --gray-700:   #3A3A3A;
+  --gray-800:   #222222;
   --gray-900:   #111111;
 
   --font:       'Comic Relief', cursive, system-ui, sans-serif;
