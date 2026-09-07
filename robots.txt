@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /admin.html
+Disallow: /auth
+Disallow: /auth.html
+Disallow: /login
+Disallow: /login.html
+Disallow: /profile
+Disallow: /profile.html
+
+Sitemap: https://tuckzed.com/sitemap.xml
