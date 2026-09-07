@@ -40,6 +40,10 @@ window.TZ_AUTH.onChange(user => {
     renderOverview();
     if (currentPanel === 'manage') renderManageTable();
     if (currentPanel === 'reports') renderReportsTable();
+    if (currentPanel === 'submissions') renderSubmissions();
+    if (currentPanel === 'collections') renderCollections();
+    if (currentPanel === 'trash') renderTrash();
+    refreshSubmissionsBadge();
   });
   if (currentPanel !== 'reports') refreshReportsBadge();
 });
@@ -85,6 +89,9 @@ function showPanel(name) {
   if (name === 'reports')   renderReportsTable();
   if (name === 'comments')  renderCommentsInbox();
   if (name === 'tags')      renderTagManager();
+  if (name === 'submissions') renderSubmissions();
+  if (name === 'collections') renderCollections();
+  if (name === 'trash')     renderTrash();
 
   // Keep the main column scrolled to the top when switching panels on mobile
   if (window.innerWidth <= 768) window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -98,18 +105,20 @@ function startNewMod() {
 }
 
 // ── On load ────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('DOMContentLoaded', () => {
   renderOverview();
   initModForm();
   initManageSearch();
   initModGallery();
+  initImportMods();
 
   // Restore the last open panel from the URL hash (e.g. admin#manage)
   // or deep-link into an edit form via ?edit=<id>
   const editId = new URLSearchParams(window.location.search).get('edit');
   const hashPanel = (window.location.hash || '').replace('#', '');
+  const hashAllow = ['overview', 'manage', 'reports', 'comments', 'tags', 'health', 'submissions', 'collections', 'trash'];
   if (editId) openEdit(editId);
-  else if (['overview', 'manage', 'reports', 'comments', 'tags', 'health'].includes(hashPanel)) showPanel(hashPanel);
+  else if (hashAllow.includes(hashPanel)) showPanel(hashPanel);
   else if (hashPanel === 'create') startNewMod();
 
   document.getElementById('delete-modal').addEventListener('click', e => {
@@ -224,8 +233,30 @@ function renderOverviewCharts(mods) {
   host.innerHTML = [
     renderBarChart('By category', top(byCategory)),
     renderBarChart('By game', top(byGame)),
-    renderBarChart('Top tags', top(byTag, 8))
+    renderBarChart('Top tags', top(byTag, 8)),
+    renderBarChart('Created (last 7 days)', growthEntries(mods, 7)),
+    renderBarChart('Created (last 30 days)', growthEntries(mods, 30))
   ].join('');
+}
+
+/** Daily create counts for the last `days` days (oldest → newest). */
+function growthEntries(mods, days) {
+  const buckets = {};
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    buckets[d.toISOString().slice(0, 10)] = 0;
+  }
+  mods.forEach(m => {
+    const iso = String(m.createdAtIso || m.createdAt || '').slice(0, 10);
+    if (iso && Object.prototype.hasOwnProperty.call(buckets, iso)) buckets[iso] += 1;
+  });
+  return Object.entries(buckets).map(([iso, count]) => {
+    const [, mo, da] = iso.split('-');
+    return { label: `${mo}/${da}`, count };
+  });
 }
 
 function renderDuplicateWarnings(mods) {
@@ -731,6 +762,8 @@ function serializeForm() {
     game: document.getElementById('f-game').value,
     category: document.getElementById('f-category').value,
     tags: document.getElementById('f-tags').value,
+    compatibility: (document.getElementById('f-compatibility') || {}).value || '',
+    changelog: (document.getElementById('f-changelog') || {}).value || '',
     desc: document.getElementById('f-desc').value,
     dl: document.getElementById('f-dl').value,
     featured: !!(document.getElementById('f-featured') && document.getElementById('f-featured').checked),
@@ -788,6 +821,10 @@ function openEdit(id) {
   document.getElementById('f-dl').value = mod.downloadUrl || '';
   const featuredEl = document.getElementById('f-featured');
   if (featuredEl) featuredEl.checked = !!mod.featured;
+  const compatEl = document.getElementById('f-compatibility');
+  if (compatEl) compatEl.value = mod.compatibility || '';
+  const changelogEl = document.getElementById('f-changelog');
+  if (changelogEl) changelogEl.value = formatChangelogForInput(mod.changelog);
 
   const existingUrls = (Array.isArray(mod.images) && mod.images.length > 0)
     ? mod.images
@@ -869,6 +906,8 @@ async function handleFormSubmit(e) {
     description: document.getElementById('f-desc').value.trim(),
     downloadUrl: document.getElementById('f-dl').value.trim(),
     featured:    !!(document.getElementById('f-featured') && document.getElementById('f-featured').checked),
+    compatibility: ((document.getElementById('f-compatibility') || {}).value || '').trim(),
+    changelog:   parseChangelogInput((document.getElementById('f-changelog') || {}).value || ''),
     coverImage:  finalCoverUrl,
     images:      finalImageUrls,
   };
@@ -947,7 +986,7 @@ function openDeleteModal(id) {
   const title = mod && mod.title ? mod.title : 'this mod';
   pendingDeleteId = id;
   document.getElementById('modal-sub').textContent =
-    `"${title}" will be permanently removed along with its images. This cannot be undone.`;
+    `"${title}" will be moved to trash. You can restore it later from the Trash panel.`;
   document.getElementById('delete-modal').classList.add('open');
   document.getElementById('modal-confirm-btn').focus();
 }
@@ -968,12 +1007,13 @@ async function confirmDelete() {
 
   try {
     await Store.delete(idToDelete);
-    showToast('🗑 Mod deleted.');
+    showToast('🗑 Mod moved to trash.');
   } catch (err) {
     showToast('❌ Failed to delete mod: ' + formatSbError(err));
   }
   renderOverview();
   if (currentPanel === 'manage') renderManageTable();
+  if (currentPanel === 'trash') renderTrash();
 }
 
 function updateDescPreview() {
@@ -1008,6 +1048,10 @@ window.cloneMod = function (id) {
   document.getElementById('f-tags').value = mod.tags || '';
   document.getElementById('f-desc').value = mod.description || '';
   document.getElementById('f-dl').value = mod.downloadUrl || '';
+  const compatEl = document.getElementById('f-compatibility');
+  if (compatEl) compatEl.value = mod.compatibility || '';
+  const changelogEl = document.getElementById('f-changelog');
+  if (changelogEl) changelogEl.value = formatChangelogForInput(mod.changelog);
   autoExpandDesc(document.getElementById('f-desc'));
   updateDescPreview();
   // Keep image URLs (shared assets) so a version bump is quick
@@ -1035,6 +1079,20 @@ window.downloadSitemap = function () {
   a.remove();
   URL.revokeObjectURL(url);
   showToast('📄 Sitemap downloaded — replace the file in the repo if needed.');
+};
+
+window.downloadRss = function () {
+  const xml = Store.buildRssXml('https://tuckzed.com');
+  const blob = new Blob([xml], { type: 'application/rss+xml' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'feed.xml';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  showToast('📡 RSS feed downloaded.');
 };
 
 // ── Selection / bulk actions ───────────────────────────────
@@ -1109,9 +1167,9 @@ window.bulkAppendTag = async function () {
 
 window.bulkDeleteSelected = async function () {
   if (!manageSelected.size) return;
-  const ok = await window.TZ.confirmDialog('Permanently delete ' + manageSelected.size + ' selected mod(s)?', {
+  const ok = await window.TZ.confirmDialog('Move ' + manageSelected.size + ' selected mod(s) to trash?', {
     title: 'Bulk delete?',
-    confirmText: 'Delete all',
+    confirmText: 'Move to trash',
     danger: true
   });
   if (!ok) return;
@@ -1119,7 +1177,7 @@ window.bulkDeleteSelected = async function () {
   for (const id of ids) {
     try { await Store.delete(id); } catch (_) {}
   }
-  showToast('🗑 Deleted ' + ids.length + ' mod(s).');
+  showToast('🗑 Moved ' + ids.length + ' mod(s) to trash.');
   clearManageSelection();
   renderManageTable();
   renderOverview();
@@ -1355,3 +1413,409 @@ function renderHealthResults(host, title, issues, isLink) {
         </tr>`).join('')}
     </tbody></table></div>`;
 }
+
+// ── Changelog helpers ──────────────────────────────────────
+function formatChangelogForInput(changelog) {
+  if (!Array.isArray(changelog) || !changelog.length) return '';
+  return changelog.map(entry => {
+    if (!entry || typeof entry !== 'object') return String(entry || '');
+    const ver = entry.version || '';
+    const notes = entry.notes || '';
+    const date = entry.date ? ` | ${entry.date}` : '';
+    return `${ver} | ${notes}${date}`.replace(/\s+\|\s+$/, '').trim();
+  }).join('\n');
+}
+
+/** Parse textarea: JSON array, or "version | notes" / "version | notes | date" lines. */
+function parseChangelogInput(raw) {
+  const text = String(raw || '').trim();
+  if (!text) return [];
+  if (text.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(text);
+      if (Array.isArray(parsed)) {
+        return parsed.map(e => {
+          if (typeof e === 'string') return { version: '', notes: e };
+          return {
+            version: String((e && e.version) || ''),
+            notes: String((e && e.notes) || ''),
+            ...(e && e.date ? { date: String(e.date) } : {})
+          };
+        }).filter(e => e.version || e.notes);
+      }
+    } catch (_) { /* fall through to line parse */ }
+  }
+  return text.split(/\r?\n/).map(line => line.trim()).filter(Boolean).map(line => {
+    const parts = line.split('|').map(p => p.trim());
+    if (parts.length >= 3) return { version: parts[0], notes: parts[1], date: parts[2] };
+    if (parts.length === 2) return { version: parts[0], notes: parts[1] };
+    return { version: '', notes: parts[0] };
+  }).filter(e => e.version || e.notes);
+}
+
+// ── Import CSV / JSON ──────────────────────────────────────
+function initImportMods() {
+  const input = document.getElementById('import-mods-file');
+  if (!input || input._bound) return;
+  input._bound = true;
+  input.addEventListener('change', async () => {
+    const file = input.files && input.files[0];
+    input.value = '';
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const rows = parseImportPayload(text, file.name);
+      if (!rows.length) {
+        showToast('⚠️ No rows found in that file.');
+        return;
+      }
+      const result = await Store.importMods(rows);
+      showToast(`⬆ Import done — added ${result.added}, skipped ${result.skipped}.`);
+      if (result.errors && result.errors.length) {
+        console.warn('Import errors:', result.errors);
+      }
+      await Store.fetchFromRemote();
+      renderOverview();
+      if (currentPanel === 'manage') renderManageTable();
+    } catch (err) {
+      showToast('❌ Import failed: ' + formatSbError(err));
+    }
+  });
+}
+
+window.triggerImportMods = function () {
+  const input = document.getElementById('import-mods-file');
+  if (input) input.click();
+};
+
+function parseImportPayload(text, filename) {
+  const trimmed = String(text || '').trim();
+  if (!trimmed) return [];
+  const looksJson = filename.toLowerCase().endsWith('.json') || trimmed.startsWith('[') || trimmed.startsWith('{');
+  if (looksJson) {
+    const data = JSON.parse(trimmed);
+    if (Array.isArray(data)) return data;
+    if (data && Array.isArray(data.mods)) return data.mods;
+    if (data && typeof data === 'object') return [data];
+    return [];
+  }
+  return parseCsvRows(trimmed);
+}
+
+function parseCsvRows(text) {
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length < 2) return [];
+  const headers = splitCsvLine(lines[0]).map(h => h.trim());
+  return lines.slice(1).map(line => {
+    const cols = splitCsvLine(line);
+    const row = {};
+    headers.forEach((h, i) => { row[h] = cols[i] != null ? cols[i] : ''; });
+    return row;
+  });
+}
+
+function splitCsvLine(line) {
+  const out = [];
+  let cur = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQuotes) {
+      if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++; }
+      else if (ch === '"') inQuotes = false;
+      else cur += ch;
+    } else if (ch === '"') inQuotes = true;
+    else if (ch === ',') { out.push(cur); cur = ''; }
+    else cur += ch;
+  }
+  out.push(cur);
+  return out;
+}
+
+// ── Submissions ────────────────────────────────────────────
+let submissionsFilter = 'pending';
+
+window.setSubmissionsFilter = function (val, btn) {
+  submissionsFilter = val;
+  if (btn && btn.parentElement) {
+    btn.parentElement.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+  renderSubmissions();
+};
+
+async function refreshSubmissionsBadge() {
+  const badge = document.getElementById('submissions-pending-badge');
+  if (!badge) return;
+  const pending = await Store.listSubmissions('pending');
+  badge.textContent = pending.length;
+  badge.style.display = pending.length > 0 ? '' : 'none';
+}
+
+async function renderSubmissions() {
+  const tbody = document.getElementById('submissions-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="6" class="table__empty">Loading submissions…</td></tr>';
+  const rows = await Store.listSubmissions(submissionsFilter);
+  refreshSubmissionsBadge();
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="6" class="table__empty">${submissionsFilter === 'pending' ? 'No pending submissions.' : 'No submissions found.'}</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(s => {
+    const status = s.status || 'pending';
+    const statusBadge = status === 'approved'
+      ? '<span class="badge badge--filled badge--success">Approved</span>'
+      : status === 'rejected'
+        ? '<span class="badge badge--gray">Rejected</span>'
+        : '<span class="badge badge--filled">Pending</span>';
+    const actions = status === 'pending'
+      ? `<button type="button" class="btn btn--sm" onclick="approveSubmission('${escapeHtml(s.id)}')">Approve</button>
+         <button type="button" class="btn btn--sm btn--danger" onclick="rejectSubmission('${escapeHtml(s.id)}')">Reject</button>`
+      : '';
+    return `
+      <tr>
+        <td class="table__nowrap"><time datetime="${escapeHtml(s.created_at || '')}">${escapeHtml(window.TZ.timeAgo(s.created_at))}</time></td>
+        <td class="table__truncate" title="${escapeHtml(s.title || '')}">
+          <strong>${escapeHtml(s.title || 'Untitled')}</strong>
+          <div class="form-hint">${escapeHtml(String(s.description || '').slice(0, 100))}</div>
+        </td>
+        <td><span class="badge badge--filled">${escapeHtml(GAMES[s.game]?.name || s.game || '—')}</span>
+          <div class="form-hint">${escapeHtml(s.category || '')}</div></td>
+        <td class="table__truncate" title="${escapeHtml(s.submitted_by || '')}">${escapeHtml(s.submitter_name || s.submitted_by || '—')}</td>
+        <td>${statusBadge}</td>
+        <td class="table__nowrap">${actions}</td>
+      </tr>`;
+  }).join('');
+}
+
+window.approveSubmission = async function (id) {
+  const rows = await Store.listSubmissions('all');
+  const s = rows.find(r => String(r.id) === String(id));
+  if (!s) { showToast('Submission not found.'); return; }
+  const ok = await window.TZ.confirmDialog('Publish this submission as a new mod?', {
+    title: 'Approve submission?',
+    confirmText: 'Approve & publish'
+  });
+  if (!ok) return;
+  try {
+    const now = new Date();
+    const newMod = {
+      id: generateId(),
+      title: s.title,
+      description: s.description || '',
+      version: s.version || '1.0.0',
+      game: s.game,
+      category: s.category,
+      tags: s.tags || '',
+      downloadUrl: s.download_url || '',
+      coverImage: s.cover_image || '',
+      images: s.cover_image ? [s.cover_image] : [],
+      compatibility: s.compatibility || '',
+      changelog: [],
+      featured: false,
+      downloads: 0,
+      likes: 0,
+      createdAt: now.toISOString().slice(0, 10),
+      createdAtIso: now.toISOString(),
+      createdBy: s.submitted_by || 'submission'
+    };
+    await Store.add(newMod);
+    await Store.updateSubmissionStatus(id, 'approved');
+    showToast('✅ Submission approved and published.');
+    renderSubmissions();
+    renderOverview();
+  } catch (err) {
+    showToast('❌ Could not approve: ' + formatSbError(err));
+  }
+};
+
+window.rejectSubmission = async function (id) {
+  const notes = await window.TZ.promptDialog('Optional note for the submitter:', {
+    title: 'Reject submission?',
+    placeholder: 'Reason…',
+    confirmText: 'Reject'
+  });
+  if (notes === null) return;
+  const success = await Store.updateSubmissionStatus(id, 'rejected', notes || '');
+  showToast(success ? 'Submission rejected.' : 'Could not reject submission.');
+  renderSubmissions();
+};
+
+// ── Collections ────────────────────────────────────────────
+async function renderCollections() {
+  const tbody = document.getElementById('collections-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="4" class="table__empty">Loading…</td></tr>';
+  const cols = await Store.listCollections();
+  if (!cols.length) {
+    tbody.innerHTML = '<tr><td colspan="4" class="table__empty">No collections yet. Create one above.</td></tr>';
+    return;
+  }
+  const rows = await Promise.all(cols.map(async c => {
+    const full = await Store.getCollection(c.id);
+    const modCount = full && full.mods ? full.mods.length : 0;
+    return { ...c, modCount };
+  }));
+  tbody.innerHTML = rows.map(c => `
+    <tr>
+      <td class="table__truncate" title="${escapeHtml(c.title || '')}"><strong>${escapeHtml(c.title || 'Untitled')}</strong>
+        <div class="form-hint">${escapeHtml(String(c.description || '').slice(0, 80))}</div></td>
+      <td>${c.modCount}</td>
+      <td class="table__nowrap"><time datetime="${escapeHtml(c.updated_at || c.created_at || '')}">${escapeHtml(window.TZ.formatDate(c.updated_at || c.created_at))}</time></td>
+      <td class="table__nowrap">
+        <button type="button" class="btn btn--sm" onclick="editCollection('${escapeHtml(c.id)}')">Edit</button>
+        <button type="button" class="btn btn--sm btn--danger" onclick="deleteCollectionAdmin('${escapeHtml(c.id)}')">Delete</button>
+      </td>
+    </tr>`).join('');
+}
+
+window.startNewCollection = function () {
+  document.getElementById('collection-edit-id').value = '';
+  document.getElementById('collection-title').value = '';
+  document.getElementById('collection-desc').value = '';
+  document.getElementById('collection-cover').value = '';
+  document.getElementById('collection-mod-ids').value = '';
+  document.getElementById('collection-editor').style.display = '';
+  renderCollectionModPicker([]);
+  document.getElementById('collection-title').focus();
+};
+
+window.cancelCollectionEdit = function () {
+  document.getElementById('collection-editor').style.display = 'none';
+};
+
+window.editCollection = async function (id) {
+  const full = await Store.getCollection(id);
+  if (!full) { showToast('Collection not found.'); return; }
+  document.getElementById('collection-edit-id').value = full.id;
+  document.getElementById('collection-title').value = full.title || '';
+  document.getElementById('collection-desc').value = full.description || '';
+  document.getElementById('collection-cover').value = full.cover_image || full.coverImage || '';
+  const ids = (full.mods || []).map(m => m.id);
+  document.getElementById('collection-mod-ids').value = ids.join(', ');
+  document.getElementById('collection-editor').style.display = '';
+  renderCollectionModPicker(ids);
+};
+
+function renderCollectionModPicker(selectedIds) {
+  const host = document.getElementById('collection-mod-picker');
+  if (!host) return;
+  const selected = new Set((selectedIds || []).map(String));
+  const mods = Store.sortNewest(Store.getAll());
+  if (!mods.length) {
+    host.innerHTML = '<p class="form-hint">No mods available.</p>';
+    return;
+  }
+  host.innerHTML = mods.slice(0, 80).map(m => `
+    <label class="collection-mod-picker__item">
+      <input type="checkbox" value="${escapeHtml(m.id)}" ${selected.has(String(m.id)) ? 'checked' : ''} onchange="syncCollectionModIdsFromPicker()" />
+      <span>${escapeHtml(m.title)}</span>
+    </label>`).join('');
+  const idsInput = document.getElementById('collection-mod-ids');
+  if (idsInput && !idsInput._bound) {
+    idsInput._bound = true;
+    idsInput.addEventListener('change', () => {
+      const ids = idsInput.value.split(',').map(s => s.trim()).filter(Boolean);
+      renderCollectionModPicker(ids);
+    });
+  }
+}
+
+window.syncCollectionModIdsFromPicker = function () {
+  const host = document.getElementById('collection-mod-picker');
+  const idsInput = document.getElementById('collection-mod-ids');
+  if (!host || !idsInput) return;
+  const checked = [...host.querySelectorAll('input[type="checkbox"]:checked')].map(el => el.value);
+  idsInput.value = checked.join(', ');
+};
+
+window.saveCollectionForm = async function () {
+  const title = document.getElementById('collection-title').value.trim();
+  if (!title) { showToast('Please enter a collection title.'); return; }
+  // Prefer explicit ID field; fall back to checked boxes if the field is empty
+  let modIds = document.getElementById('collection-mod-ids').value
+    .split(',').map(s => s.trim()).filter(Boolean);
+  if (!modIds.length) {
+    syncCollectionModIdsFromPicker();
+    modIds = document.getElementById('collection-mod-ids').value
+      .split(',').map(s => s.trim()).filter(Boolean);
+  }
+  let id = document.getElementById('collection-edit-id').value.trim();
+  if (!id) id = generateId();
+  const col = {
+    id,
+    title,
+    description: document.getElementById('collection-desc').value.trim(),
+    cover_image: document.getElementById('collection-cover').value.trim(),
+    created_by: 'admin'
+  };
+  const ok = await Store.saveCollection(col, modIds);
+  if (!ok) { showToast('❌ Could not save collection.'); return; }
+  showToast('✅ Collection saved.');
+  cancelCollectionEdit();
+  renderCollections();
+};
+
+window.deleteCollectionAdmin = async function (id) {
+  const ok = await window.TZ.confirmDialog('Delete this collection permanently?', {
+    title: 'Delete collection?',
+    confirmText: 'Delete',
+    danger: true
+  });
+  if (!ok) return;
+  const success = await Store.deleteCollection(id);
+  showToast(success ? 'Collection deleted.' : 'Could not delete collection.');
+  renderCollections();
+};
+
+// ── Trash ──────────────────────────────────────────────────
+async function renderTrash() {
+  const tbody = document.getElementById('trash-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="4" class="table__empty">Loading trash…</td></tr>';
+  const trash = await Store.fetchTrash();
+  if (!trash.length) {
+    tbody.innerHTML = '<tr><td colspan="4" class="table__empty">Trash is empty.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = trash.map(mod => `
+    <tr id="trash-row-${escapeHtml(mod.id)}">
+      <td class="table__truncate" title="${escapeHtml(mod.title)}">${escapeHtml(mod.title)}</td>
+      <td><span class="badge badge--filled">${escapeHtml(GAMES[mod.game]?.name || mod.game)}</span></td>
+      <td class="table__nowrap"><time datetime="${escapeHtml(mod.deletedAt || '')}">${escapeHtml(window.TZ.timeAgo(mod.deletedAt))}</time></td>
+      <td class="table__nowrap">
+        <button type="button" class="btn btn--sm" onclick="restoreTrashedMod('${escapeHtml(mod.id)}')">Restore</button>
+        <button type="button" class="btn btn--sm btn--danger" onclick="hardDeleteTrashedMod('${escapeHtml(mod.id)}')">Permanently Delete</button>
+      </td>
+    </tr>`).join('');
+}
+
+window.restoreTrashedMod = async function (id) {
+  try {
+    await Store.restoreMod(id);
+    showToast('♻️ Mod restored.');
+    renderTrash();
+    renderOverview();
+  } catch (err) {
+    showToast('❌ Restore failed: ' + formatSbError(err));
+  }
+};
+
+window.hardDeleteTrashedMod = async function (id) {
+  const mod = (await Store.fetchTrash()).find(m => m.id === id);
+  const title = mod && mod.title ? mod.title : 'this mod';
+  const ok = await window.TZ.confirmDialog(`"${title}" and its images will be permanently removed. This cannot be undone.`, {
+    title: 'Permanently delete?',
+    confirmText: 'Delete forever',
+    danger: true
+  });
+  if (!ok) return;
+  try {
+    await Store.hardDelete(id);
+    showToast('🗑 Permanently deleted.');
+    renderTrash();
+  } catch (err) {
+    showToast('❌ Delete failed: ' + formatSbError(err));
+  }
+};

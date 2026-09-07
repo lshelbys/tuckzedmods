@@ -13,7 +13,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Comic+Relief:wght@400;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=15" />
+  <link rel="stylesheet" href="styles.css?v=16" />
 </head>
 <body>
 <a class="skip-link" href="#main-content">Skip to content</a>
@@ -64,6 +64,10 @@
         <span class="admin-nav-item__icon" aria-hidden="true">📦</span>
         Manage Mods
       </button>
+      <button type="button" class="admin-nav-item" id="nav-collections" onclick="showPanel('collections')">
+        <span class="admin-nav-item__icon" aria-hidden="true">📚</span>
+        Collections
+      </button>
     </div>
     <div class="admin-sidebar__section">
       <div class="admin-sidebar__label">Community</div>
@@ -76,6 +80,11 @@
         <span class="admin-nav-item__icon" aria-hidden="true">💬</span>
         Comments
       </button>
+      <button type="button" class="admin-nav-item" id="nav-submissions" onclick="showPanel('submissions')">
+        <span class="admin-nav-item__icon" aria-hidden="true">📥</span>
+        Submissions
+        <span class="admin-nav-item__count" id="submissions-pending-badge" style="display:none;" aria-label="pending submissions"></span>
+      </button>
     </div>
     <div class="admin-sidebar__section">
       <div class="admin-sidebar__label">Tools</div>
@@ -86,6 +95,10 @@
       <button type="button" class="admin-nav-item" id="nav-health" onclick="showPanel('health')">
         <span class="admin-nav-item__icon" aria-hidden="true">🩺</span>
         Health Checks
+      </button>
+      <button type="button" class="admin-nav-item" id="nav-trash" onclick="showPanel('trash')">
+        <span class="admin-nav-item__icon" aria-hidden="true">🗑️</span>
+        Trash
       </button>
     </div>
     <div class="admin-sidebar__section" style="margin-top:auto;padding-top:24px;">
@@ -114,7 +127,10 @@
           </div>
           <div class="admin-header__actions">
             <button type="button" class="btn btn--ghost btn--sm" onclick="exportModsCsv()">⬇ Export CSV</button>
+            <button type="button" class="btn btn--ghost btn--sm" onclick="triggerImportMods()">⬆ Import CSV/JSON</button>
+            <input type="file" id="import-mods-file" accept=".csv,.json,text/csv,application/json" style="display:none;" />
             <button type="button" class="btn btn--ghost btn--sm" onclick="downloadSitemap()">📄 Sitemap</button>
+            <button type="button" class="btn btn--ghost btn--sm" onclick="downloadRss()">📡 RSS Feed</button>
           </div>
         </div>
       </div>
@@ -219,6 +235,18 @@
           <div class="form-field form-field--full" id="field-tags">
             <label class="form-label" for="f-tags">Tags <span>(comma separated)</span></label>
             <input type="text" class="input" id="f-tags" placeholder="e.g. drift, f1, realistic" autocomplete="off" />
+          </div>
+
+          <div class="form-field form-field--full" id="field-compatibility">
+            <label class="form-label" for="f-compatibility">Compatibility</label>
+            <input type="text" class="input" id="f-compatibility" placeholder="e.g. AC 1.16+, CSP 0.1.79+, Pure" maxlength="200" autocomplete="off" />
+            <p class="form-hint">Game version, CSP, or other requirements users should know.</p>
+          </div>
+
+          <div class="form-field form-field--full" id="field-changelog">
+            <label class="form-label" for="f-changelog">Changelog</label>
+            <textarea class="input" id="f-changelog" rows="4" placeholder="One entry per line:&#10;1.1.0 | Fixed physics&#10;1.0.0 | Initial release&#10;Or paste a JSON array of {version, notes, date?}"></textarea>
+            <p class="form-hint">Use <code>version | notes</code> lines, or a JSON array.</p>
           </div>
 
           <div class="form-field form-field--full" id="field-desc">
@@ -423,17 +451,134 @@
       </div>
     </div>
 
+    <!-- ── Submissions ─────────────────────────────────────── -->
+    <div class="panel" id="panel-submissions">
+      <div class="admin-header">
+        <div class="admin-header__row">
+          <div>
+            <h1 class="admin-header__title">Submissions</h1>
+            <p class="admin-header__sub">Review community mod proposals.</p>
+          </div>
+        </div>
+      </div>
+      <div class="filter-tabs" role="group" aria-label="Filter submissions">
+        <button type="button" class="filter-btn active" onclick="setSubmissionsFilter('pending', this)">Pending</button>
+        <button type="button" class="filter-btn" onclick="setSubmissionsFilter('approved', this)">Approved</button>
+        <button type="button" class="filter-btn" onclick="setSubmissionsFilter('rejected', this)">Rejected</button>
+        <button type="button" class="filter-btn" onclick="setSubmissionsFilter('all', this)">All</button>
+      </div>
+      <div class="table-wrap">
+        <table class="table" id="submissions-table" aria-label="Mod submissions">
+          <thead>
+            <tr>
+              <th>When</th>
+              <th>Title</th>
+              <th>Game</th>
+              <th>Submitter</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="submissions-tbody">
+            <tr><td colspan="6" class="table__empty">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── Collections ─────────────────────────────────────── -->
+    <div class="panel" id="panel-collections">
+      <div class="admin-header">
+        <div class="admin-header__row">
+          <div>
+            <h1 class="admin-header__title">Collections</h1>
+            <p class="admin-header__sub">Curate grouped mod lists for the homepage.</p>
+          </div>
+          <button type="button" class="btn btn--primary btn--sm" onclick="startNewCollection()">➕ New Collection</button>
+        </div>
+      </div>
+
+      <div id="collection-editor" class="collection-editor" style="display:none;">
+        <input type="hidden" id="collection-edit-id" value="" />
+        <div class="form-grid">
+          <div class="form-field">
+            <label class="form-label" for="collection-title">Title <span>*</span></label>
+            <input type="text" class="input" id="collection-title" maxlength="120" autocomplete="off" />
+          </div>
+          <div class="form-field">
+            <label class="form-label" for="collection-cover">Cover image URL</label>
+            <input type="url" class="input" id="collection-cover" placeholder="https://…" autocomplete="off" />
+          </div>
+          <div class="form-field form-field--full">
+            <label class="form-label" for="collection-desc">Description</label>
+            <textarea class="input" id="collection-desc" rows="2"></textarea>
+          </div>
+          <div class="form-field form-field--full">
+            <label class="form-label" for="collection-mod-ids">Mod IDs <span>(comma separated, or tick below)</span></label>
+            <input type="text" class="input" id="collection-mod-ids" placeholder="id1, id2, …" autocomplete="off" />
+          </div>
+          <div class="form-field form-field--full">
+            <div class="form-label">Pick mods</div>
+            <div id="collection-mod-picker" class="collection-mod-picker"></div>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn--primary" onclick="saveCollectionForm()">Save Collection</button>
+          <button type="button" class="btn btn--ghost" onclick="cancelCollectionEdit()">Cancel</button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table class="table" aria-label="Collections">
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Mods</th>
+              <th>Updated</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="collections-tbody">
+            <tr><td colspan="4" class="table__empty">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── Trash ───────────────────────────────────────────── -->
+    <div class="panel" id="panel-trash">
+      <div class="admin-header">
+        <h1 class="admin-header__title">Trash</h1>
+        <p class="admin-header__sub">Soft-deleted mods. Restore them or permanently remove.</p>
+      </div>
+      <div class="table-wrap">
+        <table class="table" aria-label="Trashed mods">
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Game</th>
+              <th>Deleted</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="trash-tbody">
+            <tr><td colspan="4" class="table__empty">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
   </main>
 </div>
 
 <!-- ── Delete Confirm Modal ─────────────────────────────────── -->
 <div class="modal-overlay" id="delete-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
   <div class="modal">
-    <h2 class="modal__title" id="modal-title">Delete Mod?</h2>
-    <p class="modal__sub" id="modal-sub">This action cannot be undone. The mod will be permanently removed.</p>
+    <h2 class="modal__title" id="modal-title">Move to Trash?</h2>
+    <p class="modal__sub" id="modal-sub">This mod will be moved to trash. You can restore it later from the Trash panel.</p>
     <div class="modal__actions">
       <button type="button" class="btn btn--ghost" id="modal-cancel-btn" onclick="closeDeleteModal()">Cancel</button>
-      <button type="button" class="btn btn--danger btn--primary" id="modal-confirm-btn" onclick="confirmDelete()">Delete</button>
+      <button type="button" class="btn btn--danger btn--primary" id="modal-confirm-btn" onclick="confirmDelete()">Move to Trash</button>
     </div>
   </div>
 </div>
@@ -448,9 +593,9 @@
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
 <script src="supabase-config.js?v=2"></script>
-<script src="store.js?v=15"></script>
+<script src="store.js?v=16"></script>
 <script src="firebase-config.js?v=3"></script>
 <script src="auth-nav.js?v=15"></script>
-<script src="admin.js?v=15"></script>
+<script src="admin.js?v=16"></script>
 </body>
 </html>
