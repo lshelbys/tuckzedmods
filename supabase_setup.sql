@@ -104,7 +104,13 @@ CREATE TABLE IF NOT EXISTS public.reports (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Older installs may already have `reports` without these columns
+ALTER TABLE public.reports ADD COLUMN IF NOT EXISTS reported_by TEXT DEFAULT 'anonymous';
+ALTER TABLE public.reports ADD COLUMN IF NOT EXISTS reason TEXT DEFAULT '';
+ALTER TABLE public.reports ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending';
 ALTER TABLE public.reports ADD COLUMN IF NOT EXISTS context_id TEXT DEFAULT '';
+ALTER TABLE public.reports ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+UPDATE public.reports SET status = 'pending' WHERE status IS NULL;
 
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.mod_likes ENABLE ROW LEVEL SECURITY;
