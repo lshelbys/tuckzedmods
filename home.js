@@ -724,10 +724,7 @@ function renderEmptySuggestions() {
 }
 
 function applySavedView() {
-  try {
-    const saved = localStorage.getItem('tz_view');
-    if (saved === 'list' || saved === 'grid') state.view = saved;
-  } catch (_) {}
+  // Only honor an explicit ?view= list; default to grid so cards stay intact
   applyViewClass();
 }
 
@@ -762,10 +759,17 @@ function renderContinueBrowse() {
 }
 
 function railCard(mod) {
-  const { escapeHtml } = window.TZ;
+  const { escapeHtml, CATEGORY_ICONS } = window.TZ;
+  const icon = (CATEGORY_ICONS && CATEGORY_ICONS[mod.category]) || '📦';
+  const media = mod.coverImage
+    ? `<img src="${escapeHtml(mod.coverImage)}" alt="" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'home-rail__card-ph\\'>${icon}</div>'" />`
+    : `<div class="home-rail__card-ph" aria-hidden="true">${icon}</div>`;
   return `<a class="home-rail__card" href="mod.html?id=${encodeURIComponent(mod.id)}">
-    <span class="home-rail__card-title">${escapeHtml(mod.title)}</span>
-    <span class="home-rail__card-meta">${escapeHtml(mod.category)} · v${escapeHtml(mod.version)}</span>
+    <div class="home-rail__card-media">${media}</div>
+    <div class="home-rail__card-body">
+      <span class="home-rail__card-title">${escapeHtml(mod.title)}</span>
+      <span class="home-rail__card-meta">${escapeHtml(mod.category)} · v${escapeHtml(mod.version)}</span>
+    </div>
   </a>`;
 }
 
