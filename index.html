@@ -3,34 +3,26 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>tuckzed mods — Game Mod Distribution Platform</title>
+  <script src="head.js?v=1"></script>
+  <title>tuckzed mods — Assetto Corsa &amp; BeamNG.drive Mods</title>
   <meta name="description" content="Download the best mods for Assetto Corsa and BeamNG.drive. Cars, tracks, maps, and physics overhauls curated by the tuckzed mods community." />
-  <script>
-    if (window.location.pathname.endsWith('.html')) {
-      var clean = window.location.pathname.replace(/\.html$/, '');
-      if (clean.endsWith('/index')) clean = clean.slice(0, -6) || '/';
-      window.history.replaceState(null, '', clean + window.location.search + window.location.hash);
-    }
-  </script>
-  <link rel="stylesheet" href="styles.css?v=9" />
-  <style>
-    .nav__user-label {
-      font-size: .8rem;
-      font-weight: 700;
-      padding: 6px 12px;
-      border: 2px solid var(--black);
-      border-radius: var(--radius-sm);
-      white-space: nowrap;
-    }
-    #nav-user-pill { display: flex; align-items: center; gap: 8px; }
-  </style>
-  <!-- Open Graph Meta Tags -->
-  <meta property="og:title" content="tuckzed mods — Game Mod Distribution Platform" />
-  <meta property="og:description" content="Download the best mods for Assetto Corsa and BeamNG.drive. Cars, tracks, maps, and physics overhauls curated by the tuckzed mods community." />
-  <meta property="og:image" content="https://lshelbys.github.io/tuckzedmods/images/PREVIEW.png" />
+  <meta name="theme-color" content="#000000" />
+  <link rel="canonical" href="https://tuckzed.com/" />
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="stylesheet" href="styles.css?v=11" />
+
+  <!-- Open Graph / Twitter -->
   <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="tuckzed mods" />
+  <meta property="og:url" content="https://tuckzed.com/" />
+  <meta property="og:title" content="tuckzed mods — Assetto Corsa &amp; BeamNG.drive Mods" />
+  <meta property="og:description" content="Download the best mods for Assetto Corsa and BeamNG.drive. Cars, tracks, maps, and physics overhauls curated by the tuckzed mods community." />
+  <meta property="og:image" content="https://tuckzed.com/images/PREVIEW.png" />
   <meta name="twitter:card" content="summary_large_image" />
-  <script>if(localStorage.getItem('theme')==='dark') document.documentElement.setAttribute('data-theme', 'dark');</script>
+  <meta name="twitter:title" content="tuckzed mods — Assetto Corsa &amp; BeamNG.drive Mods" />
+  <meta name="twitter:description" content="Download the best mods for Assetto Corsa and BeamNG.drive." />
+  <meta name="twitter:image" content="https://tuckzed.com/images/PREVIEW.png" />
 </head>
 <body>
 
@@ -40,13 +32,13 @@
     <div class="nav__inner">
       <a href="./" class="nav__logo" id="nav-logo">tuckzed <span>mods</span></a>
       <ul class="nav__links" role="list">
-        <li><a href="https://discord.gg/5nE69arMNP" target="_blank" class="nav__link" style="color: #5865F2; font-weight: bold; display: flex; align-items: center; gap: 6px;"><svg width="18" height="18" viewBox="0 0 127.14 96.36" fill="currentColor"><path d="M107.7 8.07A105.15 105.15 0 0 0 81.47 0a72.06 72.06 0 0 0-3.36 6.83 97.68 97.68 0 0 0-29.08 0A72.37 72.37 0 0 0 45.67 0a105.46 105.46 0 0 0-26.23 8.07C2.92 32.82-3.13 57.06 1.74 80.89a105.9 105.9 0 0 0 32.18 16.15 77.7 77.7 0 0 0 6.89-11.23 68.42 68.42 0 0 1-10.85-5.18c.91-.66 1.8-1.34 2.66-2a75.57 75.57 0 0 0 64.32 0c.87.71 1.76 1.39 2.68 2a67.62 67.62 0 0 1-10.87 5.19 77 77 0 0 0 6.89 11.22 105.45 105.45 0 0 0 32.19-16.15c5.38-27.13-2.18-50.62-17.72-72.82zM42.49 65.3c-5.74 0-10.46-5.26-10.46-11.75s4.64-11.75 10.46-11.75c5.88 0 10.53 5.31 10.46 11.75 0 6.49-4.64 11.75-10.46 11.75zm42.16 0c-5.74 0-10.46-5.26-10.46-11.75s4.64-11.75 10.46-11.75c5.88 0 10.53 5.31 10.46 11.75 0 6.49-4.63 11.75-10.46 11.75z"/></svg> Discord</a></li>
-        <li><a href="#mods"   class="nav__link" id="nav-browse">Browse</a></li>
+        <li><a href="https://discord.gg/5nE69arMNP" target="_blank" rel="noopener noreferrer" class="nav__link nav__link--discord"><svg width="18" height="18" viewBox="0 0 127.14 96.36" fill="currentColor" aria-hidden="true"><path d="M107.7 8.07A105.15 105.15 0 0 0 81.47 0a72.06 72.06 0 0 0-3.36 6.83 97.68 97.68 0 0 0-29.08 0A72.37 72.37 0 0 0 45.67 0a105.46 105.46 0 0 0-26.23 8.07C2.92 32.82-3.13 57.06 1.74 80.89a105.9 105.9 0 0 0 32.18 16.15 77.7 77.7 0 0 0 6.89-11.23 68.42 68.42 0 0 1-10.85-5.18c.91-.66 1.8-1.34 2.66-2a75.57 75.57 0 0 0 64.32 0c.87.71 1.76 1.39 2.68 2a67.62 67.62 0 0 1-10.87 5.19 77 77 0 0 0 6.89 11.22 105.45 105.45 0 0 0 32.19-16.15c5.38-27.13-2.18-50.62-17.72-72.82zM42.49 65.3c-5.74 0-10.46-5.26-10.46-11.75s4.64-11.75 10.46-11.75c5.88 0 10.53 5.31 10.46 11.75 0 6.49-4.64 11.75-10.46 11.75zm42.16 0c-5.74 0-10.46-5.26-10.46-11.75s4.64-11.75 10.46-11.75c5.88 0 10.53 5.31 10.46 11.75 0 6.49-4.63 11.75-10.46 11.75z"/></svg> Discord</a></li>
+        <li><a href="#mods" class="nav__link" id="nav-browse">Browse</a></li>
         <li><a href="auth.html?redirect=upload" class="nav__link" id="nav-upload">Upload Mods</a></li>
-        <li><a href="auth.html"    class="nav__link" id="nav-signin">Sign In</a></li>
-        <li id="nav-user-pill" style="display:none;">
+        <li><a href="auth.html" class="nav__link" id="nav-signin">Sign In</a></li>
+        <li class="nav__user-pill" id="nav-user-pill" style="display:none;">
           <span class="nav__user-label" id="nav-user-label"></span>
-          <button class="btn btn--sm" id="nav-signout-btn">Sign Out</button>
+          <button type="button" class="btn btn--sm" id="nav-signout-btn">Sign Out</button>
         </li>
       </ul>
     </div>
@@ -63,7 +55,7 @@
       Cars, tracks, maps, and physics overhauls — all in one place.
     </p>
     <div class="hero__actions">
-      <button class="btn btn--primary" id="hero-browse-btn" onclick="document.getElementById('games').scrollIntoView({behavior:'smooth'})">
+      <button type="button" class="btn btn--primary" id="hero-browse-btn" onclick="document.getElementById('games').scrollIntoView({behavior:'smooth'})">
         Browse Mods
       </button>
       <a href="auth.html?redirect=upload" class="btn" id="hero-admin-btn">Upload Mods</a>
@@ -76,11 +68,11 @@
   <div class="container">
     <div class="section__header">
       <h2 class="section__title" id="games-title">Choose a Game</h2>
-      <button class="btn btn--ghost btn--sm" id="clear-game-btn" style="display:none;" onclick="clearGameFilter()">
+      <button type="button" class="btn btn--ghost btn--sm" id="clear-game-btn" style="display:none;" onclick="clearGameFilter()">
         ✕ Clear filter
       </button>
     </div>
-    <div class="game-grid" id="game-grid" role="list">
+    <div class="game-grid" id="game-grid" role="group" aria-label="Games">
       <!-- Rendered by JS -->
     </div>
   </div>
@@ -91,8 +83,8 @@
   <div class="container">
     <div class="section__header">
       <h2 class="section__title" id="mods-title">
-        All Mods
-        <span id="mods-count"></span>
+        <span id="mods-title-text">All Mods</span>
+        <span class="section__count" id="mods-count"></span>
       </h2>
     </div>
 
@@ -104,22 +96,24 @@
           type="search"
           class="input toolbar__search"
           id="search-input"
-          placeholder="Search mods by title or description…"
+          placeholder="Search mods by title, description or tag…"
           aria-label="Search mods"
           autocomplete="off"
         />
       </div>
       <div class="filter-group" role="group" aria-label="Category filters">
-        <button class="filter-btn active" id="filter-all" onclick="setCategory('all')">All</button>
-        <button class="filter-btn" id="filter-cars"    onclick="setCategory('Cars')">🚗 Cars</button>
-        <button class="filter-btn" id="filter-tracks"  onclick="setCategory('Tracks')">🏁 Tracks</button>
-        <button class="filter-btn" id="filter-maps"    onclick="setCategory('Maps')">🗺️ Maps</button>
-        <button class="filter-btn" id="filter-physics" onclick="setCategory('Physics')">⚙️ Physics</button>
+        <button type="button" class="filter-btn active" id="filter-all" aria-pressed="true" onclick="setCategory('all')">All</button>
+        <button type="button" class="filter-btn" id="filter-cars" aria-pressed="false" onclick="setCategory('Cars')">🚗 Cars</button>
+        <button type="button" class="filter-btn" id="filter-tracks" aria-pressed="false" onclick="setCategory('Tracks')">🏁 Tracks</button>
+        <button type="button" class="filter-btn" id="filter-maps" aria-pressed="false" onclick="setCategory('Maps')">🗺️ Maps</button>
+        <button type="button" class="filter-btn" id="filter-physics" aria-pressed="false" onclick="setCategory('Physics')">⚙️ Physics</button>
       </div>
-      <div class="filter-group" style="margin-left:auto;">
-        <select class="input" id="sort-select" style="padding:8px 12px; font-weight:700; width:auto; height:100%; border-radius:999px;" onchange="setSort(this.value)">
+      <div class="filter-group" id="active-tag-wrap" style="display:none;" aria-label="Active tag filter"></div>
+      <div class="filter-group toolbar__end">
+        <label class="sr-only" for="sort-select">Sort mods</label>
+        <select class="input toolbar__sort" id="sort-select" onchange="setSort(this.value)">
           <option value="newest">Sort by: Newest</option>
-          <option value="popular">Sort by: Most Popular</option>
+          <option value="popular">Sort by: Most Downloaded</option>
           <option value="liked">Sort by: Most Liked</option>
         </select>
       </div>
@@ -133,14 +127,14 @@
 </section>
 
 <!-- ── Discord Section ──────────────────────────────────────── -->
-<section class="section" style="background: linear-gradient(135deg, #5865F2 0%, #4752C4 100%); color: white; text-align: center; border-radius: var(--radius-md); margin: 40px auto; max-width: 1200px; padding: 60px 20px;">
+<section class="section discord-cta" aria-labelledby="discord-title">
   <div class="container">
-    <h2 style="font-size: 2.5rem; margin-bottom: 16px;">Join the Community</h2>
-    <p style="font-size: 1.2rem; margin-bottom: 32px; max-width: 600px; margin-left: auto; margin-right: auto; opacity: 0.9;">
+    <h2 class="discord-cta__title" id="discord-title">Join the Community</h2>
+    <p class="discord-cta__sub">
       Discuss mods, get support, and hang out with thousands of other players in the official tuckzed mods Discord server.
     </p>
-    <a href="https://discord.gg/5nE69arMNP" target="_blank" class="btn" style="background: white; color: #5865F2; font-weight: bold; padding: 12px 32px; border-radius: 30px; display: inline-flex; align-items: center; gap: 8px;">
-      <svg width="24" height="24" viewBox="0 0 127.14 96.36" fill="currentColor"><path d="M107.7 8.07A105.15 105.15 0 0 0 81.47 0a72.06 72.06 0 0 0-3.36 6.83 97.68 97.68 0 0 0-29.08 0A72.37 72.37 0 0 0 45.67 0a105.46 105.46 0 0 0-26.23 8.07C2.92 32.82-3.13 57.06 1.74 80.89a105.9 105.9 0 0 0 32.18 16.15 77.7 77.7 0 0 0 6.89-11.23 68.42 68.42 0 0 1-10.85-5.18c.91-.66 1.8-1.34 2.66-2a75.57 75.57 0 0 0 64.32 0c.87.71 1.76 1.39 2.68 2a67.62 67.62 0 0 1-10.87 5.19 77 77 0 0 0 6.89 11.22 105.45 105.45 0 0 0 32.19-16.15c5.38-27.13-2.18-50.62-17.72-72.82zM42.49 65.3c-5.74 0-10.46-5.26-10.46-11.75s4.64-11.75 10.46-11.75c5.88 0 10.53 5.31 10.46 11.75 0 6.49-4.64 11.75-10.46 11.75zm42.16 0c-5.74 0-10.46-5.26-10.46-11.75s4.64-11.75 10.46-11.75c5.88 0 10.53 5.31 10.46 11.75 0 6.49-4.63 11.75-10.46 11.75z"/></svg>
+    <a href="https://discord.gg/5nE69arMNP" target="_blank" rel="noopener noreferrer" class="btn discord-cta__btn">
+      <svg width="24" height="24" viewBox="0 0 127.14 96.36" fill="currentColor" aria-hidden="true"><path d="M107.7 8.07A105.15 105.15 0 0 0 81.47 0a72.06 72.06 0 0 0-3.36 6.83 97.68 97.68 0 0 0-29.08 0A72.37 72.37 0 0 0 45.67 0a105.46 105.46 0 0 0-26.23 8.07C2.92 32.82-3.13 57.06 1.74 80.89a105.9 105.9 0 0 0 32.18 16.15 77.7 77.7 0 0 0 6.89-11.23 68.42 68.42 0 0 1-10.85-5.18c.91-.66 1.8-1.34 2.66-2a75.57 75.57 0 0 0 64.32 0c.87.71 1.76 1.39 2.68 2a67.62 67.62 0 0 1-10.87 5.19 77 77 0 0 0 6.89 11.22 105.45 105.45 0 0 0 32.19-16.15c5.38-27.13-2.18-50.62-17.72-72.82zM42.49 65.3c-5.74 0-10.46-5.26-10.46-11.75s4.64-11.75 10.46-11.75c5.88 0 10.53 5.31 10.46 11.75 0 6.49-4.64 11.75-10.46 11.75zm42.16 0c-5.74 0-10.46-5.26-10.46-11.75s4.64-11.75 10.46-11.75c5.88 0 10.53 5.31 10.46 11.75 0 6.49-4.63 11.75-10.46 11.75z"/></svg>
       Join Discord Server
     </a>
   </div>
@@ -152,12 +146,12 @@
     <div class="footer__inner">
       <span class="footer__brand">tuckzed mods</span>
       <nav class="footer__links" aria-label="Footer navigation">
-        <a href="https://discord.gg/5nE69arMNP" target="_blank" class="footer__link" style="color: #5865F2; font-weight: bold;">Discord</a>
-        <a href="#games"  class="footer__link" id="footer-games">Games</a>
-        <a href="#mods"   class="footer__link" id="footer-mods">Mods</a>
-        <a href="admin.html"   class="footer__link" id="footer-admin">Admin</a>
+        <a href="https://discord.gg/5nE69arMNP" target="_blank" rel="noopener noreferrer" class="footer__link footer__link--discord">Discord</a>
+        <a href="#games" class="footer__link" id="footer-games">Games</a>
+        <a href="#mods" class="footer__link" id="footer-mods">Mods</a>
+        <a href="admin.html" class="footer__link" id="footer-admin">Admin</a>
       </nav>
-      <span class="footer__copy">© 2026 tuckzed mods. Community-driven.</span>
+      <span class="footer__copy">© <span data-year>2026</span> tuckzed mods. Community-driven.</span>
     </div>
   </div>
 </footer>
@@ -170,310 +164,9 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js?v=2"></script>
-<script src="store.js?v=9"></script>
+<script src="store.js?v=11"></script>
 <script src="firebase-config.js?v=3"></script>
-<script src="auth-nav.js?v=3"></script>
-<script>
-'use strict';
-
-// ── State ──────────────────────────────────────────────────
-const state = {
-  activeGame:     null,   // 'ac' | 'beamng' | null
-  activeCategory: 'all',
-  searchQuery:    '',
-  sort:           'newest',
-};
-
-// ── Init ───────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-  renderGameCards();
-  renderMods();
-  initSearch();
-
-  // Fetch live mods from Supabase
-  if (window.TZ && window.TZ.Store && window.TZ.Store.fetchFromRemote) {
-    window.TZ.Store.fetchFromRemote().then(() => {
-      renderGameCards();
-      renderMods();
-    });
-  }
-
-  // Handle URL hash navigation to section
-  if (window.location.hash === '#mods') {
-    document.getElementById('mods').scrollIntoView({ behavior: 'smooth' });
-  }
-});
-
-// ── Game Cards ─────────────────────────────────────────────
-function renderGameCards() {
-  const { Store, GAMES } = window.TZ;
-  const counts = Store.countByGame();
-  const grid = document.getElementById('game-grid');
-
-  grid.innerHTML = Object.values(GAMES).map(game => `
-    <div
-      class="game-card${state.activeGame === game.id ? ' selected' : ''}"
-      id="game-card-${game.id}"
-      role="listitem button"
-      tabindex="0"
-      aria-pressed="${state.activeGame === game.id}"
-      onclick="toggleGame('${game.id}')"
-      onkeydown="if(event.key==='Enter'||event.key===' ')toggleGame('${game.id}')"
-    >
-      <div class="game-card__icon" aria-hidden="true">${game.icon}</div>
-      <div class="game-card__name">${game.name}</div>
-      <div class="game-card__desc">${game.desc}</div>
-      <div class="game-card__footer">
-        <span class="game-card__count">${counts[game.id] || 0} mods</span>
-        <span class="badge game-card__badge">Browse →</span>
-      </div>
-    </div>
-  `).join('');
-}
-
-function toggleGame(gameId) {
-  state.activeGame = state.activeGame === gameId ? null : gameId;
-  renderGameCards();
-  renderMods();
-  updateModsTitle();
-  document.getElementById('clear-game-btn').style.display = state.activeGame ? '' : 'none';
-
-  // Scroll to mods section when a game is selected
-  if (state.activeGame) {
-    document.getElementById('mods').scrollIntoView({ behavior: 'smooth' });
-  }
-}
-
-function clearGameFilter() {
-  state.activeGame = null;
-  renderGameCards();
-  renderMods();
-  updateModsTitle();
-  document.getElementById('clear-game-btn').style.display = 'none';
-}
-
-function updateModsTitle() {
-  const { GAMES } = window.TZ;
-  const titleEl = document.getElementById('mods-title');
-  if (state.activeGame) {
-    titleEl.firstChild.textContent = GAMES[state.activeGame].name + ' Mods ';
-  } else {
-    titleEl.firstChild.textContent = 'All Mods ';
-  }
-}
-
-// ── Search ─────────────────────────────────────────────────
-function initSearch() {
-  const input = document.getElementById('search-input');
-  let timer;
-  input.addEventListener('input', () => {
-    clearTimeout(timer);
-    timer = setTimeout(() => {
-      state.searchQuery = input.value.trim().toLowerCase();
-      renderMods();
-    }, 200);
-  });
-}
-
-// ── Category Filters ───────────────────────────────────────
-function setCategory(cat) {
-  state.activeCategory = cat;
-
-  // Update filter button states
-  const catMap = {
-    all: 'filter-all', Cars: 'filter-cars',
-    Tracks: 'filter-tracks', Maps: 'filter-maps', Physics: 'filter-physics',
-  };
-  Object.values(catMap).forEach(id => {
-    document.getElementById(id)?.classList.remove('active');
-  });
-  const activeId = catMap[cat];
-  if (activeId) document.getElementById(activeId)?.classList.add('active');
-
-  renderMods();
-}
-
-function setSort(val) {
-  state.sort = val;
-  renderMods();
-}
-
-function handleDownload(e, id, url) {
-  e.preventDefault();
-  e.stopPropagation();
-  if (!url) {
-    window.TZ.showToast('No download link is available for this mod.');
-    return;
-  }
-  window.TZ.Store.incrementDownloads(id);
-  window.open(url, '_blank', 'noopener,noreferrer');
-  // Re-render to show updated count after a short delay
-  setTimeout(renderMods, 1500);
-}
-
-// ── Helpers ────────────────────────────────────────────────
-function truncateWords(text, limit = 40) {
-  if (!text) return '';
-  const words = text.trim().split(/\s+/);
-  if (words.length <= limit) return text;
-  return words.slice(0, limit).join(' ') + '…';
-}
-
-function goToMod(id, e) {
-  if (e && e.target && e.target.closest('.mod-card__dl-btn')) return;
-  window.location.href = `mod.html?id=${encodeURIComponent(id)}`;
-}
-window.goToMod = goToMod;
-
-let observer = null;
-
-function renderMods(append = false) {
-  const { Store, GAMES, CATEGORY_ICONS, escapeHtml } = window.TZ;
-  const grid = document.getElementById('mod-grid');
-  const countEl = document.getElementById('mods-count');
-
-  if (!append) {
-    state.page = 1;
-  }
-
-  let mods = Store.getAll();
-
-  // Filter by game
-  if (state.activeGame) {
-    mods = mods.filter(m => m.game === state.activeGame);
-  }
-  // Filter by category
-  if (state.activeCategory !== 'all') {
-    mods = mods.filter(m => m.category === state.activeCategory);
-  }
-  // Filter by search
-  if (state.searchQuery) {
-    mods = mods.filter(m => {
-      const tags = Array.isArray(m.tags) ? m.tags.join(' ') : (m.tags || '');
-      const haystack = `${m.title || ''} ${m.description || ''} ${tags}`.toLowerCase();
-      return haystack.includes(state.searchQuery);
-    });
-  }
-
-  // Sort
-  if (state.sort === 'popular') {
-    mods.sort((a, b) => (b.downloads || 0) - (a.downloads || 0));
-  } else if (state.sort === 'liked') {
-    mods.sort((a, b) => (b.likes || 0) - (a.likes || 0));
-  } else {
-    mods.sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
-  }
-
-  countEl.textContent = `${mods.length} ${mods.length === 1 ? 'mod' : 'mods'}`;
-
-  if (mods.length === 0) {
-    grid.innerHTML = `
-      <div class="empty-state" role="status">
-        <div class="empty-state__icon">🔍</div>
-        <div class="empty-state__title">No mods found</div>
-        <div class="empty-state__desc">Try adjusting your search or filters.</div>
-      </div>`;
-    return;
-  }
-
-  const PAGE_SIZE = 12;
-  const pageMods = mods.slice((state.page - 1) * PAGE_SIZE, state.page * PAGE_SIZE);
-
-  const html = pageMods.map((mod, i) => {
-    const game = GAMES[mod.game];
-    const icon = CATEGORY_ICONS[mod.category] || '📦';
-    const imgHtml = mod.coverImage
-      ? `<img src="${escapeHtml(mod.coverImage)}" alt="${escapeHtml(mod.title)} cover" class="mod-card__img" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'mod-card__img-placeholder\\'>${icon}</div>'" />`
-      : `<div class="mod-card__img-placeholder" aria-label="${escapeHtml(mod.category)} mod">${icon}</div>`;
-    const imgBadge = (Array.isArray(mod.images) && mod.images.length > 1)
-      ? `<span style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,0.78);color:#fff;font-size:0.7rem;font-weight:700;padding:2px 7px;border-radius:4px;z-index:2;letter-spacing:0.02em;">📷 ${mod.images.length}</span>`
-      : '';
-
-    return `
-      <article
-        class="mod-card"
-        id="mod-card-${mod.id}"
-        role="listitem"
-        tabindex="0"
-        style="animation-delay:${Math.min(i * 40, 400)}ms"
-        aria-label="${escapeHtml(mod.title)} — ${escapeHtml(mod.category)} mod for ${escapeHtml(game?.name || mod.game)}"
-        onclick="goToMod(this.dataset.modId, event)"
-        onkeydown="if(event.key==='Enter')goToMod(this.dataset.modId, event)"
-        data-mod-id="${escapeHtml(mod.id)}"
-      >
-        <div class="mod-card__img-wrap">${imgHtml}${imgBadge}</div>
-        <div class="mod-card__body">
-          <div class="mod-card__tags">
-            <span class="badge badge--filled">${escapeHtml(game?.name || mod.game)}</span>
-            <span class="badge badge--gray">${escapeHtml(mod.category)}</span>
-            ${mod.tags ? String(mod.tags).split(',').map(t => t.trim()).filter(Boolean).map(t => `<span class="badge badge--outline" data-tag="${escapeHtml(t)}" onclick="event.stopPropagation(); searchTag(this.dataset.tag)" style="cursor:pointer; z-index:2; position:relative;">#${escapeHtml(t)}</span>`).join(' ') : ''}
-          </div>
-          <h3 class="mod-card__title">${escapeHtml(mod.title)}</h3>
-          <p class="mod-card__desc">${escapeHtml(truncateWords(mod.description, 40))}</p>
-          <div class="mod-card__meta">
-            <span class="mod-card__version">v${escapeHtml(mod.version)}</span>
-            <span>${escapeHtml(mod.createdAt)}</span>
-            <div style="margin-left:auto; display:flex; gap:12px; font-weight:700; color:var(--gray-600);">
-              <span>❤️ ${mod.likes || 0}</span>
-              <span>⬇ ${mod.downloads || 0}</span>
-            </div>
-          </div>
-        </div>
-        <div class="mod-card__footer">
-          <button
-            type="button"
-            data-mod-id="${escapeHtml(mod.id)}"
-            data-dl="${escapeHtml(mod.downloadUrl || '')}"
-            onclick="handleDownload(event, this.dataset.modId, this.dataset.dl)"
-            class="btn btn--primary mod-card__dl-btn${!mod.downloadUrl ? ' disabled' : ''}"
-            id="dl-btn-${mod.id}"
-            ${!mod.downloadUrl ? 'disabled' : ''}
-            aria-label="Download ${escapeHtml(mod.title)}"
-          >
-            ⬇ Download
-          </button>
-        </div>
-      </article>`;
-  }).join('');
-
-  if (!append) {
-    grid.innerHTML = html;
-  } else {
-    const oldSentinel = document.getElementById('scroll-sentinel');
-    if (oldSentinel) oldSentinel.remove();
-    grid.insertAdjacentHTML('beforeend', html);
-  }
-
-  if (state.page * PAGE_SIZE < mods.length) {
-    grid.insertAdjacentHTML('beforeend', `<div id="scroll-sentinel" style="height:20px; width:100%; grid-column:1/-1;"></div>`);
-    if (observer) observer.disconnect();
-    observer = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting) {
-        state.page++;
-        renderMods(true);
-      }
-    });
-    observer.observe(document.getElementById('scroll-sentinel'));
-  }
-}
-
-function searchTag(tag) {
-  const input = document.getElementById('search-input');
-  if (input) input.value = tag;
-  state.searchQuery = tag.toLowerCase();
-  renderMods();
-  document.getElementById('mod-grid').scrollIntoView({ behavior: 'smooth' });
-}
-
-// ── Refresh on storage change (admin panel edits) ──────────
-window.addEventListener('storage', e => {
-  if (e.key === 'tuckzed_mods_v2' || e.key === 'tuckzed_mods_v1') {
-    if (window.TZ && window.TZ.Store) window.TZ.Store._cache = null;
-    renderGameCards();
-    renderMods();
-  }
-});
-</script>
+<script src="auth-nav.js?v=11"></script>
+<script src="home.js?v=11"></script>
 </body>
 </html>
-
