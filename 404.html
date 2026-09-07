@@ -3,74 +3,42 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>tuckzed mods</title>
   <script>
+    // Clean URLs (/mod, /admin, …) resolve here on static hosts; forward to the real page.
     (function () {
       var parts = window.location.pathname.replace(/^\/+|\/+$/g, '').split('/').filter(Boolean);
       var last = parts.length ? parts[parts.length - 1] : '';
-      var search = window.location.search || '';
-      var hash = window.location.hash || '';
-
       var routes = {
         'admin':   'admin.html',
         'auth':    'auth.html',
-        'login':   'login.html',
+        'login':   'auth.html',
         'profile': 'profile.html',
         'mod':     'mod.html'
       };
-
       if (routes[last]) {
         var prefix = parts.length > 1 ? '/' + parts.slice(0, -1).join('/') : '';
-        window.location.replace(prefix + '/' + routes[last] + search + hash);
+        window.location.replace(prefix + '/' + routes[last] + (window.location.search || '') + (window.location.hash || ''));
       }
     })();
   </script>
-  <link rel="stylesheet" href="styles.css?v=9" />
-  <style>
-    .not-found-wrap {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 64px 24px;
-      text-align: center;
-    }
-    .not-found-card {
-      border: 2px solid var(--black);
-      border-radius: var(--radius-lg);
-      padding: 48px;
-      max-width: 480px;
-      background: var(--white);
-      box-shadow: var(--shadow-lg);
-    }
-    .not-found-code {
-      font-size: 3.5rem;
-      font-weight: 700;
-      line-height: 1;
-      margin-bottom: 16px;
-    }
-    .not-found-sub {
-      color: var(--gray-600);
-      margin-bottom: 28px;
-    }
-  </style>
-  <!-- Open Graph Meta Tags -->
-  <meta property="og:title" content="tuckzed mods — Game Mod Distribution Platform" />
-  <meta property="og:description" content="Download the best mods for Assetto Corsa and BeamNG.drive. Cars, tracks, maps, and physics overhauls curated by the tuckzed mods community." />
-  <meta property="og:image" content="https://lshelbys.github.io/tuckzedmods/images/PREVIEW.png" />
-  <meta property="og:type" content="website" />
-  <meta name="twitter:card" content="summary_large_image" />
-  <script>if(localStorage.getItem('theme')==='dark') document.documentElement.setAttribute('data-theme', 'dark');</script>
+  <script src="head.js?v=1"></script>
+  <title>Page Not Found — tuckzed mods</title>
+  <meta name="robots" content="noindex" />
+  <meta name="theme-color" content="#000000" />
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="styles.css?v=11" />
 </head>
 <body>
-  <div class="not-found-wrap">
+  <main class="not-found-wrap" role="main">
     <div class="not-found-card">
       <div class="not-found-code">404</div>
-      <h2>Page Not Found</h2>
-      <p class="not-found-sub">The page you were looking for doesn't exist.</p>
-      <a href="./" class="btn btn--primary">Back to Home</a>
+      <h1>Page Not Found</h1>
+      <p class="not-found-sub">The page you were looking for doesn't exist or may have been moved.</p>
+      <div class="hero__actions">
+        <a href="./" class="btn btn--primary">Back to Home</a>
+        <a href="./#mods" class="btn">Browse Mods</a>
+      </div>
     </div>
-  </div>
+  </main>
 </body>
 </html>
