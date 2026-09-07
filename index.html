@@ -12,7 +12,7 @@
       window.history.replaceState(null, '', clean + window.location.search + window.location.hash);
     }
   </script>
-  <link rel="stylesheet" href="styles.css?v=7" />
+  <link rel="stylesheet" href="styles.css?v=8" />
   <style>
     .nav__user-label {
       font-size: .8rem;
@@ -170,9 +170,9 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js?v=2"></script>
-<script src="store.js?v=8"></script>
-<script src="firebase-config.js?v=2"></script>
-<script src="auth-nav.js"></script>
+<script src="store.js?v=9"></script>
+<script src="firebase-config.js?v=3"></script>
+<script src="auth-nav.js?v=2"></script>
 <script>
 'use strict';
 
@@ -301,8 +301,12 @@ function setSort(val) {
 function handleDownload(e, id, url) {
   e.preventDefault();
   e.stopPropagation();
+  if (!url) {
+    window.TZ.showToast('No download link is available for this mod.');
+    return;
+  }
   window.TZ.Store.incrementDownloads(id);
-  window.open(url, '_blank');
+  window.open(url, '_blank', 'noopener,noreferrer');
   // Re-render to show updated count after a short delay
   setTimeout(renderMods, 1500);
 }
@@ -344,11 +348,11 @@ function renderMods(append = false) {
   }
   // Filter by search
   if (state.searchQuery) {
-    mods = mods.filter(m =>
-      m.title.toLowerCase().includes(state.searchQuery) ||
-      m.description.toLowerCase().includes(state.searchQuery) ||
-      (m.tags && m.tags.toLowerCase().includes(state.searchQuery))
-    );
+    mods = mods.filter(m => {
+      const tags = Array.isArray(m.tags) ? m.tags.join(' ') : (m.tags || '');
+      const haystack = `${m.title || ''} ${m.description || ''} ${tags}`.toLowerCase();
+      return haystack.includes(state.searchQuery);
+    });
   }
 
   // Sort
@@ -357,7 +361,7 @@ function renderMods(append = false) {
   } else if (state.sort === 'liked') {
     mods.sort((a, b) => (b.likes || 0) - (a.likes || 0));
   } else {
-    // Newest is default from store (already sorted by created_at)
+    mods.sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
   }
 
   countEl.textContent = `${mods.length} ${mods.length === 1 ? 'mod' : 'mods'}`;
@@ -393,15 +397,16 @@ function renderMods(append = false) {
         tabindex="0"
         style="animation-delay:${Math.min(i * 40, 400)}ms"
         aria-label="${escapeHtml(mod.title)} — ${escapeHtml(mod.category)} mod for ${escapeHtml(game?.name || mod.game)}"
-        onclick="goToMod('${mod.id}', event)"
-        onkeydown="if(event.key==='Enter')goToMod('${mod.id}', event)"
+        onclick="goToMod(this.dataset.modId, event)"
+        onkeydown="if(event.key==='Enter')goToMod(this.dataset.modId, event)"
+        data-mod-id="${escapeHtml(mod.id)}"
       >
         <div class="mod-card__img-wrap">${imgHtml}${imgBadge}</div>
         <div class="mod-card__body">
           <div class="mod-card__tags">
             <span class="badge badge--filled">${escapeHtml(game?.name || mod.game)}</span>
             <span class="badge badge--gray">${escapeHtml(mod.category)}</span>
-            ${mod.tags ? mod.tags.split(',').map(t => `<span class="badge badge--outline" onclick="event.stopPropagation(); searchTag('${escapeHtml(t.trim())}')" style="cursor:pointer; z-index:2; position:relative;">#${escapeHtml(t.trim())}</span>`).join(' ') : ''}
+            ${mod.tags ? String(mod.tags).split(',').map(t => t.trim()).filter(Boolean).map(t => `<span class="badge badge--outline" data-tag="${escapeHtml(t)}" onclick="event.stopPropagation(); searchTag(this.dataset.tag)" style="cursor:pointer; z-index:2; position:relative;">#${escapeHtml(t)}</span>`).join(' ') : ''}
           </div>
           <h3 class="mod-card__title">${escapeHtml(mod.title)}</h3>
           <p class="mod-card__desc">${escapeHtml(truncateWords(mod.description, 40))}</p>
@@ -417,9 +422,12 @@ function renderMods(append = false) {
         <div class="mod-card__footer">
           <button
             type="button"
-            onclick="handleDownload(event, '${mod.id}', '${escapeHtml(mod.downloadUrl)}')"
-            class="btn btn--primary mod-card__dl-btn"
+            data-mod-id="${escapeHtml(mod.id)}"
+            data-dl="${escapeHtml(mod.downloadUrl || '')}"
+            onclick="handleDownload(event, this.dataset.modId, this.dataset.dl)"
+            class="btn btn--primary mod-card__dl-btn${!mod.downloadUrl ? ' disabled' : ''}"
             id="dl-btn-${mod.id}"
+            ${!mod.downloadUrl ? 'disabled' : ''}
             aria-label="Download ${escapeHtml(mod.title)}"
           >
             ⬇ Download
@@ -459,7 +467,8 @@ function searchTag(tag) {
 
 // ── Refresh on storage change (admin panel edits) ──────────
 window.addEventListener('storage', e => {
-  if (e.key === 'tuckzed_mods_v1') {
+  if (e.key === 'tuckzed_mods_v2' || e.key === 'tuckzed_mods_v1') {
+    if (window.TZ && window.TZ.Store) window.TZ.Store._cache = null;
     renderGameCards();
     renderMods();
   }

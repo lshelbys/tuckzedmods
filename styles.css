@@ -99,6 +99,13 @@ button, input, select, textarea { font-family: var(--font); }
 }
 .btn:hover  { background: var(--black); color: var(--white); }
 .btn:active { transform: scale(.97); }
+.btn:disabled,
+.btn.disabled {
+  opacity: .55;
+  cursor: not-allowed;
+  pointer-events: none;
+  transform: none;
+}
 
 .btn--primary { background: var(--black); color: var(--white); }
 .btn--primary:hover { background: var(--gray-900); }
@@ -253,7 +260,11 @@ textarea.input {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 64px;
+  min-height: 64px;
+  height: auto;
+  padding: 8px 0;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 .nav__logo {
   font-size: 1.4rem;
@@ -266,6 +277,8 @@ textarea.input {
   align-items: center;
   gap: 4px;
   list-style: none;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 .nav__link {
   padding: 8px 14px;

@@ -11,11 +11,10 @@
  * 6. Copy the firebaseConfig object values below into this file
  * 7. In the left sidebar → Build → Authentication → Get started
  * 8. Enable "Email/Password" sign-in provider → Save
- * 9. Go to Authentication → Users → Add user:
- *      Email:    admin@tuckzed.com
- *      Password: Lsk37Ti@
+ * 9. Go to Authentication → Users → Add user with your admin email.
+ *    Do not store the admin password in this file.
  * 10. In Authentication → Settings → Authorized domains,
- *      add: lshelbys.github.io
+ *      add tuckzed.com (and lshelbys.github.io if you still use GitHub Pages).
  * ──────────────────────────────────────────────────────────────
  */
 

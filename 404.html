@@ -6,9 +6,10 @@
   <title>tuckzed mods</title>
   <script>
     (function () {
-      var pathname = window.location.pathname.replace(/^\/+|\/+$/g, '');
-      var search   = window.location.search || '';
-      var hash     = window.location.hash || '';
+      var parts = window.location.pathname.replace(/^\/+|\/+$/g, '').split('/').filter(Boolean);
+      var last = parts.length ? parts[parts.length - 1] : '';
+      var search = window.location.search || '';
+      var hash = window.location.hash || '';
 
       var routes = {
         'admin':   'admin.html',
@@ -18,12 +19,13 @@
         'mod':     'mod.html'
       };
 
-      if (routes[pathname]) {
-        window.location.replace('/' + routes[pathname] + search + hash);
+      if (routes[last]) {
+        var prefix = parts.length > 1 ? '/' + parts.slice(0, -1).join('/') : '';
+        window.location.replace(prefix + '/' + routes[last] + search + hash);
       }
     })();
   </script>
-  <link rel="stylesheet" href="styles.css?v=7" />
+  <link rel="stylesheet" href="styles.css?v=8" />
   <style>
     .not-found-wrap {
       flex: 1;

@@ -12,7 +12,7 @@
       window.history.replaceState(null, '', clean + window.location.search + window.location.hash);
     }
   </script>
-  <link rel="stylesheet" href="styles.css?v=7" />
+  <link rel="stylesheet" href="styles.css?v=8" />
   <style>
     .nav__user-label {
       font-size: .8rem;
@@ -308,9 +308,9 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js?v=2"></script>
-<script src="store.js?v=8"></script>
-<script src="firebase-config.js?v=2"></script>
-<script src="auth-nav.js"></script>
+<script src="store.js?v=9"></script>
+<script src="firebase-config.js?v=3"></script>
+<script src="auth-nav.js?v=2"></script>
 
 <script>
 'use strict';
@@ -412,10 +412,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Keyboard navigation for image gallery & lightbox
   document.addEventListener('keydown', e => {
+    const tag = (e.target && e.target.tagName) || '';
+    const typing = tag === 'INPUT' || tag === 'TEXTAREA' || (e.target && e.target.isContentEditable);
     if (e.key === 'Escape' && isLightboxOpen) {
       closeLightbox();
       return;
     }
+    if (typing) return;
     if (galleryImages.length <= 1) return;
     if (e.key === 'ArrowLeft') prevImage();
     if (e.key === 'ArrowRight') nextImage();
@@ -495,7 +498,7 @@ function renderMod(mod) {
 
   const badgesEl = document.getElementById('mod-badges');
   if (badgesEl && mod.tags) {
-    const tagsArr = mod.tags.split(',').map(t => t.trim()).filter(Boolean);
+    const tagsArr = String(mod.tags).split(',').map(t => t.trim()).filter(Boolean);
     tagsArr.forEach(t => {
       const tagSpan = document.createElement('span');
       tagSpan.className = 'badge badge--outline';
@@ -814,8 +817,9 @@ function renderRelatedMods(mod) {
         id="rel-card-${m.id}"
         role="listitem"
         tabindex="0"
-        onclick="goToMod('${m.id}', event)"
-        onkeydown="if(event.key==='Enter')goToMod('${m.id}', event)"
+        onclick="goToMod(this.dataset.modId, event)"
+        onkeydown="if(event.key==='Enter')goToMod(this.dataset.modId, event)"
+        data-mod-id="${escapeHtml(m.id)}"
       >
         <div class="mod-card__img-wrap">${imgHtml}${imgBadge}</div>
         <div class="mod-card__body">
@@ -831,7 +835,7 @@ function renderRelatedMods(mod) {
           </div>
         </div>
         <div class="mod-card__footer">
-          <a
+          ${m.downloadUrl ? `<a
             href="${escapeHtml(m.downloadUrl)}"
             target="_blank"
             rel="noopener noreferrer"
@@ -839,7 +843,7 @@ function renderRelatedMods(mod) {
             id="rel-dl-btn-${m.id}"
           >
             ⬇ Download
-          </a>
+          </a>` : `<button type="button" class="btn btn--primary mod-card__dl-btn disabled" disabled>⬇ Download</button>`}
         </div>
       </article>
     `;
@@ -855,14 +859,19 @@ window.handleLikeToggle = async function(e) {
   const likeBtn = document.getElementById('mod-like-btn');
   const isCurrentlyLiked = likeBtn.dataset.liked === 'true';
   const newLikedState = !isCurrentlyLiked;
-  
+
   likeBtn.disabled = true;
-  await window.TZ.Store.toggleLike(currentMod.id, newLikedState);
-  
-  const countEl = document.getElementById('mod-likes-count');
-  const currentLikes = parseInt(countEl ? countEl.textContent : 0) || 0;
-  const newLikes = newLikedState ? currentLikes + 1 : Math.max(0, currentLikes - 1);
-  
+  const result = await window.TZ.Store.toggleLike(currentMod.id, newLikedState);
+
+  if (!result || !result.ok) {
+    window.TZ.showToast('❌ Could not update like. Please try again.');
+    likeBtn.disabled = false;
+    return;
+  }
+
+  const newLikes = result.likes;
+  currentMod.likes = newLikes;
+
   if (newLikedState) {
     likeBtn.innerHTML = `❤️ Liked (<span id="mod-likes-count">${newLikes}</span>)`;
     likeBtn.dataset.liked = 'true';
@@ -877,9 +886,11 @@ window.handleModDownload = function(e) {
   e.preventDefault();
   if (currentMod && currentMod.downloadUrl) {
     window.TZ.Store.incrementDownloads(currentMod.id);
-    window.open(currentMod.downloadUrl, '_blank');
+    window.open(currentMod.downloadUrl, '_blank', 'noopener,noreferrer');
     const dlEl = document.getElementById('mod-downloads');
-    if(dlEl) dlEl.textContent = parseInt(dlEl.textContent) + 1;
+    if (dlEl) dlEl.textContent = (parseInt(dlEl.textContent, 10) || 0) + 1;
+  } else {
+    window.TZ.showToast('No download link is available for this mod.');
   }
 }
 
@@ -985,8 +996,12 @@ window.submitReply = async function(parentId, btnEl) {
   btnEl.disabled = true;
   btnEl.textContent = 'Posting...';
   
-  const user = window.TZ_AUTH.currentUser();
-  const username = user.email.split('@')[0];
+  const user = window.TZ_AUTH && window.TZ_AUTH.currentUser();
+  if (!user) {
+    window.TZ.showToast('Please sign in to reply.');
+    return;
+  }
+  const username = (user.displayName || user.email.split('@')[0] || 'user');
   
   const success = await window.TZ.Store.addComment(currentMod.id, username, text, parentId);
   btnEl.disabled = false;
@@ -1041,19 +1056,28 @@ window.postComment = async function() {
   const input = document.getElementById('comment-input');
   const btn = document.getElementById('comment-submit-btn');
   const text = input.value.trim();
-  if(!text || !currentMod) return;
-  
+  if (!text || !currentMod) return;
+
+  const user = window.TZ_AUTH && window.TZ_AUTH.currentUser();
+  if (!user) {
+    window.TZ.showToast('Please sign in to comment.');
+    return;
+  }
+
   btn.disabled = true;
   btn.textContent = 'Posting...';
-  
-  const user = window.TZ_AUTH.currentUser();
-  const username = user.email.split('@')[0];
-  
-  await window.TZ.Store.addComment(currentMod.id, username, text);
-  input.value = '';
+
+  const username = (user.displayName || user.email.split('@')[0] || 'user');
+  const created = await window.TZ.Store.addComment(currentMod.id, username, text);
   btn.disabled = false;
   btn.textContent = 'Post Comment';
-  
+
+  if (!created) {
+    window.TZ.showToast('❌ Failed to post comment.');
+    return;
+  }
+
+  input.value = '';
   loadComments(currentMod.id);
 }
 </script>

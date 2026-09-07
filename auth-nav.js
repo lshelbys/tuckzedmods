@@ -36,7 +36,8 @@
 
     if (user) {
       // ── Signed in ─────────────────────────────────────────────
-      const isAdmin = user.email.toLowerCase() === window.TZ_AUTH.ADMIN_EMAIL.toLowerCase();
+      const isAdmin = !!(user.email && window.TZ_AUTH && window.TZ_AUTH.ADMIN_EMAIL
+        && user.email.toLowerCase() === window.TZ_AUTH.ADMIN_EMAIL.toLowerCase());
 
       // Always hide "Upload Mods" when signed in
       if (uploadLi) uploadLi.style.display = 'none';
@@ -59,7 +60,10 @@
             window.location.href = 'admin';
           };
           userLabel.onkeydown = function (e) {
-            if (e.key === 'Enter' || e.key === ' ') window.location.href = 'admin';
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              window.location.href = 'admin';
+            }
           };
         }
       } else {
@@ -81,7 +85,10 @@
             window.location.href = 'profile';
           };
           userLabel.onkeydown = function (e) {
-            if (e.key === 'Enter' || e.key === ' ') window.location.href = 'profile';
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              window.location.href = 'profile';
+            }
           };
         }
       }
@@ -160,11 +167,15 @@
 
   // ── Inject Dark Mode Toggle ───────────────────────────────
   function initThemeToggle() {
+    if (document.getElementById('theme-toggle-btn')) return;
     const navLinks = document.querySelector('.nav__links');
     if (!navLinks) return;
     const li = document.createElement('li');
     const btn = document.createElement('button');
+    btn.id = 'theme-toggle-btn';
+    btn.type = 'button';
     btn.className = 'btn btn--sm';
+    btn.setAttribute('aria-label', 'Toggle dark mode');
     btn.style.cssText = 'padding:4px 8px; font-size:1.2rem; background:transparent; border:none; box-shadow:none; cursor:pointer; margin-left: 8px;';
     
     function updateIcon() {

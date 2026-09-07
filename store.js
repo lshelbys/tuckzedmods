@@ -57,11 +57,13 @@ const Store = {
       version: row.version || '1.0.0',
       game: row.game,
       category: row.category,
+      tags: normalizeTags(row.tags),
       downloadUrl: row.download_url || '',
-      downloads: row.downloads || 0,
+      downloads: Number(row.downloads) || 0,
+      likes: Number(row.likes) || 0,
       coverImage: row.cover_image || (images[0] || ''),
       images: images,
-      createdAt: row.created_at ? row.created_at.slice(0, 10) : today(),
+      createdAt: row.created_at ? String(row.created_at).slice(0, 10) : today(),
       createdBy: row.created_by || 'admin'
     };
   },
@@ -79,16 +81,52 @@ const Store = {
       version: mod.version || '1.0.0',
       game: mod.game,
       category: mod.category,
+      tags: normalizeTags(mod.tags),
       download_url: mod.downloadUrl || '',
-      downloads: mod.downloads || 0,
+      downloads: Number(mod.downloads) || 0,
+      likes: Number(mod.likes) || 0,
       cover_image: mod.coverImage || (images[0] || ''),
-      created_at: mod.createdAt ? new Date(mod.createdAt).toISOString() : new Date().toISOString(),
+      created_at: toIsoDate(mod.createdAt),
       created_by: mod.createdBy || 'admin'
     };
     if (includeImages) {
       row.images = images;
     }
     return row;
+  },
+
+  /** Write a mod row, retrying without optional columns if the schema is older */
+  async persistRow(mode, mod) {
+    const sb = this.getSb();
+    if (!sb) return { ok: true, localOnly: true };
+
+    const payloads = [
+      this.modToRow(mod, true),
+      this.modToRow(mod, false)
+    ];
+    const slim = this.modToRow(mod, false);
+    delete slim.tags;
+    delete slim.likes;
+    delete slim.downloads;
+    payloads.push(slim);
+
+    let lastError = null;
+    try {
+      for (const row of payloads) {
+        const result = mode === 'insert'
+          ? await sb.from('mods').insert([row])
+          : await sb.from('mods').update(row).eq('id', mod.id);
+        if (!result.error) return { ok: true };
+        lastError = result.error;
+        const msg = ((result.error.message || '') + ' ' + (result.error.code || '')).toLowerCase();
+        const schemaMiss = result.error.code === '42703' || result.error.code === 'PGRST204'
+          || msg.includes('images') || msg.includes('likes') || msg.includes('tags') || msg.includes('downloads');
+        if (!schemaMiss) break;
+      }
+    } catch (err) {
+      return { ok: false, error: err };
+    }
+    return { ok: false, error: lastError };
   },
 
   /** Load mods synchronously from localStorage cache */
@@ -168,27 +206,14 @@ const Store = {
 
   /** Add a new mod (persists to Supabase and cache) */
   async add(mod) {
-    const mods = this.getAll();
+    const result = await this.persistRow('insert', mod);
+    if (!result.ok) {
+      console.error('Supabase insert error:', result.error);
+      throw result.error || new Error('Failed to publish mod.');
+    }
+    const mods = this.getAll().filter(m => m.id !== mod.id);
     mods.unshift(mod);
     this.save(mods);
-
-    const sb = this.getSb();
-    if (sb) {
-      try {
-        const row = this.modToRow(mod, true);
-        const { error } = await sb.from('mods').insert([row]);
-        if (error) {
-          if (error.code === '42703' || error.code === 'PGRST204' || (error.message && error.message.includes('images'))) {
-            const fallbackRow = this.modToRow(mod, false);
-            await sb.from('mods').insert([fallbackRow]);
-          } else {
-            console.error('Supabase insert error:', error);
-          }
-        }
-      } catch (err) {
-        console.error('Supabase add exception:', err);
-      }
-    }
     return mod;
   },
 
@@ -199,60 +224,49 @@ const Store = {
     if (idx === -1) return null;
 
     const oldMod = mods[idx];
-    mods[idx] = { ...mods[idx], ...data };
+    const next = { ...oldMod, ...data };
+
+    const result = await this.persistRow('update', next);
+    if (!result.ok) {
+      console.error('Supabase update error:', result.error);
+      throw result.error || new Error('Failed to update mod.');
+    }
+
+    mods[idx] = next;
     this.save(mods);
 
-    // Delete any removed images from Supabase Storage so no orphaned files remain
     const oldImages = [oldMod.coverImage, ...(oldMod.images || [])].filter(Boolean);
-    const newImages = new Set([mods[idx].coverImage, ...(mods[idx].images || [])].filter(Boolean));
+    const newImages = new Set([next.coverImage, ...(next.images || [])].filter(Boolean));
     const removedImages = oldImages.filter(img => !newImages.has(img));
     if (removedImages.length > 0) {
       this.deleteStorageFiles(removedImages);
     }
-
-    const sb = this.getSb();
-    if (sb) {
-      try {
-        const row = this.modToRow(mods[idx], true);
-        const { error } = await sb.from('mods').update(row).eq('id', id);
-        if (error) {
-          if (error.code === '42703' || error.code === 'PGRST204' || (error.message && error.message.includes('images'))) {
-            const fallbackRow = this.modToRow(mods[idx], false);
-            await sb.from('mods').update(fallbackRow).eq('id', id);
-          } else {
-            console.error('Supabase update error:', error);
-          }
-        }
-      } catch (err) {
-        console.error('Supabase update exception:', err);
-      }
-    }
-    return mods[idx];
+    return next;
   },
 
   /** Delete a mod (persists to Supabase and cache, and cleans all images from Storage) */
   async delete(id) {
     const mod = this.getById(id);
-    if (mod) {
-      // 1. Delete all images belonging to this mod from Supabase Storage
-      const imagesToDelete = [mod.coverImage, ...(mod.images || [])].filter(Boolean);
-      await this.deleteStorageFiles(imagesToDelete);
-    }
-
-    // 2. Remove from local cache
-    const mods = this.getAll().filter(m => m.id !== id);
-    this.save(mods);
-
-    // 3. Delete from database
     const sb = this.getSb();
     if (sb) {
       try {
         const { error } = await sb.from('mods').delete().eq('id', id);
-        if (error) console.error('Supabase delete error:', error);
+        if (error) {
+          console.error('Supabase delete error:', error);
+          throw error;
+        }
       } catch (err) {
         console.error('Supabase delete exception:', err);
+        throw err;
       }
     }
+
+    if (mod) {
+      const imagesToDelete = [mod.coverImage, ...(mod.images || [])].filter(Boolean);
+      await this.deleteStorageFiles(imagesToDelete);
+    }
+
+    this.save(this.getAll().filter(m => m.id !== id));
   },
 
   /** Upload image file to Supabase Storage (max 10MB) */
@@ -329,17 +343,22 @@ const Store = {
 
   /** Increment downloads counter */
   async incrementDownloads(id) {
+    const mod = this.getById(id);
+    if (mod) {
+      mod.downloads = (mod.downloads || 0) + 1;
+      this.save(this.getAll());
+    }
     const sb = this.getSb();
     if (!sb) return;
     try {
-      const mod = this.getById(id);
-      if (mod) {
-        const newDls = (mod.downloads || 0) + 1;
-        await sb.from('mods').update({ downloads: newDls }).eq('id', id);
-        mod.downloads = newDls;
+      const { data } = await sb.from('mods').select('downloads').eq('id', id).maybeSingle();
+      const next = ((data && Number(data.downloads)) || (mod ? mod.downloads - 1 : 0)) + 1;
+      await sb.from('mods').update({ downloads: next }).eq('id', id);
+      if (mod && mod.downloads !== next) {
+        mod.downloads = next;
         this.save(this.getAll());
       }
-    } catch(e) { console.error('Increment downloads error:', e); }
+    } catch (e) { console.error('Increment downloads error:', e); }
   },
 
   /** Mod Likes */
@@ -352,39 +371,52 @@ const Store = {
     return !!data;
   },
 
+  async syncLikeCount(modId) {
+    const sb = this.getSb();
+    if (!sb) return 0;
+    const { count, error } = await sb.from('mod_likes').select('*', { count: 'exact', head: true }).eq('mod_id', modId);
+    if (error) throw error;
+    const likes = count || 0;
+    await sb.from('mods').update({ likes }).eq('id', modId);
+    const mod = this.getById(modId);
+    if (mod) {
+      mod.likes = likes;
+      this.save(this.getAll());
+    }
+    return likes;
+  },
+
   async toggleLike(modId, isLiking) {
     const sb = this.getSb();
     const user = window.TZ_AUTH ? window.TZ_AUTH.currentUser() : null;
-    if (!sb || !user) return false;
+    if (!sb || !user) return { ok: false, likes: 0 };
 
+    let error = null;
     if (isLiking) {
-      const { error } = await sb.from('mod_likes').insert([{ mod_id: modId, user_email: user.email }]);
-      if (!error) {
-        // Optimistically update local
-        const mods = this.getAll();
-        const mod = mods.find(m => m.id === modId);
-        if (mod) {
-          mod.likes = (mod.likes || 0) + 1;
-          this.save(mods);
-          // Update remote
-          await sb.from('mods').update({ likes: mod.likes }).eq('id', modId);
-        }
+      ({ error } = await sb.from('mod_likes').insert([{ mod_id: modId, user_email: user.email }]));
+      if (error && (error.code === '23505' || (error.message && error.message.toLowerCase().includes('duplicate')))) {
+        error = null; // already liked
       }
     } else {
-      const { error } = await sb.from('mod_likes').delete().eq('mod_id', modId).eq('user_email', user.email);
-      if (!error) {
-        // Optimistically update local
-        const mods = this.getAll();
-        const mod = mods.find(m => m.id === modId);
-        if (mod && mod.likes > 0) {
-          mod.likes -= 1;
-          this.save(mods);
-          // Update remote
-          await sb.from('mods').update({ likes: mod.likes }).eq('id', modId);
-        }
-      }
+      ({ error } = await sb.from('mod_likes').delete().eq('mod_id', modId).eq('user_email', user.email));
     }
-    return true;
+    if (error) {
+      console.error('Toggle like error:', error);
+      return { ok: false, likes: (this.getById(modId) || {}).likes || 0 };
+    }
+    try {
+      const likes = await this.syncLikeCount(modId);
+      return { ok: true, likes };
+    } catch (err) {
+      console.error('Sync like count error:', err);
+      const mod = this.getById(modId);
+      const fallback = Math.max(0, (mod && mod.likes || 0) + (isLiking ? 1 : -1));
+      if (mod) {
+        mod.likes = fallback;
+        this.save(this.getAll());
+      }
+      return { ok: true, likes: fallback };
+    }
   },
 
   /** Reporting System */
@@ -490,6 +522,19 @@ function today() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function toIsoDate(value) {
+  if (!value) return new Date().toISOString();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(String(value))) return String(value) + 'T00:00:00.000Z';
+  const d = new Date(value);
+  return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+}
+
+function normalizeTags(tags) {
+  if (!tags) return '';
+  if (Array.isArray(tags)) return tags.map(t => String(t).trim()).filter(Boolean).join(', ');
+  return String(tags);
+}
+
 function escapeHtml(str) {
   return String(str)
     .replace(/&/g, '&amp;')
@@ -521,4 +566,4 @@ function showToast(message, duration = 3000) {
 }
 
 // ── Export globals ───────────────────────────────────────────
-window.TZ = { Store, GAMES, CATEGORIES, CATEGORY_ICONS, generateId, today, escapeHtml, showToast };
+window.TZ = { Store, GAMES, CATEGORIES, CATEGORY_ICONS, generateId, today, escapeHtml, showToast, normalizeTags };

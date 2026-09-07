@@ -13,7 +13,7 @@
       window.history.replaceState(null, '', clean + window.location.search + window.location.hash);
     }
   </script>
-  <link rel="stylesheet" href="styles.css?v=7" />
+  <link rel="stylesheet" href="styles.css?v=8" />
   <style>
     .profile-page {
       flex: 1;
@@ -326,9 +326,9 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js?v=2"></script>
-<script src="store.js?v=8"></script>
-<script src="firebase-config.js?v=2"></script>
-<script src="auth-nav.js"></script>
+<script src="store.js?v=9"></script>
+<script src="firebase-config.js?v=3"></script>
+<script src="auth-nav.js?v=2"></script>
 
 <script>
 'use strict';
@@ -416,6 +416,10 @@ document.addEventListener('DOMContentLoaded', function () {
     
     const img = new Image();
     const objUrl = URL.createObjectURL(file);
+    img.onerror = () => {
+      URL.revokeObjectURL(objUrl);
+      window.TZ.showToast('That file could not be used as an avatar. Please pick an image.');
+    };
     img.onload = () => {
       const canvas = document.createElement('canvas');
       let { width, height } = img;
@@ -430,6 +434,14 @@ document.addEventListener('DOMContentLoaded', function () {
       ctx.drawImage(img, 0, 0, width, height);
       canvas.toBlob(blob => {
         URL.revokeObjectURL(objUrl);
+        if (!blob) {
+          avatarFile = file;
+          const imgEl = document.getElementById('avatar-preview');
+          imgEl.src = objUrl;
+          imgEl.style.display = 'block';
+          document.getElementById('avatar-placeholder').style.display = 'none';
+          return;
+        }
         avatarFile = new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' });
         
         const previewUrl = URL.createObjectURL(avatarFile);

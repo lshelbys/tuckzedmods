@@ -13,7 +13,7 @@
       window.history.replaceState(null, '', clean + window.location.search + window.location.hash);
     }
   </script>
-  <link rel="stylesheet" href="styles.css?v=7" />
+  <link rel="stylesheet" href="styles.css?v=8" />
   <style>
     .nav__user-label {
       font-size: .8rem;
@@ -410,9 +410,9 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js?v=2"></script>
-<script src="store.js?v=8"></script>
-<script src="firebase-config.js?v=2"></script>
-<script src="auth-nav.js"></script>
+<script src="store.js?v=9"></script>
+<script src="firebase-config.js?v=3"></script>
+<script src="auth-nav.js?v=2"></script>
 <script>
 'use strict';
 
@@ -540,7 +540,7 @@ function renderOverview() {
       <td>
         <div class="table__actions">
           <button class="btn btn--sm" id="ov-edit-${mod.id}" onclick="openEdit('${mod.id}')">Edit</button>
-          <button class="btn btn--sm btn--danger" id="ov-del-${mod.id}" onclick="openDeleteModal('${mod.id}','${escapeHtml(mod.title).replace(/'/g, "\\'")}')">Delete</button>
+          <button class="btn btn--sm btn--danger" id="ov-del-${mod.id}" onclick="openDeleteModal('${mod.id}')">Delete</button>
         </div>
       </td>
     </tr>
@@ -579,7 +579,7 @@ function renderManageTable() {
       <td>
         <div class="table__actions">
           <button class="btn btn--sm" id="edit-btn-${mod.id}" onclick="openEdit('${mod.id}')">✏️ Edit</button>
-          <button class="btn btn--sm btn--danger" id="delete-btn-${mod.id}" onclick="openDeleteModal('${mod.id}','${escapeHtml(mod.title).replace(/'/g, "\\'")}')">🗑 Delete</button>
+          <button class="btn btn--sm btn--danger" id="delete-btn-${mod.id}" onclick="openDeleteModal('${mod.id}')">🗑 Delete</button>
         </div>
       </td>
     </tr>
@@ -775,34 +775,50 @@ function initModGallery() {
         showToast(`⚠️ Only adding ${remainingSlots} image(s) to stay within the 10-image limit.`);
       }
 
-      async function compressImage(file) {
+      function compressImage(file) {
         return new Promise((resolve) => {
+          if (!file || !String(file.type || '').startsWith('image/')) {
+            resolve(file);
+            return;
+          }
           const img = new Image();
           const objUrl = URL.createObjectURL(file);
+          const finish = (result) => {
+            URL.revokeObjectURL(objUrl);
+            resolve(result);
+          };
+          img.onerror = () => finish(file);
           img.onload = () => {
-            const canvas = document.createElement('canvas');
-            let { width, height } = img;
-            const MAX_WIDTH = 1920;
-            if (width > MAX_WIDTH) {
-              height = Math.round((height * MAX_WIDTH) / width);
-              width = MAX_WIDTH;
+            try {
+              const canvas = document.createElement('canvas');
+              let { width, height } = img;
+              const MAX_WIDTH = 1920;
+              if (width > MAX_WIDTH) {
+                height = Math.round((height * MAX_WIDTH) / width);
+                width = MAX_WIDTH;
+              }
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0, width, height);
+              canvas.toBlob(blob => {
+                if (!blob) {
+                  finish(file);
+                  return;
+                }
+                const compressedFile = new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' });
+                finish(compressedFile);
+              }, 'image/jpeg', 0.82);
+            } catch (_) {
+              finish(file);
             }
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, width, height);
-            canvas.toBlob(blob => {
-              URL.revokeObjectURL(objUrl);
-              const compressedFile = new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' });
-              resolve(compressedFile);
-            }, 'image/jpeg', 0.82);
           };
           img.src = objUrl;
         });
       }
 
       Promise.all(toAdd.map(compressImage)).then(compressedFiles => {
-        compressedFiles.forEach(file => {
+        compressedFiles.filter(Boolean).forEach(file => {
           const previewUrl = URL.createObjectURL(file);
           const item = {
             id: 'img_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
@@ -817,7 +833,11 @@ function initModGallery() {
         fileInput.value = '';
         renderImageGallery();
         showToast(`📷 Added and compressed ${compressedFiles.length} image(s).`);
+      }).catch(() => {
+        fileInput.value = '';
+        showToast('❌ Could not process one or more images. Please try a different file.');
       });
+    });
   }
 
   // Also hook up auto-expansion for description
@@ -981,26 +1001,38 @@ async function handleFormSubmit(e) {
   };
 
   if (editId) {
-    // Edit existing
-    await Store.update(editId, data);
-    showToast('✅ Mod updated successfully in Supabase!');
-    showFormMsg('Mod updated!');
-    resetForm();
+    try {
+      await Store.update(editId, data);
+      showToast('✅ Mod updated successfully in Supabase!');
+      showFormMsg('Mod updated!');
+      resetForm();
+    } catch (err) {
+      showToast('❌ Failed to update mod: ' + (err.message || 'Please try again.'));
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Save Changes';
+      return;
+    }
   } else {
-    // Create new
     const newMod = {
       id:         generateId(),
       createdAt:  today(),
       ...data,
     };
-    await Store.add(newMod);
-    showToast('🚀 Mod published live to Supabase!');
-    showFormMsg('Mod published!');
-    resetForm();
+    try {
+      await Store.add(newMod);
+      showToast('🚀 Mod published live to Supabase!');
+      showFormMsg('Mod published!');
+      resetForm();
+    } catch (err) {
+      showToast('❌ Failed to publish mod: ' + (err.message || 'Please try again.'));
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Publish Mod';
+      return;
+    }
   }
 
   submitBtn.disabled = false;
-  submitBtn.textContent = editId ? 'Save Changes' : 'Publish Mod';
+  submitBtn.textContent = 'Publish Mod';
 
   // Refresh overview stats and manage table
   renderOverview();
@@ -1059,7 +1091,9 @@ function hideFormMsg() {
 // ── Delete Modal ───────────────────────────────────────────
 let pendingDeleteId = null;
 
-function openDeleteModal(id, title) {
+function openDeleteModal(id) {
+  const mod = Store.getById(id);
+  const title = mod && mod.title ? mod.title : 'this mod';
   pendingDeleteId = id;
   document.getElementById('modal-sub').textContent =
     `"${title}" will be permanently removed. This cannot be undone.`;
@@ -1077,8 +1111,12 @@ async function confirmDelete() {
   const idToDelete = pendingDeleteId;
   closeDeleteModal();
   showToast('🗑 Mod deleting...');
-  await Store.delete(idToDelete);
-  showToast('🗑 Mod deleted.');
+  try {
+    await Store.delete(idToDelete);
+    showToast('🗑 Mod deleted.');
+  } catch (err) {
+    showToast('❌ Failed to delete mod. Please try again.');
+  }
   renderOverview();
   if (currentPanel === 'manage') renderManageTable();
 }
