@@ -345,7 +345,7 @@ const Store = {
   /** Mod Likes */
   async getModLikeStatus(modId) {
     const sb = this.getSb();
-    const user = window.TZ_AUTH ? window.TZ_AUTH.getUser() : null;
+    const user = window.TZ_AUTH ? window.TZ_AUTH.currentUser() : null;
     if (!sb || !user) return false;
     
     const { data } = await sb.from('mod_likes').select('mod_id').eq('mod_id', modId).eq('user_email', user.email).single();
@@ -354,7 +354,7 @@ const Store = {
 
   async toggleLike(modId, isLiking) {
     const sb = this.getSb();
-    const user = window.TZ_AUTH ? window.TZ_AUTH.getUser() : null;
+    const user = window.TZ_AUTH ? window.TZ_AUTH.currentUser() : null;
     if (!sb || !user) return false;
 
     if (isLiking) {
@@ -390,7 +390,7 @@ const Store = {
   /** Reporting System */
   async submitReport(targetId, targetType, reason) {
     const sb = this.getSb();
-    const user = window.TZ_AUTH ? window.TZ_AUTH.getUser() : null;
+    const user = window.TZ_AUTH ? window.TZ_AUTH.currentUser() : null;
     if (!sb) return false;
     
     const { error } = await sb.from('reports').insert([{
@@ -422,7 +422,7 @@ const Store = {
   async addComment(modId, username, text) {
     const sb = this.getSb();
     if (!sb) return null;
-    const user = window.TZ_AUTH ? window.TZ_AUTH.getUser() : null;
+    const user = window.TZ_AUTH ? window.TZ_AUTH.currentUser() : null;
     const userEmail = user ? user.email : 'anonymous';
     const { data, error } = await sb.from('mod_comments').insert([{
       mod_id: modId,

@@ -541,7 +541,7 @@ function renderMod(mod) {
   const likesCountEl = document.getElementById('mod-likes-count');
   if (likesCountEl) likesCountEl.textContent = mod.likes || 0;
   
-  if (window.TZ_AUTH && window.TZ_AUTH.getUser()) {
+  if (window.TZ_AUTH && window.TZ_AUTH.currentUser()) {
     window.TZ.Store.getModLikeStatus(mod.id).then(isLiked => {
       const likeBtn = document.getElementById('mod-like-btn');
       if (isLiked) {
@@ -818,7 +818,7 @@ function renderRelatedMods(mod) {
 
 window.handleLikeToggle = async function(e) {
   e.preventDefault();
-  if (!window.TZ_AUTH || !window.TZ_AUTH.getUser()) {
+  if (!window.TZ_AUTH || !window.TZ_AUTH.currentUser()) {
     window.TZ.showToast('Please sign in to like mods!');
     return;
   }
@@ -859,7 +859,7 @@ async function loadComments(modId) {
   const formWrap = document.getElementById('comment-form-wrap');
   const loginPrompt = document.getElementById('comment-login-prompt');
   
-  if(window.TZ_AUTH && window.TZ_AUTH.getUser()) {
+  if(window.TZ_AUTH && window.TZ_AUTH.currentUser()) {
     formWrap.style.display = 'block';
     loginPrompt.style.display = 'none';
   } else {
@@ -899,7 +899,7 @@ async function loadComments(modId) {
 }
 
 window.reportComment = async function(commentId) {
-  if (!window.TZ_AUTH || !window.TZ_AUTH.getUser()) {
+  if (!window.TZ_AUTH || !window.TZ_AUTH.currentUser()) {
     window.TZ.showToast('Please sign in to report comments!');
     return;
   }
@@ -923,7 +923,7 @@ window.postComment = async function() {
   btn.disabled = true;
   btn.textContent = 'Posting...';
   
-  const user = window.TZ_AUTH.getUser();
+  const user = window.TZ_AUTH.currentUser();
   const username = user.email.split('@')[0];
   
   await window.TZ.Store.addComment(currentMod.id, username, text);
