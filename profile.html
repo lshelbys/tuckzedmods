@@ -212,7 +212,6 @@
                   placeholder="e.g. speedracer99"
                   maxlength="30"
                   autocomplete="username" />
-                <span class="form-error" role="alert">Display name must be 3–30 characters.</span>
               </div>
             </div>
             <div class="profile-actions">
@@ -376,7 +375,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // ── Pre-fill forms ─────────────────────────────────────────
   function prefillForms(user) {
-    document.getElementById('f-username').value  = user.displayName || '';
+    document.getElementById('f-username').value  = user.displayName || user.email.split('@')[0] || '';
     document.getElementById('f-new-email').value = user.email || '';
     if (user.photoURL) {
       document.getElementById('avatar-preview').src = user.photoURL;
@@ -444,10 +443,8 @@ document.addEventListener('DOMContentLoaded', function () {
   // ── 1. Profile form ───────────────────────────────────────
   document.getElementById('form-profile').addEventListener('submit', async function (e) {
     e.preventDefault();
-    var username = document.getElementById('f-username').value.trim();
-
-    if (!username || username.length < 3) { setErr('field-username'); return; }
-    clrErr('field-username');
+    const user = firebase.auth().currentUser;
+    var username = document.getElementById('f-username').value.trim() || user.displayName || user.email.split('@')[0];
 
     setLoading('btn-profile', true, 'Save Profile');
 
