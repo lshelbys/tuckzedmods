@@ -3,156 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="head.js?v=1"></script>
   <title>My Profile — tuckzed mods</title>
   <meta name="description" content="Manage your tuckzed mods account — update username, email and password." />
   <meta name="robots" content="noindex, nofollow" />
-  <script>
-    if (window.location.pathname.endsWith('.html')) {
-      var clean = window.location.pathname.replace(/\.html$/, '');
-      if (clean.endsWith('/index')) clean = clean.slice(0, -6) || '/';
-      window.history.replaceState(null, '', clean + window.location.search + window.location.hash);
-    }
-  </script>
-  <link rel="stylesheet" href="styles.css?v=9" />
-  <style>
-    .profile-page {
-      flex: 1;
-      padding: 56px 0;
-      background: var(--gray-50);
-    }
-    .profile-grid {
-      display: grid;
-      grid-template-columns: 260px 1fr;
-      gap: 28px;
-      align-items: start;
-    }
-
-    /* ── Sidebar ─────────────────────────────────────── */
-    .profile-sidebar {
-      background: var(--white);
-      border: 2px solid var(--black);
-      border-radius: var(--radius-lg);
-      padding: 32px 24px;
-      text-align: center;
-    }
-    .profile-avatar {
-      width: 80px; height: 80px;
-      border-radius: 50%;
-      border: 3px solid var(--black);
-      background: var(--black);
-      color: var(--white);
-      font-size: 2rem;
-      font-weight: 700;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 16px;
-    }
-    .profile-sidebar__name {
-      font-size: 1.1rem;
-      font-weight: 700;
-      margin-bottom: 4px;
-    }
-    .profile-sidebar__email {
-      font-size: .8rem;
-      color: var(--gray-600);
-      word-break: break-all;
-      margin-bottom: 20px;
-    }
-    .profile-sidebar__joined {
-      font-size: .75rem;
-      color: var(--gray-400);
-      padding-top: 16px;
-      border-top: 1.5px solid var(--gray-100);
-    }
-
-    /* ── Cards ───────────────────────────────────────── */
-    .profile-cards {
-      display: flex;
-      flex-direction: column;
-      gap: 24px;
-    }
-    .profile-card {
-      background: var(--white);
-      border: 2px solid var(--black);
-      border-radius: var(--radius-lg);
-      padding: 32px;
-    }
-    .profile-card__title {
-      font-size: 1.1rem;
-      font-weight: 700;
-      margin-bottom: 4px;
-    }
-    .profile-card__sub {
-      font-size: .83rem;
-      color: var(--gray-600);
-      margin-bottom: 24px;
-    }
-    .profile-card__divider {
-      border: none;
-      border-top: 1.5px solid var(--gray-100);
-      margin: 0 0 24px;
-    }
-
-    /* ── Field rows ──────────────────────────────────── */
-    .profile-fields { display: flex; flex-direction: column; gap: 16px; margin-bottom: 20px; }
-
-    .profile-actions {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-    .profile-status {
-      font-size: .83rem;
-      font-weight: 700;
-      padding: 7px 14px;
-      border: 2px solid var(--black);
-      border-radius: var(--radius-sm);
-      display: none;
-    }
-    .profile-status.show { display: inline-block; }
-    .profile-status--success { background: var(--gray-50); }
-    .profile-status--error   { background: var(--white); }
-
-    /* ── Password wrap ───────────────────────────────── */
-    .pw-wrap { position: relative; }
-    .pw-toggle {
-      position: absolute; right: 12px; top: 50%;
-      transform: translateY(-50%);
-      background: none; border: none; cursor: pointer;
-      font-size: 1rem; padding: 0; color: var(--gray-600);
-    }
-    .pw-wrap .input { padding-right: 40px; }
-
-    /* ── Danger zone ─────────────────────────────────── */
-    .profile-card--danger { border-color: var(--black); }
-    .profile-card--danger .profile-card__title { color: var(--black); }
-
-    .nav__user-label {
-      font-size: .8rem; font-weight: 700;
-      padding: 6px 12px;
-      border: 2px solid var(--black);
-      border-radius: var(--radius-sm);
-      white-space: nowrap;
-    }
-    #nav-user-pill { display: flex; align-items: center; gap: 8px; }
-
-    @media (max-width: 768px) {
-      .profile-grid { grid-template-columns: 1fr; }
-    }
-    @media (max-width: 480px) {
-      .profile-sidebar { padding: 24px 16px; }
-      .profile-card { padding: 24px 16px; }
-    }
-  </style>
-  <!-- Open Graph Meta Tags -->
-  <meta property="og:title" content="tuckzed mods — Game Mod Distribution Platform" />
-  <meta property="og:description" content="Download the best mods for Assetto Corsa and BeamNG.drive. Cars, tracks, maps, and physics overhauls curated by the tuckzed mods community." />
-  <meta property="og:image" content="https://lshelbys.github.io/tuckzedmods/images/PREVIEW.png" />
-  <meta property="og:type" content="website" />
-  <meta name="twitter:card" content="summary_large_image" />
-  <script>if(localStorage.getItem('theme')==='dark') document.documentElement.setAttribute('data-theme', 'dark');</script>
+  <meta name="theme-color" content="#000000" />
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="stylesheet" href="styles.css?v=11" />
 </head>
 <body>
 
@@ -162,25 +20,29 @@
     <div class="nav__inner">
       <a href="./" class="nav__logo" id="nav-logo">tuckzed <span>mods</span></a>
       <ul class="nav__links" role="list">
-        <li><a href="https://discord.gg/5nE69arMNP" target="_blank" class="nav__link" style="color: #5865F2; font-weight: bold; display: flex; align-items: center; gap: 6px;"><svg width="18" height="18" viewBox="0 0 127.14 96.36" fill="currentColor"><path d="M107.7 8.07A105.15 105.15 0 0 0 81.47 0a72.06 72.06 0 0 0-3.36 6.83 97.68 97.68 0 0 0-29.08 0A72.37 72.37 0 0 0 45.67 0a105.46 105.46 0 0 0-26.23 8.07C2.92 32.82-3.13 57.06 1.74 80.89a105.9 105.9 0 0 0 32.18 16.15 77.7 77.7 0 0 0 6.89-11.23 68.42 68.42 0 0 1-10.85-5.18c.91-.66 1.8-1.34 2.66-2a75.57 75.57 0 0 0 64.32 0c.87.71 1.76 1.39 2.68 2a67.62 67.62 0 0 1-10.87 5.19 77 77 0 0 0 6.89 11.22 105.45 105.45 0 0 0 32.19-16.15c5.38-27.13-2.18-50.62-17.72-72.82zM42.49 65.3c-5.74 0-10.46-5.26-10.46-11.75s4.64-11.75 10.46-11.75c5.88 0 10.53 5.31 10.46 11.75 0 6.49-4.64 11.75-10.46 11.75zm42.16 0c-5.74 0-10.46-5.26-10.46-11.75s4.64-11.75 10.46-11.75c5.88 0 10.53 5.31 10.46 11.75 0 6.49-4.63 11.75-10.46 11.75z"/></svg> Discord</a></li>
+        <li><a href="https://discord.gg/5nE69arMNP" target="_blank" rel="noopener noreferrer" class="nav__link nav__link--discord"><svg width="18" height="18" viewBox="0 0 127.14 96.36" fill="currentColor" aria-hidden="true"><path d="M107.7 8.07A105.15 105.15 0 0 0 81.47 0a72.06 72.06 0 0 0-3.36 6.83 97.68 97.68 0 0 0-29.08 0A72.37 72.37 0 0 0 45.67 0a105.46 105.46 0 0 0-26.23 8.07C2.92 32.82-3.13 57.06 1.74 80.89a105.9 105.9 0 0 0 32.18 16.15 77.7 77.7 0 0 0 6.89-11.23 68.42 68.42 0 0 1-10.85-5.18c.91-.66 1.8-1.34 2.66-2a75.57 75.57 0 0 0 64.32 0c.87.71 1.76 1.39 2.68 2a67.62 67.62 0 0 1-10.87 5.19 77 77 0 0 0 6.89 11.22 105.45 105.45 0 0 0 32.19-16.15c5.38-27.13-2.18-50.62-17.72-72.82zM42.49 65.3c-5.74 0-10.46-5.26-10.46-11.75s4.64-11.75 10.46-11.75c5.88 0 10.53 5.31 10.46 11.75 0 6.49-4.64 11.75-10.46 11.75zm42.16 0c-5.74 0-10.46-5.26-10.46-11.75s4.64-11.75 10.46-11.75c5.88 0 10.53 5.31 10.46 11.75 0 6.49-4.63 11.75-10.46 11.75z"/></svg> Discord</a></li>
         <li><a href="./#mods" class="nav__link" id="nav-browse">Browse</a></li>
         <li><a href="auth.html?redirect=upload" class="nav__link" id="nav-upload">Upload Mods</a></li>
-        <li><a href="auth.html"    class="nav__link" id="nav-signin">Sign In</a></li>
-        <li id="nav-user-pill" style="display:none;">
+        <li><a href="auth.html" class="nav__link" id="nav-signin">Sign In</a></li>
+        <li class="nav__user-pill" id="nav-user-pill" style="display:none;">
           <span class="nav__user-label" id="nav-user-label"></span>
-          <button class="btn btn--sm" id="nav-signout-btn">Sign Out</button>
+          <button type="button" class="btn btn--sm" id="nav-signout-btn">Sign Out</button>
         </li>
       </ul>
     </div>
   </div>
 </nav>
 
+<div id="profile-loading" class="admin-loading" role="status">
+  <p class="admin-loading__title">Loading your profile…</p>
+  <p class="admin-loading__sub">Please wait a moment.</p>
+</div>
+
 <!-- ── Profile Page ─────────────────────────────────────────── -->
 <main class="profile-page" role="main" id="profile-main" style="display:none;">
   <div class="container">
     <div class="profile-grid">
 
-      <!-- Sidebar -->
       <aside class="profile-sidebar" aria-label="Profile summary">
         <div class="profile-avatar" id="profile-avatar" aria-hidden="true">?</div>
         <div class="profile-sidebar__name"  id="sidebar-name">Loading…</div>
@@ -188,31 +50,28 @@
         <div class="profile-sidebar__joined" id="sidebar-joined"></div>
       </aside>
 
-      <!-- Cards -->
       <div class="profile-cards">
 
         <!-- ── Public Profile ──────────────────────────────── -->
         <section class="profile-card" aria-labelledby="card-profile-title">
           <h2 class="profile-card__title" id="card-profile-title">Public Profile</h2>
-          <p class="profile-card__sub">Update your avatar and display name across the site.</p>
+          <p class="profile-card__sub">Update your avatar and display name shown on your comments.</p>
           <hr class="profile-card__divider" />
           <form id="form-profile" novalidate>
             <div class="profile-fields">
               <div class="form-field" id="field-avatar">
-                <label class="form-label">Avatar</label>
-                <div style="display:flex; align-items:center; gap:16px;">
-                  <img id="avatar-preview" src="" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid var(--black);display:none;" />
-                  <div id="avatar-placeholder" style="width:80px;height:80px;border-radius:50%;background:var(--black);color:var(--white);display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:700;">?</div>
+                <label class="form-label" for="f-avatar">Avatar</label>
+                <div class="avatar-picker">
+                  <img id="avatar-preview" src="" alt="Avatar preview" class="avatar-picker__preview" />
+                  <div id="avatar-placeholder" class="avatar-picker__placeholder" aria-hidden="true">?</div>
                   <input type="file" id="f-avatar" accept="image/*" style="display:none;" />
                   <button type="button" class="btn btn--secondary btn--sm" onclick="document.getElementById('f-avatar').click()">Change Avatar</button>
                 </div>
               </div>
               <div class="form-field" id="field-username">
                 <label class="form-label" for="f-username">Display Name</label>
-                <input type="text" class="input" id="f-username"
-                  placeholder="e.g. speedracer99"
-                  maxlength="30"
-                  autocomplete="username" />
+                <input type="text" class="input" id="f-username" placeholder="e.g. speedracer99" maxlength="30" autocomplete="username" />
+                <span class="form-error" role="alert">Display name must be at least 3 characters.</span>
               </div>
             </div>
             <div class="profile-actions">
@@ -225,28 +84,25 @@
         <!-- ── Email ─────────────────────────────────── -->
         <section class="profile-card" aria-labelledby="card-email-title">
           <h2 class="profile-card__title" id="card-email-title">Email Address</h2>
-          <p class="profile-card__sub">Changing your email requires your current password to verify it's you.</p>
+          <p class="profile-card__sub">We'll send a verification link to the new address. Your email changes once you click it.</p>
           <hr class="profile-card__divider" />
           <form id="form-email" novalidate>
             <div class="profile-fields">
               <div class="form-field" id="field-new-email">
                 <label class="form-label" for="f-new-email">New Email Address</label>
-                <input type="email" class="input" id="f-new-email"
-                  placeholder="new@example.com"
-                  autocomplete="email" />
+                <input type="email" class="input" id="f-new-email" placeholder="new@example.com" autocomplete="email" inputmode="email" />
                 <span class="form-error" role="alert">Please enter a valid email address.</span>
               </div>
               <div class="form-field" id="field-email-pass">
                 <label class="form-label" for="f-email-pass">Current Password</label>
                 <div class="pw-wrap">
-                  <input type="password" class="input" id="f-email-pass"
-                    placeholder="Confirm with your password"
-                    autocomplete="current-password" />
-                  <button type="button" class="pw-toggle" id="tog-email-pass" aria-label="Toggle password">👁</button>
+                  <input type="password" class="input" id="f-email-pass" placeholder="Confirm with your password" autocomplete="current-password" />
+                  <button type="button" class="pw-toggle" id="tog-email-pass" aria-label="Show password">👁</button>
                 </div>
                 <span class="form-error" role="alert">Please enter your current password.</span>
               </div>
             </div>
+            <p class="form-hint" id="email-pending-note" style="display:none;"></p>
             <div class="profile-actions">
               <button type="submit" class="btn btn--primary btn--sm" id="btn-email">Update Email</button>
               <span class="profile-status" id="status-email" role="status"></span>
@@ -264,30 +120,24 @@
               <div class="form-field" id="field-cur-pass">
                 <label class="form-label" for="f-cur-pass">Current Password</label>
                 <div class="pw-wrap">
-                  <input type="password" class="input" id="f-cur-pass"
-                    placeholder="Your current password"
-                    autocomplete="current-password" />
-                  <button type="button" class="pw-toggle" id="tog-cur-pass" aria-label="Toggle password">👁</button>
+                  <input type="password" class="input" id="f-cur-pass" placeholder="Your current password" autocomplete="current-password" />
+                  <button type="button" class="pw-toggle" id="tog-cur-pass" aria-label="Show password">👁</button>
                 </div>
                 <span class="form-error" role="alert">Please enter your current password.</span>
               </div>
               <div class="form-field" id="field-new-pass">
                 <label class="form-label" for="f-new-pass">New Password <span>(min. 6 characters)</span></label>
                 <div class="pw-wrap">
-                  <input type="password" class="input" id="f-new-pass"
-                    placeholder="Choose a new password"
-                    autocomplete="new-password" />
-                  <button type="button" class="pw-toggle" id="tog-new-pass" aria-label="Toggle password">👁</button>
+                  <input type="password" class="input" id="f-new-pass" placeholder="Choose a new password" autocomplete="new-password" />
+                  <button type="button" class="pw-toggle" id="tog-new-pass" aria-label="Show password">👁</button>
                 </div>
                 <span class="form-error" role="alert">New password must be at least 6 characters.</span>
               </div>
               <div class="form-field" id="field-conf-pass">
                 <label class="form-label" for="f-conf-pass">Confirm New Password</label>
                 <div class="pw-wrap">
-                  <input type="password" class="input" id="f-conf-pass"
-                    placeholder="Repeat new password"
-                    autocomplete="new-password" />
-                  <button type="button" class="pw-toggle" id="tog-conf-pass" aria-label="Toggle password">👁</button>
+                  <input type="password" class="input" id="f-conf-pass" placeholder="Repeat new password" autocomplete="new-password" />
+                  <button type="button" class="pw-toggle" id="tog-conf-pass" aria-label="Show password">👁</button>
                 </div>
                 <span class="form-error" role="alert">Passwords do not match.</span>
               </div>
@@ -297,6 +147,17 @@
               <span class="profile-status" id="status-password" role="status"></span>
             </div>
           </form>
+        </section>
+
+        <!-- ── Danger zone ───────────────────────────── -->
+        <section class="profile-card profile-card--danger" aria-labelledby="card-delete-title">
+          <h2 class="profile-card__title" id="card-delete-title">Delete Account</h2>
+          <p class="profile-card__sub">Permanently delete your account. Your comments will remain but will no longer be linked to you.</p>
+          <hr class="profile-card__divider" />
+          <div class="profile-actions">
+            <button type="button" class="btn btn--danger btn--sm" id="btn-delete-account">Delete My Account</button>
+            <span class="profile-status" id="status-delete" role="status"></span>
+          </div>
         </section>
 
       </div><!-- /.profile-cards -->
@@ -310,10 +171,10 @@
     <div class="footer__inner">
       <span class="footer__brand">tuckzed mods</span>
       <nav class="footer__links" aria-label="Footer navigation">
-        <a href="https://discord.gg/5nE69arMNP" target="_blank" class="footer__link" style="color: #5865F2; font-weight: bold;">Discord</a>
+        <a href="https://discord.gg/5nE69arMNP" target="_blank" rel="noopener noreferrer" class="footer__link footer__link--discord">Discord</a>
         <a href="./#mods" class="footer__link" id="footer-mods">Browse</a>
       </nav>
-      <span class="footer__copy">© 2026 tuckzed mods.</span>
+      <span class="footer__copy">© <span data-year>2026</span> tuckzed mods.</span>
     </div>
   </div>
 </footer>
@@ -321,293 +182,14 @@
 <!-- ── Toast ────────────────────────────────────────────────── -->
 <div class="toast-container" aria-live="assertive" aria-atomic="true"></div>
 
-<!-- ── Firebase SDKs ────────────────────────────────────────── -->
+<!-- ── Scripts ─────────────────────────────────────────────── -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js?v=2"></script>
-<script src="store.js?v=9"></script>
+<script src="store.js?v=11"></script>
 <script src="firebase-config.js?v=3"></script>
-<script src="auth-nav.js?v=3"></script>
-
-<script>
-'use strict';
-
-document.addEventListener('DOMContentLoaded', function () {
-
-  var auth = window.TZ_AUTH;
-
-  // ── Auth guard: must be signed-in non-admin user ──────────
-  auth.onChange(function (user) {
-    if (!user) {
-      window.location.href = 'auth.html';
-      return;
-    }
-    if (user.email.toLowerCase() === auth.ADMIN_EMAIL.toLowerCase()) {
-      // Admin has no profile page — redirect to admin panel
-      window.location.href = 'admin.html';
-      return;
-    }
-    // Valid regular user
-    document.getElementById('profile-main').style.display = '';
-    populateSidebar(user);
-    prefillForms(user);
-  });
-
-  // ── Populate sidebar ───────────────────────────────────────
-  function populateSidebar(user) {
-    var name   = user.displayName || user.email.split('@')[0];
-    var letter = name.charAt(0).toUpperCase();
-
-    const avatarEl = document.getElementById('profile-avatar');
-    if (user.photoURL) {
-      avatarEl.innerHTML = `<img src="${window.TZ.escapeHtml(user.photoURL)}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" />`;
-    } else {
-      avatarEl.textContent = letter;
-    }
-    
-    document.getElementById('sidebar-name').textContent    = name;
-    document.getElementById('sidebar-email').textContent   = user.email;
-
-    var created = user.metadata && user.metadata.creationTime
-      ? new Date(user.metadata.creationTime).toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' })
-      : '';
-    document.getElementById('sidebar-joined').textContent = created ? 'Member since ' + created : '';
-  }
-
-  // ── Pre-fill forms ─────────────────────────────────────────
-  function prefillForms(user) {
-    document.getElementById('f-username').value  = user.displayName || user.email.split('@')[0] || '';
-    document.getElementById('f-new-email').value = user.email || '';
-    if (user.photoURL) {
-      document.getElementById('avatar-preview').src = user.photoURL;
-      document.getElementById('avatar-preview').style.display = 'block';
-      document.getElementById('avatar-placeholder').style.display = 'none';
-    }
-  }
-
-  // ── Password toggle helper ─────────────────────────────────
-  function bindToggle(inputId, btnId) {
-    document.getElementById(btnId).addEventListener('click', function () {
-      var inp = document.getElementById(inputId);
-      var btn = document.getElementById(btnId);
-      if (inp.type === 'password') {
-        inp.type = 'text'; btn.textContent = '🙈';
-      } else {
-        inp.type = 'password'; btn.textContent = '👁';
-      }
-    });
-  }
-  bindToggle('f-email-pass', 'tog-email-pass');
-  bindToggle('f-cur-pass',   'tog-cur-pass');
-  bindToggle('f-new-pass',   'tog-new-pass');
-  bindToggle('f-conf-pass',  'tog-conf-pass');
-
-  // ── Field error helpers ────────────────────────────────────
-  function setErr(id)  { document.getElementById(id).classList.add('error'); }
-  function clrErr(id)  { document.getElementById(id).classList.remove('error'); }
-  function isEmail(s)  { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s); }
-
-  // ── Avatar Preview & Compress ───────────────────────────────
-  let avatarFile = null;
-  document.getElementById('f-avatar').addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    
-    const img = new Image();
-    const objUrl = URL.createObjectURL(file);
-    img.onerror = () => {
-      URL.revokeObjectURL(objUrl);
-      window.TZ.showToast('That file could not be used as an avatar. Please pick an image.');
-    };
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      let { width, height } = img;
-      const MAX_WIDTH = 256;
-      if (width > MAX_WIDTH) {
-        height = Math.round((height * MAX_WIDTH) / width);
-        width = MAX_WIDTH;
-      }
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, width, height);
-      canvas.toBlob(blob => {
-        URL.revokeObjectURL(objUrl);
-        if (!blob) {
-          avatarFile = file;
-          const imgEl = document.getElementById('avatar-preview');
-          imgEl.src = objUrl;
-          imgEl.style.display = 'block';
-          document.getElementById('avatar-placeholder').style.display = 'none';
-          return;
-        }
-        avatarFile = new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' });
-        
-        const previewUrl = URL.createObjectURL(avatarFile);
-        const imgEl = document.getElementById('avatar-preview');
-        imgEl.src = previewUrl;
-        imgEl.style.display = 'block';
-        document.getElementById('avatar-placeholder').style.display = 'none';
-      }, 'image/jpeg', 0.8);
-    };
-    img.src = objUrl;
-  });
-
-  // ── 1. Profile form ───────────────────────────────────────
-  document.getElementById('form-profile').addEventListener('submit', async function (e) {
-    e.preventDefault();
-    const user = firebase.auth().currentUser;
-    var username = document.getElementById('f-username').value.trim() || user.displayName || user.email.split('@')[0];
-
-    setLoading('btn-profile', true, 'Save Profile');
-
-    try {
-      const user = firebase.auth().currentUser;
-      let avatarUrl = null;
-      if (avatarFile) {
-        avatarUrl = await window.TZ.Store.uploadAvatar(avatarFile);
-      }
-      
-      const newPhotoURL = avatarUrl || user.photoURL;
-      await user.updateProfile({ displayName: username, photoURL: newPhotoURL });
-      
-      if (window.TZ.Store.updateProfile) {
-        await window.TZ.Store.updateProfile({
-          email: user.email,
-          display_name: username,
-          avatar_url: newPhotoURL
-        });
-      }
-
-      showStatus('status-profile', '✓ Profile updated!', 'success');
-      window.TZ.showToast('Profile updated!');
-      populateSidebar(user);
-      if (window.TZ_AUTH && window.TZ_AUTH.applyNavState) {
-        window.TZ_AUTH.applyNavState(user);
-      }
-    } catch(err) {
-      console.error(err);
-      showStatus('status-profile', 'Failed to update profile', 'error');
-    }
-
-    setLoading('btn-profile', false, 'Save Profile');
-  });
-
-  // ── Status message helpers ─────────────────────────────────
-  function showStatus(id, msg, type) {
-    var el = document.getElementById(id);
-    el.textContent = msg;
-    el.className   = 'profile-status show profile-status--' + type;
-    setTimeout(function () { el.classList.remove('show'); }, 4000);
-  }
-
-  function setLoading(btnId, loading, label) {
-    var btn = document.getElementById(btnId);
-    btn.disabled    = loading;
-    btn.textContent = loading ? 'Saving…' : label;
-  }
-
-  // ── Firebase friendly errors ───────────────────────────────
-  function friendlyErr(code) {
-    var map = {
-      'auth/wrong-password':          'Current password is incorrect.',
-      'auth/invalid-credential':      'Current password is incorrect.',
-      'auth/email-already-in-use':    'That email is already in use.',
-      'auth/invalid-email':           'Please enter a valid email.',
-      'auth/requires-recent-login':   'Please sign out and sign back in, then try again.',
-      'auth/weak-password':           'Password must be at least 6 characters.',
-      'auth/too-many-requests':       'Too many attempts. Please try again later.',
-      'auth/network-request-failed':  'Network error. Check your connection.',
-    };
-    return map[code] || 'Something went wrong. Please try again.';
-  }
-  // ── Re-authenticate helper ─────────────────────────────────
-  function reauth(currentPassword) {
-    var user       = firebase.auth().currentUser;
-    var credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPassword);
-    return user.reauthenticateWithCredential(credential);
-  }
-
-  // ── 2. Email form ──────────────────────────────────────────
-  document.getElementById('form-email').addEventListener('submit', function (e) {
-    e.preventDefault();
-    var newEmail = document.getElementById('f-new-email').value.trim();
-    var curPass  = document.getElementById('f-email-pass').value;
-    var valid    = true;
-
-    if (!newEmail || !isEmail(newEmail)) { setErr('field-new-email');  valid = false; }
-    else clrErr('field-new-email');
-
-    if (!curPass) { setErr('field-email-pass'); valid = false; }
-    else clrErr('field-email-pass');
-
-    if (!valid) return;
-
-    setLoading('btn-email', true, 'Update Email');
-
-    reauth(curPass)
-      .then(function () {
-        var user = firebase.auth().currentUser;
-        if (typeof user.verifyBeforeUpdateEmail === 'function') {
-          return user.verifyBeforeUpdateEmail(newEmail);
-        } else {
-          return user.updateEmail(newEmail);
-        }
-      })
-      .then(function () {
-        showStatus('status-email', '✓ Verification link sent to new email!', 'success');
-        window.TZ.showToast('Please check your new email to verify the change.');
-        document.getElementById('f-email-pass').value = '';
-        // The email won't actually update in the UI until the user clicks the verification link
-      })
-      .catch(function (err) {
-        showStatus('status-email', friendlyErr(err.code), 'error');
-      })
-      .finally(function () {
-        setLoading('btn-email', false, 'Update Email');
-      });
-  });
-
-  // ── 3. Password form ───────────────────────────────────────
-  document.getElementById('form-password').addEventListener('submit', function (e) {
-    e.preventDefault();
-    var curPass  = document.getElementById('f-cur-pass').value;
-    var newPass  = document.getElementById('f-new-pass').value;
-    var confPass = document.getElementById('f-conf-pass').value;
-    var valid    = true;
-
-    if (!curPass) { setErr('field-cur-pass');  valid = false; }
-    else clrErr('field-cur-pass');
-
-    if (!newPass || newPass.length < 6) { setErr('field-new-pass');  valid = false; }
-    else clrErr('field-new-pass');
-
-    if (newPass !== confPass) { setErr('field-conf-pass'); valid = false; }
-    else clrErr('field-conf-pass');
-
-    if (!valid) return;
-
-    setLoading('btn-password', true, 'Change Password');
-
-    reauth(curPass)
-      .then(function () {
-        return firebase.auth().currentUser.updatePassword(newPass);
-      })
-      .then(function () {
-        showStatus('status-password', '✓ Password changed!', 'success');
-        window.TZ.showToast('Password changed successfully!');
-        document.getElementById('form-password').reset();
-      })
-      .catch(function (err) {
-        showStatus('status-password', friendlyErr(err.code), 'error');
-      })
-      .finally(function () {
-        setLoading('btn-password', false, 'Change Password');
-      });
-  });
-
-}); // end DOMContentLoaded
-</script>
+<script src="auth-nav.js?v=11"></script>
+<script src="profile.js?v=11"></script>
 </body>
 </html>
