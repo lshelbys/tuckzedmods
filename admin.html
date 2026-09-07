@@ -13,7 +13,7 @@
       window.history.replaceState(null, '', clean + window.location.search + window.location.hash);
     }
   </script>
-  <link rel="stylesheet" href="styles.css?v=9" />
+  <link rel="stylesheet" href="styles.css?v=10" />
   <style>
     .nav__user-label {
       font-size: .8rem;
@@ -54,6 +54,11 @@
   </div>
 </nav>
 
+<div id="admin-auth-loading" style="padding:80px 24px;text-align:center;">
+  <p style="font-weight:700;font-size:1.1rem;">Checking admin access…</p>
+  <p style="color:var(--gray-600);margin-top:8px;">Please wait a moment.</p>
+</div>
+
 <!-- ── Admin Layout ─────────────────────────────────────────── -->
 <div class="admin-layout">
 
@@ -68,7 +73,7 @@
     </div>
     <div class="admin-sidebar__section">
       <div class="admin-sidebar__label">Content</div>
-      <button class="admin-nav-item" id="nav-create" onclick="showPanel('create')">
+      <button class="admin-nav-item" id="nav-create" onclick="startNewMod()">
         <span class="admin-nav-item__icon" aria-hidden="true">➕</span>
         New Mod
       </button>
@@ -334,7 +339,7 @@
             <h1 class="admin-header__title">Manage Mods</h1>
             <p class="admin-header__sub">Edit or delete published mods.</p>
           </div>
-          <button class="btn btn--primary btn--sm" onclick="showPanel('create')" id="manage-add-btn">
+          <button class="btn btn--primary btn--sm" onclick="startNewMod()" id="manage-add-btn">
             ➕ Add New Mod
           </button>
         </div>
@@ -410,7 +415,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js?v=2"></script>
-<script src="store.js?v=9"></script>
+<script src="store.js?v=10"></script>
 <script src="firebase-config.js?v=3"></script>
 <script src="auth-nav.js?v=3"></script>
 <script>
@@ -418,25 +423,38 @@
 
 // ── Auth Guard ─────────────────────────────────────────
 // Hide admin content until Firebase confirms admin identity.
-document.querySelector('.admin-layout').style.visibility = 'hidden';
+document.querySelector('.admin-layout').style.display = 'none';
+
+function revealAdmin() {
+  const loading = document.getElementById('admin-auth-loading');
+  if (loading) loading.style.display = 'none';
+  const layout = document.querySelector('.admin-layout');
+  if (layout) {
+    layout.style.display = '';
+    layout.style.visibility = '';
+  }
+}
+
+function formatSbError(err) {
+  if (!err) return 'Please try again.';
+  return err.message || err.details || err.hint || err.error_description || 'Please try again.';
+}
 
 window.TZ_AUTH.onChange(user => {
   if (!user) {
-    // Not signed in → go to sign-in page
     window.location.href = 'auth.html?redirect=upload';
     return;
   }
   if (user.email.toLowerCase() !== window.TZ_AUTH.ADMIN_EMAIL.toLowerCase()) {
-    // Signed in but not admin → go home with notice
     window.TZ?.showToast('Access restricted to admins.');
     window.location.href = './';
     return;
   }
-  // Admin confirmed → reveal panel and load live mods from Supabase
-  document.querySelector('.admin-layout').style.visibility = '';
+  revealAdmin();
   Store.fetchFromRemote().then(() => {
     renderOverview();
     if (currentPanel === 'manage') renderManageTable();
+    if (currentPanel === 'reports') renderReportsTable();
   });
 });
 
@@ -471,7 +489,11 @@ function showPanel(name) {
   if (name === 'overview') renderOverview();
   if (name === 'manage')   renderManageTable();
   if (name === 'reports')  renderReportsTable();
-  if (name === 'create' && document.getElementById('edit-id').value === '') resetForm();
+}
+
+function startNewMod() {
+  resetForm();
+  showPanel('create');
 }
 
 // ── On load ────────────────────────────────────────────────
@@ -527,7 +549,7 @@ function renderOverview() {
   const tbody = document.getElementById('recent-tbody');
 
   if (recent.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--gray-400);padding:32px;">No mods yet. <button class="btn btn--sm" onclick="showPanel('create')" style="margin-left:8px;">Add one</button></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--gray-400);padding:32px;">No mods yet. <button class="btn btn--sm" onclick="startNewMod()" style="margin-left:8px;">Add one</button></td></tr>`;
     return;
   }
 
@@ -559,7 +581,10 @@ function renderManageTable() {
   if (manageFilterGame)  mods = mods.filter(m => m.game === manageFilterGame);
   if (manageFilterQuery) {
     const q = manageFilterQuery.toLowerCase();
-    mods = mods.filter(m => m.title.toLowerCase().includes(q) || m.category.toLowerCase().includes(q));
+    mods = mods.filter(m =>
+      String(m.title || '').toLowerCase().includes(q) ||
+      String(m.category || '').toLowerCase().includes(q)
+    );
   }
 
   if (mods.length === 0) {
@@ -588,13 +613,16 @@ function renderManageTable() {
 
 function initManageSearch() {
   let timer;
-  document.getElementById('manage-search').addEventListener('input', e => {
+  function applySearch() {
+    const input = document.getElementById('manage-search');
+    manageFilterQuery = (input && input.value ? input.value : '').trim();
+    renderManageTable();
+  }
+  document.getElementById('manage-search').addEventListener('input', () => {
     clearTimeout(timer);
-    timer = setTimeout(() => {
-      manageFilterQuery = e.target.value.trim();
-      renderManageTable();
-    }, 200);
+    timer = setTimeout(applySearch, 200);
   });
+  document.getElementById('manage-search').addEventListener('search', applySearch);
 
   document.getElementById('manage-game-filter').addEventListener('change', e => {
     manageFilterGame = e.target.value;
@@ -875,6 +903,7 @@ function resetForm() {
   document.getElementById('edit-id').value = '';
   document.getElementById('form-panel-title').textContent = 'New Mod';
   document.getElementById('form-panel-sub').textContent = 'Fill in the details below to publish a new mod.';
+  document.getElementById('form-submit-btn').disabled = false;
   document.getElementById('form-submit-btn').textContent = 'Publish Mod';
   document.getElementById('form-cancel-btn').style.display = 'none';
 
@@ -946,7 +975,7 @@ function openEdit(id) {
 
 function cancelEdit() {
   resetForm();
-  document.getElementById('form-cancel-btn').style.display = 'none';
+  showPanel('manage');
 }
 
 async function handleFormSubmit(e) {
@@ -1006,8 +1035,9 @@ async function handleFormSubmit(e) {
       showToast('✅ Mod updated successfully in Supabase!');
       showFormMsg('Mod updated!');
       resetForm();
+      showPanel('manage');
     } catch (err) {
-      showToast('❌ Failed to update mod: ' + (err.message || 'Please try again.'));
+      showToast('❌ Failed to update mod: ' + formatSbError(err));
       submitBtn.disabled = false;
       submitBtn.textContent = 'Save Changes';
       return;
@@ -1023,8 +1053,9 @@ async function handleFormSubmit(e) {
       showToast('🚀 Mod published live to Supabase!');
       showFormMsg('Mod published!');
       resetForm();
+      showPanel('overview');
     } catch (err) {
-      showToast('❌ Failed to publish mod: ' + (err.message || 'Please try again.'));
+      showToast('❌ Failed to publish mod: ' + formatSbError(err));
       submitBtn.disabled = false;
       submitBtn.textContent = 'Publish Mod';
       return;

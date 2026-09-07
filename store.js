@@ -113,9 +113,13 @@ const Store = {
     let lastError = null;
     try {
       for (const row of payloads) {
-        const result = mode === 'insert'
-          ? await sb.from('mods').insert([row])
-          : await sb.from('mods').update(row).eq('id', mod.id);
+        let result;
+        if (mode === 'insert') {
+          result = await sb.from('mods').insert([row]);
+        } else {
+          const { id, ...rest } = row;
+          result = await sb.from('mods').update(rest).eq('id', mod.id);
+        }
         if (!result.error) return { ok: true };
         lastError = result.error;
         const msg = ((result.error.message || '') + ' ' + (result.error.code || '')).toLowerCase();

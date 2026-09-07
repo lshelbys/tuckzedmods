@@ -120,6 +120,7 @@ button, input, select, textarea { font-family: var(--font); }
 .btn--danger:hover { background: var(--black); color: var(--white); }
 
 .btn--sm { padding: 6px 14px; font-size: .8rem; }
+.btn--secondary { background: var(--white); color: var(--black); }
 
 /* ── Badges ─────────────────────────────────────────────────── */
 .badge {
