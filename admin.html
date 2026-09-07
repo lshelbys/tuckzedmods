@@ -3,16 +3,20 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <script src="head.js?v=1"></script>
+  <script src="head.js?v=2"></script>
   <title>Admin — tuckzed mods</title>
   <meta name="description" content="tuckzed mods admin dashboard — create, edit and delete mod listings." />
   <meta name="robots" content="noindex, nofollow" />
   <meta name="theme-color" content="#000000" />
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
   <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="stylesheet" href="styles.css?v=11" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Comic+Relief:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css?v=12" />
 </head>
 <body>
+<a class="skip-link" href="#main-content">Skip to content</a>
 
 <!-- ── Navigation ──────────────────────────────────────────── -->
 <nav class="nav" role="navigation" aria-label="Main navigation">
@@ -83,7 +87,7 @@
   </aside>
 
   <!-- Main Content -->
-  <main class="admin-main" role="main">
+  <main id="main-content" class="admin-main" role="main">
 
     <!-- ── Overview Panel ──────────────────────────────────── -->
     <div class="panel active" id="panel-overview">
@@ -317,9 +321,9 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js?v=2"></script>
-<script src="store.js?v=11"></script>
+<script src="store.js?v=12"></script>
 <script src="firebase-config.js?v=3"></script>
-<script src="auth-nav.js?v=11"></script>
-<script src="admin.js?v=11"></script>
+<script src="auth-nav.js?v=12"></script>
+<script src="admin.js?v=12"></script>
 </body>
 </html>

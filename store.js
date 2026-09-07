@@ -633,24 +633,68 @@ function escapeHtml(str) {
     .replace(/'/g, '&#39;');
 }
 
+// ── Auth redirect helper ─────────────────────────────────────
+/** Build auth.html?redirect=… pointing back to the current (or given) page. */
+function authRedirectUrl(returnTo) {
+  let target = returnTo;
+  if (!target) {
+    const file = (window.location.pathname.split('/').pop() || 'index.html').replace(/\/$/, '');
+    const page = (!file || file === 'index') ? './' : (file.endsWith('.html') ? file : file + '.html');
+    target = page === './' ? './' : page + (window.location.search || '') + (window.location.hash || '');
+  }
+  if (target === './' || target === '/' || target === 'index.html') return 'auth.html';
+  return 'auth.html?redirect=' + encodeURIComponent(target);
+}
+
 // ── Toast ────────────────────────────────────────────────────
-function showToast(message, duration = 3000) {
+/**
+ * Show a toast notification.
+ * @param {string} message
+ * @param {number|{duration?:number, action?:{label:string, href?:string, onClick?:Function}}} [opts]
+ */
+function showToast(message, opts = 3000) {
+  const options = typeof opts === 'number' ? { duration: opts } : (opts || {});
+  const duration = options.duration != null ? options.duration : (options.action ? 5500 : 3000);
+
   let container = document.querySelector('.toast-container');
   if (!container) {
     container = document.createElement('div');
     container.className = 'toast-container';
+    container.setAttribute('aria-live', 'polite');
     document.body.appendChild(container);
   }
   const toast = document.createElement('div');
-  toast.className = 'toast';
-  toast.textContent = message;
+  toast.className = 'toast' + (options.action ? ' toast--action' : '');
+  toast.setAttribute('role', 'status');
+
+  const text = document.createElement('span');
+  text.className = 'toast__text';
+  text.textContent = message;
+  toast.appendChild(text);
+
+  if (options.action && options.action.label) {
+    const btn = document.createElement(options.action.href ? 'a' : 'button');
+    btn.className = 'toast__action';
+    btn.textContent = options.action.label;
+    if (options.action.href) {
+      btn.href = options.action.href;
+    } else {
+      btn.type = 'button';
+      btn.addEventListener('click', () => {
+        toast.classList.remove('show');
+        if (typeof options.action.onClick === 'function') options.action.onClick();
+      });
+    }
+    toast.appendChild(btn);
+  }
+
   container.appendChild(toast);
   requestAnimationFrame(() => {
     requestAnimationFrame(() => { toast.classList.add('show'); });
   });
   setTimeout(() => {
     toast.classList.remove('show');
-    setTimeout(() => toast.remove(), 300);
+    setTimeout(() => toast.remove(), 280);
   }, duration);
 }
 
@@ -693,13 +737,27 @@ function openDialog(opts = {}) {
     const inputEl = hasInput ? overlay.querySelector('.modal__input') : null;
     if (inputEl && input.defaultValue) inputEl.value = input.defaultValue;
     const previouslyFocused = document.activeElement;
+    const modalEl = overlay.querySelector('.modal');
     let settled = false;
+
+    function onFocusTrap(e) {
+      if (e.key !== 'Tab' || !modalEl) return;
+      const focusables = modalEl.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      const list = Array.prototype.filter.call(focusables, el => !el.disabled && el.offsetParent !== null);
+      if (list.length === 0) return;
+      const first = list[0];
+      const last = list[list.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
 
     function close(result) {
       if (settled) return;
       settled = true;
       overlay.classList.remove('open');
+      document.body.classList.remove('modal-open');
       document.removeEventListener('keydown', onKey);
+      document.removeEventListener('keydown', onFocusTrap);
       setTimeout(() => overlay.remove(), 200);
       if (previouslyFocused && typeof previouslyFocused.focus === 'function') {
         try { previouslyFocused.focus(); } catch (_) {}
@@ -728,10 +786,12 @@ function openDialog(opts = {}) {
     overlay.querySelector('[data-action="cancel"]').addEventListener('click', cancel);
     overlay.addEventListener('click', e => { if (e.target === overlay) cancel(); });
     document.addEventListener('keydown', onKey);
+    document.addEventListener('keydown', onFocusTrap);
     if (inputEl) inputEl.addEventListener('input', () => inputEl.classList.remove('modal__input--error'));
 
     requestAnimationFrame(() => {
       overlay.classList.add('open');
+      document.body.classList.add('modal-open');
       const focusTarget = inputEl || overlay.querySelector('[data-action="confirm"]');
       if (focusTarget) focusTarget.focus();
       if (inputEl && typeof inputEl.select === 'function' && !input.multiline) inputEl.select();
@@ -759,5 +819,6 @@ function promptDialog(message, opts = {}) {
 window.TZ = {
   Store, GAMES, CATEGORIES, CATEGORY_ICONS,
   generateId, today, escapeHtml, showToast, normalizeTags, parseTags,
-  formatDate, timeAgo, formatCount, stripMarkdown, confirmDialog, promptDialog
+  formatDate, timeAgo, formatCount, stripMarkdown, confirmDialog, promptDialog,
+  authRedirectUrl
 };

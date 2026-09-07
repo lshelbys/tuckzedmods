@@ -263,10 +263,15 @@ function truncateWords(text, limit = 40) {
 }
 
 function goToMod(id, e) {
-  if (e && e.target && e.target.closest('.mod-card__dl-btn, .mod-card__tag')) return;
+  if (e && e.target && e.target.closest('.mod-card__dl-btn, .mod-card__tag, .mod-card__footer')) return;
   window.location.href = `mod.html?id=${encodeURIComponent(id)}`;
 }
 window.goToMod = goToMod;
+
+function onCardImgLoad(img) {
+  if (img) img.classList.add('is-loaded');
+}
+window.onCardImgLoad = onCardImgLoad;
 
 function getFilteredMods() {
   const { Store, parseTags } = window.TZ;
@@ -316,14 +321,15 @@ function renderModCard(mod, i) {
   const { GAMES, CATEGORY_ICONS, escapeHtml, formatDate, formatCount, parseTags } = window.TZ;
   const game = GAMES[mod.game];
   const icon = CATEGORY_ICONS[mod.category] || '📦';
+  const href = `mod.html?id=${encodeURIComponent(mod.id)}`;
   const imgHtml = mod.coverImage
-    ? `<img src="${escapeHtml(mod.coverImage)}" alt="${escapeHtml(mod.title)} cover" class="mod-card__img" loading="lazy" decoding="async" onerror="this.parentElement.innerHTML='<div class=\\'mod-card__img-placeholder\\'>${icon}</div>'" />`
+    ? `<img src="${escapeHtml(mod.coverImage)}" alt="" class="mod-card__img img-fade" loading="lazy" decoding="async" onload="onCardImgLoad(this)" onerror="this.parentElement.innerHTML='<div class=\\'mod-card__img-placeholder\\'>${icon}</div>'" />`
     : `<div class="mod-card__img-placeholder" aria-label="${escapeHtml(mod.category)} mod">${icon}</div>`;
   const imgBadge = (Array.isArray(mod.images) && mod.images.length > 1)
     ? `<span class="mod-card__img-badge">📷 ${mod.images.length}</span>`
     : '';
   const tagsHtml = parseTags(mod.tags).slice(0, 4).map(t =>
-    `<span class="badge badge--outline mod-card__tag" data-tag="${escapeHtml(t)}" role="button" tabindex="0" onclick="event.stopPropagation(); searchTag(this.dataset.tag)" onkeydown="if(event.key==='Enter'){event.stopPropagation();searchTag(this.dataset.tag)}">#${escapeHtml(t)}</span>`
+    `<button type="button" class="badge badge--outline mod-card__tag" data-tag="${escapeHtml(t)}" onclick="event.preventDefault(); event.stopPropagation(); searchTag(this.dataset.tag)">#${escapeHtml(t)}</button>`
   ).join(' ');
 
   return `
@@ -331,31 +337,29 @@ function renderModCard(mod, i) {
       class="mod-card"
       id="mod-card-${escapeHtml(mod.id)}"
       role="listitem"
-      tabindex="0"
       style="animation-delay:${Math.min(i * 40, 400)}ms"
-      aria-label="${escapeHtml(mod.title)} — ${escapeHtml(mod.category)} mod for ${escapeHtml(game?.name || mod.game)}"
-      onclick="goToMod(this.dataset.modId, event)"
-      onkeydown="if(event.key==='Enter')goToMod(this.dataset.modId, event)"
       data-mod-id="${escapeHtml(mod.id)}"
     >
-      <div class="mod-card__img-wrap">${imgHtml}${imgBadge}</div>
-      <div class="mod-card__body">
-        <div class="mod-card__tags">
-          <span class="badge badge--filled">${escapeHtml(game?.name || mod.game)}</span>
-          <span class="badge badge--gray">${escapeHtml(mod.category)}</span>
-          ${tagsHtml}
-        </div>
-        <h3 class="mod-card__title">${escapeHtml(mod.title)}</h3>
-        <p class="mod-card__desc">${escapeHtml(truncateWords(window.TZ.stripMarkdown(mod.description), 40))}</p>
-        <div class="mod-card__meta">
-          <span class="mod-card__version">v${escapeHtml(mod.version)}</span>
-          <time datetime="${escapeHtml(mod.createdAt)}">${escapeHtml(formatDate(mod.createdAt))}</time>
-          <div class="mod-card__stats">
-            <span title="${mod.likes || 0} likes">❤️ ${formatCount(mod.likes)}</span>
-            <span title="${mod.downloads || 0} downloads" data-downloads="${mod.downloads || 0}">⬇ ${formatCount(mod.downloads)}</span>
+      <a href="${href}" class="mod-card__hit" aria-label="${escapeHtml(mod.title)} — ${escapeHtml(mod.category)} mod for ${escapeHtml(game?.name || mod.game)}">
+        <div class="mod-card__img-wrap">${imgHtml}${imgBadge}</div>
+        <div class="mod-card__body">
+          <div class="mod-card__tags">
+            <span class="badge badge--filled">${escapeHtml(game?.name || mod.game)}</span>
+            <span class="badge badge--gray">${escapeHtml(mod.category)}</span>
+          </div>
+          <h3 class="mod-card__title">${escapeHtml(mod.title)}</h3>
+          <p class="mod-card__desc">${escapeHtml(truncateWords(window.TZ.stripMarkdown(mod.description), 40))}</p>
+          <div class="mod-card__meta">
+            <span class="mod-card__version">v${escapeHtml(mod.version)}</span>
+            <time datetime="${escapeHtml(mod.createdAt)}">${escapeHtml(formatDate(mod.createdAt))}</time>
+            <div class="mod-card__stats">
+              <span title="${mod.likes || 0} likes">❤️ ${formatCount(mod.likes)}</span>
+              <span title="${mod.downloads || 0} downloads" data-downloads="${mod.downloads || 0}">⬇ ${formatCount(mod.downloads)}</span>
+            </div>
           </div>
         </div>
-      </div>
+      </a>
+      ${tagsHtml ? `<div class="mod-card__tag-row">${tagsHtml}</div>` : ''}
       <div class="mod-card__footer">
         <button
           type="button"
@@ -436,17 +440,32 @@ function renderMods(append = false) {
   }
 
   if (observer) { observer.disconnect(); observer = null; }
+  const existingMore = document.getElementById('load-more-wrap');
+  if (existingMore) existingMore.remove();
+
   if (state.page * PAGE_SIZE < mods.length) {
-    grid.insertAdjacentHTML('beforeend', `<div id="scroll-sentinel" style="height:20px;width:100%;grid-column:1/-1;" aria-hidden="true"></div>`);
+    grid.insertAdjacentHTML('beforeend', `
+      <div id="scroll-sentinel" class="scroll-sentinel" aria-hidden="true"></div>
+      <div id="load-more-wrap" class="load-more-wrap">
+        <button type="button" class="btn btn--ghost" id="load-more-btn" onclick="loadMoreMods()">Load more mods</button>
+      </div>`);
     observer = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting) {
-        state.page++;
-        renderMods(true);
-      }
-    }, { rootMargin: '200px' });
+      if (entries[0].isIntersecting) loadMoreMods();
+    }, { rootMargin: '240px' });
     observer.observe(document.getElementById('scroll-sentinel'));
   }
 }
+
+function loadMoreMods() {
+  if (observer) { observer.disconnect(); observer = null; }
+  const wrap = document.getElementById('load-more-wrap');
+  const sentinel = document.getElementById('scroll-sentinel');
+  if (wrap) wrap.remove();
+  if (sentinel) sentinel.remove();
+  state.page++;
+  renderMods(true);
+}
+window.loadMoreMods = loadMoreMods;
 
 function resetFilters() {
   state.activeGame = null;

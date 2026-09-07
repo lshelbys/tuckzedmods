@@ -24,4 +24,16 @@
       window.history.replaceState(null, '', clean + window.location.search + window.location.hash);
     }
   } catch (_) {}
+
+  document.documentElement.classList.add('js');
+
+  // Failsafe so the page never stays blank if a later script fails to boot
+  function readyFailsafe() {
+    if (document.body) document.body.classList.add('is-ready');
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () { setTimeout(readyFailsafe, 2500); });
+  } else {
+    setTimeout(readyFailsafe, 2500);
+  }
 })();

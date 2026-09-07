@@ -10,6 +10,7 @@ let galleryImages = [];
 let activeImageIndex = 0;
 let isLightboxOpen = false;
 let lightboxOpenTimestamp = 0;
+let lightboxPrevFocus = null;
 
 function truncateWords(text, limit = 40) {
   if (!text) return '';
@@ -134,17 +135,34 @@ function updateAuthUI() {
     }
   } else {
     if (formWrap) formWrap.style.display = 'none';
-    if (loginPrompt) loginPrompt.style.display = 'block';
+    if (loginPrompt) {
+      loginPrompt.style.display = 'block';
+      const link = loginPrompt.querySelector('a');
+      if (link && window.TZ.authRedirectUrl) link.href = window.TZ.authRedirectUrl();
+    }
     if (likeBtn && currentMod) setLikeButton(false, currentMod.likes || 0);
   }
 }
 
-function setLikeButton(isLiked, count) {
+function setLikeButton(isLiked, count, animate) {
   const likeBtn = document.getElementById('mod-like-btn');
   if (!likeBtn) return;
   likeBtn.innerHTML = `<span>${isLiked ? '❤️ Liked' : '🤍 Like'} (<span id="mod-likes-count">${window.TZ.formatCount(count)}</span>)</span>`;
   likeBtn.dataset.liked = isLiked ? 'true' : 'false';
   likeBtn.setAttribute('aria-pressed', isLiked ? 'true' : 'false');
+  likeBtn.classList.toggle('btn--liked', isLiked);
+  if (animate) {
+    likeBtn.classList.remove('btn--pop');
+    void likeBtn.offsetWidth;
+    likeBtn.classList.add('btn--pop');
+  }
+}
+
+function requireSignIn(message) {
+  const href = window.TZ.authRedirectUrl
+    ? window.TZ.authRedirectUrl()
+    : 'auth.html?redirect=' + encodeURIComponent('mod.html' + window.location.search);
+  window.TZ.showToast(message, { action: { label: 'Sign in', href } });
 }
 
 function showNotFound() {
@@ -273,9 +291,17 @@ function renderMod(mod) {
   updateAuthUI();
   renderRelatedMods(mod);
 
+  const editWrap = document.getElementById('admin-edit-wrap');
+  if (editWrap) {
+    const editLink = editWrap.querySelector('a');
+    if (editLink) editLink.href = 'admin.html?edit=' + encodeURIComponent(mod.id);
+  }
+
   document.getElementById('mod-loading').style.display = 'none';
   document.getElementById('mod-not-found').style.display = 'none';
-  document.getElementById('mod-content').style.display = 'block';
+  const content = document.getElementById('mod-content');
+  content.style.display = 'block';
+  content.classList.add('content-enter');
 }
 
 // ── Gallery ────────────────────────────────────────────────
@@ -338,6 +364,7 @@ function openLightbox(e) {
 
   isLightboxOpen = true;
   lightboxOpenTimestamp = Date.now();
+  lightboxPrevFocus = document.activeElement;
 
   const overlay = document.getElementById('lightbox-overlay');
   if (overlay) {
@@ -346,11 +373,26 @@ function openLightbox(e) {
     overlay.setAttribute('aria-hidden', 'false');
   }
   document.body.style.overflow = 'hidden';
+  document.body.classList.add('lightbox-open');
   updateLightbox();
   const closeBtn = document.getElementById('lightbox-close-btn');
   if (closeBtn) closeBtn.focus();
+  document.addEventListener('keydown', lightboxFocusTrap);
 }
 window.openLightbox = openLightbox;
+
+function lightboxFocusTrap(e) {
+  if (!isLightboxOpen || e.key !== 'Tab') return;
+  const overlay = document.getElementById('lightbox-overlay');
+  if (!overlay) return;
+  const focusables = overlay.querySelectorAll('button, [href], [tabindex]:not([tabindex="-1"])');
+  const list = Array.prototype.filter.call(focusables, el => !el.disabled && el.offsetParent !== null);
+  if (list.length === 0) return;
+  const first = list[0];
+  const last = list[list.length - 1];
+  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+}
 
 function closeLightbox(e) {
   // Ignore the click that opened the lightbox bubbling up to the overlay
@@ -359,6 +401,7 @@ function closeLightbox(e) {
     return;
   }
   isLightboxOpen = false;
+  document.removeEventListener('keydown', lightboxFocusTrap);
   const overlay = document.getElementById('lightbox-overlay');
   if (overlay) {
     overlay.classList.remove('open');
@@ -366,8 +409,13 @@ function closeLightbox(e) {
     overlay.setAttribute('aria-hidden', 'true');
   }
   document.body.style.overflow = '';
+  document.body.classList.remove('lightbox-open');
   const expandBtn = document.getElementById('gallery-expand-btn');
-  if (expandBtn) expandBtn.focus();
+  if (lightboxPrevFocus && typeof lightboxPrevFocus.focus === 'function') {
+    try { lightboxPrevFocus.focus(); } catch (_) {}
+  } else if (expandBtn) {
+    expandBtn.focus();
+  }
 }
 window.closeLightbox = closeLightbox;
 
@@ -460,38 +508,33 @@ function renderRelatedMods(mod) {
   relatedGrid.innerHTML = related.map(m => {
     const game = GAMES[m.game];
     const icon = CATEGORY_ICONS[m.category] || '📦';
+    const href = `mod.html?id=${encodeURIComponent(m.id)}`;
     const imgHtml = m.coverImage
-      ? `<img src="${escapeHtml(m.coverImage)}" alt="${escapeHtml(m.title)} cover" class="mod-card__img" loading="lazy" decoding="async" onerror="this.parentElement.innerHTML='<div class=\\'mod-card__img-placeholder\\'>${icon}</div>'" />`
+      ? `<img src="${escapeHtml(m.coverImage)}" alt="" class="mod-card__img img-fade" loading="lazy" decoding="async" onload="this.classList.add('is-loaded')" onerror="this.parentElement.innerHTML='<div class=\\'mod-card__img-placeholder\\'>${icon}</div>'" />`
       : `<div class="mod-card__img-placeholder">${icon}</div>`;
     const imgBadge = (Array.isArray(m.images) && m.images.length > 1)
       ? `<span class="mod-card__img-badge">📷 ${m.images.length}</span>`
       : '';
 
     return `
-      <article
-        class="mod-card"
-        id="rel-card-${escapeHtml(m.id)}"
-        role="listitem"
-        tabindex="0"
-        onclick="goToMod(this.dataset.modId, event)"
-        onkeydown="if(event.key==='Enter')goToMod(this.dataset.modId, event)"
-        data-mod-id="${escapeHtml(m.id)}"
-      >
-        <div class="mod-card__img-wrap">${imgHtml}${imgBadge}</div>
-        <div class="mod-card__body">
-          <div class="mod-card__tags">
-            <span class="badge badge--filled">${escapeHtml(game?.name || m.game)}</span>
-            <span class="badge badge--gray">${escapeHtml(m.category)}</span>
+      <article class="mod-card" id="rel-card-${escapeHtml(m.id)}" role="listitem" data-mod-id="${escapeHtml(m.id)}">
+        <a href="${href}" class="mod-card__hit" aria-label="View ${escapeHtml(m.title)}">
+          <div class="mod-card__img-wrap">${imgHtml}${imgBadge}</div>
+          <div class="mod-card__body">
+            <div class="mod-card__tags">
+              <span class="badge badge--filled">${escapeHtml(game?.name || m.game)}</span>
+              <span class="badge badge--gray">${escapeHtml(m.category)}</span>
+            </div>
+            <h3 class="mod-card__title">${escapeHtml(m.title)}</h3>
+            <p class="mod-card__desc">${escapeHtml(truncateWords(window.TZ.stripMarkdown(m.description), 40))}</p>
+            <div class="mod-card__meta">
+              <span class="mod-card__version">v${escapeHtml(m.version)}</span>
+              <time datetime="${escapeHtml(m.createdAt)}">${escapeHtml(formatDate(m.createdAt))}</time>
+            </div>
           </div>
-          <h3 class="mod-card__title">${escapeHtml(m.title)}</h3>
-          <p class="mod-card__desc">${escapeHtml(truncateWords(window.TZ.stripMarkdown(m.description), 40))}</p>
-          <div class="mod-card__meta">
-            <span class="mod-card__version">v${escapeHtml(m.version)}</span>
-            <time datetime="${escapeHtml(m.createdAt)}">${escapeHtml(formatDate(m.createdAt))}</time>
-          </div>
-        </div>
+        </a>
         <div class="mod-card__footer">
-          <a href="mod.html?id=${encodeURIComponent(m.id)}" class="btn btn--primary mod-card__dl-btn" id="rel-view-btn-${escapeHtml(m.id)}">View Mod →</a>
+          <a href="${href}" class="btn btn--primary mod-card__dl-btn" id="rel-view-btn-${escapeHtml(m.id)}">View Mod →</a>
         </div>
       </article>`;
   }).join('');
@@ -501,18 +544,23 @@ function renderRelatedMods(mod) {
 window.handleLikeToggle = async function (e) {
   e.preventDefault();
   if (!window.TZ_AUTH || !window.TZ_AUTH.currentUser()) {
-    window.TZ.showToast('Please sign in to like mods.');
+    requireSignIn('Sign in to like this mod.');
     return;
   }
   if (!currentMod) return;
   const likeBtn = document.getElementById('mod-like-btn');
   const newLikedState = likeBtn.dataset.liked !== 'true';
+  const prevLikes = currentMod.likes || 0;
+  const optimisticLikes = Math.max(0, prevLikes + (newLikedState ? 1 : -1));
 
+  // Optimistic UI for instant feedback
+  setLikeButton(newLikedState, optimisticLikes, true);
   likeBtn.disabled = true;
   const result = await window.TZ.Store.toggleLike(currentMod.id, newLikedState);
   likeBtn.disabled = false;
 
   if (!result || !result.ok) {
+    setLikeButton(!newLikedState, prevLikes);
     window.TZ.showToast('Could not update like. Please try again.');
     return;
   }
@@ -664,7 +712,7 @@ window.submitReply = async function (parentId, btnEl) {
 
   const user = window.TZ_AUTH && window.TZ_AUTH.currentUser();
   if (!user) {
-    window.TZ.showToast('Please sign in to reply.');
+    requireSignIn('Sign in to reply to comments.');
     return;
   }
 
@@ -749,7 +797,7 @@ window.saveEditComment = async function (commentId, btnEl) {
 
 window.reportComment = async function (commentId) {
   if (!window.TZ_AUTH || !window.TZ_AUTH.currentUser()) {
-    window.TZ.showToast('Please sign in to report comments.');
+    requireSignIn('Sign in to report comments.');
     return;
   }
   const reason = await window.TZ.promptDialog('Tell us what is wrong with this comment (e.g. spam, harassment, offensive content).', {
@@ -773,7 +821,7 @@ window.postComment = async function () {
 
   const user = window.TZ_AUTH && window.TZ_AUTH.currentUser();
   if (!user) {
-    window.TZ.showToast('Please sign in to comment.');
+    requireSignIn('Sign in to leave a comment.');
     return;
   }
 

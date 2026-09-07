@@ -7,6 +7,7 @@
 'use strict';
 
 (function initAuthNav() {
+  const DISCORD_URL = 'https://discord.gg/5nE69arMNP';
 
   /**
    * Called by onAuthStateChanged — updates the nav to reflect auth state.
@@ -19,25 +20,45 @@
     const userPill    = document.getElementById('nav-user-pill');
     const userLabel   = document.getElementById('nav-user-label');
     const signoutBtn  = document.getElementById('nav-signout-btn');
+    const footerAdmin = document.getElementById('footer-admin');
+    const heroUpload  = document.getElementById('hero-admin-btn');
 
     if (!signinLink) return; // nav not present
 
     if (user) {
-      // ── Signed in ─────────────────────────────────────────────
       const isAdmin = !!(user.email && window.TZ_AUTH && window.TZ_AUTH.ADMIN_EMAIL
         && user.email.toLowerCase() === window.TZ_AUTH.ADMIN_EMAIL.toLowerCase());
 
-      // Always hide "Upload Mods" when signed in
-      if (uploadLi) uploadLi.style.display = 'none';
+      if (isAdmin) {
+        if (uploadLi) uploadLi.style.display = '';
+        if (uploadLink) {
+          uploadLink.href = 'admin.html';
+          uploadLink.textContent = 'Upload Mods';
+          uploadLink.removeAttribute('target');
+          uploadLink.removeAttribute('rel');
+        }
+        if (heroUpload) {
+          heroUpload.href = 'admin.html';
+          heroUpload.textContent = 'Upload Mods';
+          heroUpload.removeAttribute('target');
+          heroUpload.removeAttribute('rel');
+        }
+        if (footerAdmin) footerAdmin.style.display = '';
+      } else {
+        if (uploadLi) uploadLi.style.display = 'none';
+        if (heroUpload) {
+          heroUpload.href = DISCORD_URL;
+          heroUpload.target = '_blank';
+          heroUpload.rel = 'noopener noreferrer';
+          heroUpload.textContent = 'Submit a Mod';
+        }
+        if (footerAdmin) footerAdmin.style.display = 'none';
+      }
 
-      // Hide "Sign In" link
       signinLink.style.display = 'none';
-
-      // Show user pill
       if (userPill) userPill.style.display = '';
 
       if (isAdmin) {
-        // Admin: make the label a clickable link back to the admin panel
         if (userLabel) {
           userLabel.textContent  = '⚡ Admin';
           userLabel.style.cursor = 'pointer';
@@ -55,7 +76,6 @@
           };
         }
       } else {
-        // Regular user: label links to their profile page
         if (userLabel) {
           const name = user.displayName || user.email.split('@')[0];
           const escapedName = window.TZ ? window.TZ.escapeHtml(name) : name;
@@ -81,7 +101,6 @@
         }
       }
 
-      // Sign Out handler
       if (signoutBtn) {
         signoutBtn.onclick = async function () {
           const ok = window.TZ && window.TZ.confirmDialog
@@ -89,39 +108,57 @@
             : confirm('Are you sure you want to sign out?');
           if (ok) {
             await window.TZ_AUTH.signOut();
-            // Always redirect to homepage on sign-out
             window.location.href = './';
           }
         };
       }
 
     } else {
-      // ── Signed out ────────────────────────────────────────────
-      // Show "Upload Mods" and "Sign In" links
+      // Guests: point "Upload" at Discord — uploads are admin-curated
       if (uploadLi) uploadLi.style.display = '';
-      if (uploadLink) uploadLink.href = 'auth.html?redirect=upload';
+      if (uploadLink) {
+        uploadLink.href = DISCORD_URL;
+        uploadLink.target = '_blank';
+        uploadLink.rel = 'noopener noreferrer';
+        uploadLink.textContent = 'Submit a Mod';
+      }
+      if (heroUpload) {
+        heroUpload.href = DISCORD_URL;
+        heroUpload.target = '_blank';
+        heroUpload.rel = 'noopener noreferrer';
+        heroUpload.textContent = 'Submit a Mod';
+      }
+      if (signinLink) {
+        // Preserve return URL when opening Sign In from a deep page
+        const path = window.location.pathname.replace(/^\/+|\/+$/g, '');
+        const isAuth = path === 'auth' || path === 'login';
+        if (!isAuth && window.TZ && window.TZ.authRedirectUrl) {
+          signinLink.href = window.TZ.authRedirectUrl();
+        } else if (!isAuth) {
+          const file = (path.split('/').pop() || '') || 'index';
+          if (file && file !== 'index') {
+            const page = file.endsWith('.html') ? file : file + '.html';
+            signinLink.href = 'auth.html?redirect=' + encodeURIComponent(page + (window.location.search || ''));
+          }
+        }
+      }
       signinLink.style.display = '';
       if (userPill) userPill.style.display = 'none';
+      if (footerAdmin) footerAdmin.style.display = 'none';
     }
 
     updateNavHighlight();
   }
 
-  /**
-   * Highlights the nav button corresponding to the current page
-   */
   function updateNavHighlight() {
     var rawPath = window.location.pathname.replace(/^\/+|\/+$/g, '').replace(/\.html$/, '');
-    var search  = window.location.search || '';
     var hash    = window.location.hash || '';
-    var isUpload = search.indexOf('redirect=upload') !== -1;
 
     var browseLink = document.getElementById('nav-browse');
     var uploadLink = document.getElementById('nav-upload');
     var signinLink = document.getElementById('nav-signin');
     var userLabel  = document.getElementById('nav-user-label');
 
-    // Clear all active states first
     if (browseLink) browseLink.classList.remove('active');
     if (uploadLink) uploadLink.classList.remove('active');
     if (signinLink) signinLink.classList.remove('active');
@@ -130,23 +167,19 @@
     if (rawPath === 'admin') {
       if (userLabel)  userLabel.classList.add('active');
       if (uploadLink) uploadLink.classList.add('active');
-    } else if (isUpload) {
-      if (uploadLink) uploadLink.classList.add('active');
     } else if (rawPath === 'auth' || rawPath === 'login') {
       if (signinLink) signinLink.classList.add('active');
     } else if (rawPath === 'profile') {
       if (userLabel)  userLabel.classList.add('active');
     } else if (!rawPath || rawPath === 'index') {
-      if (hash === '#mods') {
+      if (hash === '#mods' || hash === '#games') {
         if (browseLink) browseLink.classList.add('active');
       }
     }
   }
 
-  // Listen for hash changes (e.g. clicking Browse)
   window.addEventListener('hashchange', updateNavHighlight);
 
-  // Wait for Firebase to load, then attach the listener
   function attachListener() {
     updateNavHighlight();
     if (window.TZ_AUTH && window.TZ_AUTH.onChange) {
@@ -156,7 +189,6 @@
     }
   }
 
-  // ── Inject Dark Mode Toggle ───────────────────────────────
   function initThemeToggle() {
     if (document.getElementById('theme-toggle-btn')) return;
     const navLinks = document.querySelector('.nav__links');
@@ -167,11 +199,19 @@
     btn.type = 'button';
     btn.className = 'theme-toggle';
 
+    function syncThemeColor() {
+      const meta = document.querySelector('meta[name="theme-color"]');
+      if (!meta) return;
+      const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+      meta.setAttribute('content', dark ? '#111111' : '#000000');
+    }
+
     function updateIcon() {
       const dark = document.documentElement.getAttribute('data-theme') === 'dark';
       btn.textContent = dark ? '☀️' : '🌙';
       btn.setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode');
       btn.title = dark ? 'Switch to light mode' : 'Switch to dark mode';
+      syncThemeColor();
     }
     updateIcon();
 
@@ -186,20 +226,83 @@
       }
       updateIcon();
     };
-    
+
     li.appendChild(btn);
     navLinks.appendChild(li);
   }
-  
-  // Keep the footer copyright year current without editing every page
+
+  function initMobileNav() {
+    const nav = document.querySelector('.nav');
+    const inner = document.querySelector('.nav__inner');
+    const links = document.querySelector('.nav__links');
+    if (!nav || !inner || !links || document.getElementById('nav-menu-btn')) return;
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.id = 'nav-menu-btn';
+    btn.className = 'nav__menu-btn';
+    btn.setAttribute('aria-expanded', 'false');
+    btn.setAttribute('aria-controls', 'nav-links');
+    btn.setAttribute('aria-label', 'Open menu');
+    btn.innerHTML = '<span class="nav__menu-icon" aria-hidden="true"></span>';
+
+    if (!links.id) links.id = 'nav-links';
+    inner.insertBefore(btn, links);
+
+    function setOpen(open) {
+      nav.classList.toggle('nav--open', open);
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      btn.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+      document.body.classList.toggle('nav-open', open);
+    }
+
+    btn.addEventListener('click', () => setOpen(!nav.classList.contains('nav--open')));
+
+    links.addEventListener('click', e => {
+      if (e.target.closest('a, button')) setOpen(false);
+    });
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && nav.classList.contains('nav--open')) setOpen(false);
+    });
+
+    window.addEventListener('resize', () => {
+      if (window.innerWidth > 768 && nav.classList.contains('nav--open')) setOpen(false);
+    });
+  }
+
+  function initNavScroll() {
+    const nav = document.querySelector('.nav');
+    if (!nav) return;
+    let ticking = false;
+    function update() {
+      ticking = false;
+      nav.classList.toggle('nav--scrolled', window.scrollY > 8);
+    }
+    window.addEventListener('scroll', () => {
+      if (!ticking) {
+        ticking = true;
+        requestAnimationFrame(update);
+      }
+    }, { passive: true });
+    update();
+  }
+
   function fillYear() {
     document.querySelectorAll('[data-year]').forEach(el => { el.textContent = new Date().getFullYear(); });
+  }
+
+  function markPageReady() {
+    document.body.classList.add('is-ready');
   }
 
   function boot() {
     attachListener();
     initThemeToggle();
+    initMobileNav();
+    initNavScroll();
     fillYear();
+    markPageReady();
   }
 
   if (document.readyState === 'loading') {
@@ -208,7 +311,6 @@
     boot();
   }
 
-  // Expose so profile page can force an update
   if (window.TZ_AUTH) {
     window.TZ_AUTH.applyNavState = applyNavState;
   } else {

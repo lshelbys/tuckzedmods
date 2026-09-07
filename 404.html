@@ -21,15 +21,19 @@
       }
     })();
   </script>
-  <script src="head.js?v=1"></script>
+  <script src="head.js?v=2"></script>
   <title>Page Not Found — tuckzed mods</title>
   <meta name="robots" content="noindex" />
   <meta name="theme-color" content="#000000" />
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="styles.css?v=11" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Comic+Relief:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css?v=12" />
 </head>
 <body>
-  <main class="not-found-wrap" role="main">
+<a class="skip-link" href="#main-content">Skip to content</a>
+  <main id="main-content" class="not-found-wrap" role="main">
     <div class="not-found-card">
       <div class="not-found-code">404</div>
       <h1>Page Not Found</h1>
@@ -40,5 +44,6 @@
       </div>
     </div>
   </main>
+<script>document.body.classList.add("is-ready");</script>
 </body>
 </html>

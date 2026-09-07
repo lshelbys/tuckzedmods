@@ -103,8 +103,11 @@ document.addEventListener('DOMContentLoaded', () => {
   initModGallery();
 
   // Restore the last open panel from the URL hash (e.g. admin#manage)
+  // or deep-link into an edit form via ?edit=<id>
+  const editId = new URLSearchParams(window.location.search).get('edit');
   const hashPanel = (window.location.hash || '').replace('#', '');
-  if (['overview', 'manage', 'reports'].includes(hashPanel)) showPanel(hashPanel);
+  if (editId) openEdit(editId);
+  else if (['overview', 'manage', 'reports'].includes(hashPanel)) showPanel(hashPanel);
   else if (hashPanel === 'create') startNewMod();
 
   document.getElementById('delete-modal').addEventListener('click', e => {
