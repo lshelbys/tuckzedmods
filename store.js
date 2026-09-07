@@ -434,6 +434,24 @@ const Store = {
     return data;
   },
 
+  /** Edit a comment */
+  async editComment(commentId, newText) {
+    const sb = this.getSb();
+    if (!sb) return false;
+    const { error } = await sb.from('mod_comments').update({ comment: newText }).eq('id', commentId);
+    if (error) { console.error('Edit comment error:', error); return false; }
+    return true;
+  },
+
+  /** Delete a comment */
+  async deleteComment(commentId) {
+    const sb = this.getSb();
+    if (!sb) return false;
+    const { error } = await sb.from('mod_comments').delete().eq('id', commentId);
+    if (error) { console.error('Delete comment error:', error); return false; }
+    return true;
+  },
+
   /** Get comments for a mod */
   async getComments(modId) {
     const sb = this.getSb();
