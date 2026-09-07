@@ -29,6 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderCollections();
   initSearch();
   initHeroButton();
+  initAlertsCta();
 
   // Fetch live mods from Supabase, then re-render with fresh data
   if (Store.fetchFromRemote) {
@@ -516,6 +517,21 @@ function resetFilters() {
   renderMods();
 }
 window.resetFilters = resetFilters;
+
+function initAlertsCta() {
+  const btn = document.getElementById('alerts-subscribe-btn');
+  if (!btn || !window.TZ_AUTH || !window.TZ_AUTH.onChange) return;
+  window.TZ_AUTH.onChange(user => {
+    if (user) {
+      btn.href = 'profile.html#card-notif-title';
+      btn.textContent = 'Manage alerts';
+    } else {
+      const { authRedirectUrl } = window.TZ;
+      btn.href = authRedirectUrl ? authRedirectUrl('profile.html#card-notif-title') : 'auth.html?redirect=' + encodeURIComponent('profile.html');
+      btn.textContent = 'Sign in to subscribe';
+    }
+  });
+}
 
 function retryFetch() {
   const { Store } = window.TZ;

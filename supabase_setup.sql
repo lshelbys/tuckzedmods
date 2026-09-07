@@ -431,3 +431,18 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN
   CREATE POLICY "Allow Manage Submissions" ON public.mod_submissions FOR ALL USING (true) WITH CHECK (true);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- New-mod alert subscriptions (in-app notifications when a mod is published)
+CREATE TABLE IF NOT EXISTS public.new_mod_subscriptions (
+  user_email TEXT PRIMARY KEY,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS new_mod_subscriptions_created_at_idx ON public.new_mod_subscriptions (created_at DESC);
+ALTER TABLE public.new_mod_subscriptions ENABLE ROW LEVEL SECURITY;
+DO $$ BEGIN
+  CREATE POLICY "Public Read New Mod Subscriptions" ON public.new_mod_subscriptions FOR SELECT USING (true);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN
+  CREATE POLICY "Allow Manage New Mod Subscriptions" ON public.new_mod_subscriptions FOR ALL USING (true) WITH CHECK (true);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;

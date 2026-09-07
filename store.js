@@ -270,7 +270,7 @@ const Store = {
   },
 
   /** Add a new mod (persists to Supabase and cache) */
-  async add(mod) {
+  async add(mod, opts = {}) {
     if (!mod.createdAtIso) mod.createdAtIso = new Date().toISOString();
     if (!mod.createdAt) mod.createdAt = mod.createdAtIso.slice(0, 10);
     const result = await this.persistRow('insert', mod);
@@ -281,6 +281,9 @@ const Store = {
     const mods = this.getAll().filter(m => m.id !== mod.id);
     mods.unshift(mod);
     this.save(mods);
+    if (opts.notify !== false) {
+      this.notifyNewModSubscribers(mod).catch(err => console.warn('New-mod notify skipped:', err));
+    }
     return mod;
   },
 
@@ -536,6 +539,11 @@ const Store = {
       await sb.from('mod_comments').update({ user_email: newEmail }).eq('user_email', oldEmail);
       await sb.from('comment_reactions').update({ user_email: newEmail }).eq('user_email', oldEmail);
       await sb.from('notifications').update({ user_email: newEmail }).eq('user_email', oldEmail);
+      const { data: alertSub } = await sb.from('new_mod_subscriptions').select('user_email').eq('user_email', oldEmail).maybeSingle();
+      if (alertSub) {
+        await sb.from('new_mod_subscriptions').delete().eq('user_email', oldEmail);
+        await sb.from('new_mod_subscriptions').upsert([{ user_email: newEmail }], { onConflict: 'user_email', ignoreDuplicates: true });
+      }
       return true;
     } catch (err) {
       console.error('migrateUserEmail error:', err);
@@ -553,6 +561,7 @@ const Store = {
       await sb.from('mod_wishlists').delete().eq('user_email', email);
       await sb.from('comment_reactions').delete().eq('user_email', email);
       await sb.from('notifications').delete().eq('user_email', email);
+      await sb.from('new_mod_subscriptions').delete().eq('user_email', email);
       await sb.from('profiles').delete().eq('email', email);
       if (profile && profile.avatar_url) await this.deleteAvatarFiles([profile.avatar_url]);
       // Soft-anonymize comments rather than deleting community history
@@ -1052,6 +1061,74 @@ const Store = {
     return !error;
   },
 
+  // ── New-mod alert subscriptions ──────────────────────────
+  async getNewModSubscription(email) {
+    const sb = this.getSb();
+    if (!sb || !email) return false;
+    try {
+      const { data, error } = await sb.from('new_mod_subscriptions').select('user_email').eq('user_email', email).maybeSingle();
+      if (error) throw error;
+      return !!data;
+    } catch (err) {
+      console.warn('getNewModSubscription:', err);
+      return false;
+    }
+  },
+
+  async setNewModSubscription(email, subscribed) {
+    const sb = this.getSb();
+    if (!sb || !email) return { ok: false };
+    try {
+      if (subscribed) {
+        let { error } = await sb.from('new_mod_subscriptions').upsert([{ user_email: email }], { onConflict: 'user_email' });
+        if (error && (error.code === '23505' || /duplicate/i.test(error.message || ''))) error = null;
+        if (error) throw error;
+      } else {
+        const { error } = await sb.from('new_mod_subscriptions').delete().eq('user_email', email);
+        if (error) throw error;
+      }
+      return { ok: true };
+    } catch (err) {
+      console.error('setNewModSubscription:', err);
+      return { ok: false, error: err };
+    }
+  },
+
+  /** Fan out in-app notifications to new-mod subscribers */
+  async notifyNewModSubscribers(mod) {
+    const sb = this.getSb();
+    if (!sb || !mod || !mod.id) return 0;
+    try {
+      const { data, error } = await sb.from('new_mod_subscriptions').select('user_email');
+      if (error) throw error;
+      const emails = (data || []).map(r => r.user_email).filter(Boolean);
+      if (!emails.length) return 0;
+      const gameName = (GAMES[mod.game] && GAMES[mod.game].name) || mod.game || 'a game';
+      const title = mod.title || 'a new mod';
+      const link = `mod.html?id=${encodeURIComponent(mod.id)}`;
+      const rows = emails.map(userEmail => ({
+        user_email: userEmail,
+        type: 'new_mod',
+        message: `New mod: ${title} (${gameName})`,
+        link,
+        context_id: String(mod.id),
+        from_user: mod.createdBy || 'admin',
+        read: false
+      }));
+      // Insert in chunks to avoid payload limits
+      const chunkSize = 100;
+      for (let i = 0; i < rows.length; i += chunkSize) {
+        const chunk = rows.slice(i, i + chunkSize);
+        const { error: insertErr } = await sb.from('notifications').insert(chunk);
+        if (insertErr) console.warn('notifyNewModSubscribers chunk error:', insertErr);
+      }
+      return rows.length;
+    } catch (err) {
+      console.warn('notifyNewModSubscribers:', err);
+      return 0;
+    }
+  },
+
   // ── Collections ──────────────────────────────────────────
   async listCollections() {
     const sb = this.getSb();
@@ -1211,7 +1288,7 @@ const Store = {
           createdAtIso: toIsoDate(raw.createdAtIso || raw.created_at || raw.createdAt),
           createdBy: raw.createdBy || raw.created_by || 'import'
         };
-        await this.add(mod);
+        await this.add(mod, { notify: false });
         results.added += 1;
       } catch (err) {
         results.errors.push(String(err.message || err));

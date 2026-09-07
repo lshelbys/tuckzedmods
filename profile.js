@@ -24,6 +24,7 @@ document.addEventListener('DOMContentLoaded', function () {
       loadLikedMods(user && user.email);
       loadWishlistMods(user && user.email);
       loadNotifications(user && user.email);
+      loadNewModSubscription(user && user.email);
       maybeMigrateEmail(user);
     } catch (err) {
       console.error('Profile render error:', err);
@@ -159,6 +160,40 @@ document.addEventListener('DOMContentLoaded', function () {
     window.TZ.showToast('All notifications marked as read.');
     loadNotifications(user.email);
   };
+
+  async function loadNewModSubscription(email) {
+    var box = document.getElementById('f-new-mod-alerts');
+    var status = document.getElementById('status-new-mod-alerts');
+    if (!box) return;
+    if (!email || !window.TZ.Store.getNewModSubscription) {
+      box.disabled = true;
+      return;
+    }
+    box.disabled = true;
+    try {
+      box.checked = await window.TZ.Store.getNewModSubscription(email);
+    } catch (_) {
+      box.checked = false;
+    }
+    box.disabled = false;
+    if (box.dataset.bound === '1') return;
+    box.dataset.bound = '1';
+    box.addEventListener('change', async function () {
+      var want = !!box.checked;
+      box.disabled = true;
+      if (status) status.textContent = 'Saving…';
+      var result = await window.TZ.Store.setNewModSubscription(email, want);
+      box.disabled = false;
+      if (!result || !result.ok) {
+        box.checked = !want;
+        if (status) status.textContent = '';
+        window.TZ.showToast('Could not update subscription. Re-run supabase_setup.sql if needed.');
+        return;
+      }
+      if (status) status.textContent = want ? 'Subscribed' : 'Unsubscribed';
+      window.TZ.showToast(want ? 'You’ll get alerts when new mods are published.' : 'New-mod alerts turned off.');
+    });
+  }
 
   // ── Sidebar ────────────────────────────────────────────────
   function populateSidebar(user) {

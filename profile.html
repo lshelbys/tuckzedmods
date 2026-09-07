@@ -13,7 +13,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Comic+Relief:wght@400;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=16" />
+  <link rel="stylesheet" href="styles.css?v=17" />
 </head>
 <body>
 <a class="skip-link" href="#main-content">Skip to content</a>
@@ -111,7 +111,18 @@
             <h2 class="profile-card__title" id="card-notif-title" style="margin:0;">Notifications</h2>
             <button type="button" class="btn btn--ghost btn--sm" id="btn-mark-notifs-read" onclick="markAllNotificationsRead()">Mark all read</button>
           </div>
-          <p class="profile-card__sub">Replies and other activity on your comments.</p>
+          <p class="profile-card__sub">Replies on your comments and alerts when new mods are published.</p>
+          <hr class="profile-card__divider" />
+          <div class="notif-subscribe" id="new-mod-subscribe-wrap">
+            <label class="notif-subscribe__label" for="f-new-mod-alerts">
+              <input type="checkbox" id="f-new-mod-alerts" />
+              <span>
+                <strong>Notify me when a new mod is added</strong>
+                <span class="form-hint" style="display:block;margin:4px 0 0;">Shows up here and on your profile badge when you’re signed in.</span>
+              </span>
+            </label>
+            <span class="profile-status" id="status-new-mod-alerts" role="status"></span>
+          </div>
           <hr class="profile-card__divider" />
           <div id="notifications-list" class="notif-list" aria-live="polite">
             <p class="form-hint">Loading notifications…</p>
@@ -225,9 +236,9 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js?v=2"></script>
-<script src="store.js?v=16"></script>
+<script src="store.js?v=17"></script>
 <script src="firebase-config.js?v=3"></script>
 <script src="auth-nav.js?v=16"></script>
-<script src="profile.js?v=16"></script>
+<script src="profile.js?v=17"></script>
 </body>
 </html>
