@@ -3,36 +3,29 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="head.js?v=1"></script>
   <title>Mod Details — tuckzed mods</title>
   <meta name="description" content="View mod details, screenshots, and download links on tuckzed mods." />
-  <script>
-    if (window.location.pathname.endsWith('.html')) {
-      var clean = window.location.pathname.replace(/\.html$/, '');
-      if (clean.endsWith('/index')) clean = clean.slice(0, -6) || '/';
-      window.history.replaceState(null, '', clean + window.location.search + window.location.hash);
-    }
-  </script>
-  <link rel="stylesheet" href="styles.css?v=9" />
-  <style>
-    .nav__user-label {
-      font-size: .8rem;
-      font-weight: 700;
-      padding: 6px 12px;
-      border: 2px solid var(--black);
-      border-radius: var(--radius-sm);
-      white-space: nowrap;
-    }
-    #nav-user-pill { display: flex; align-items: center; gap: 8px; }
-  </style>
-  <!-- Open Graph Meta Tags -->
-  <meta property="og:title" content="tuckzed mods — Game Mod Distribution Platform" />
-  <meta property="og:description" content="Download the best mods for Assetto Corsa and BeamNG.drive. Cars, tracks, maps, and physics overhauls curated by the tuckzed mods community." />
-  <meta property="og:image" content="https://lshelbys.github.io/tuckzedmods/images/PREVIEW.png" />
-  <meta property="og:type" content="website" />
+  <meta name="theme-color" content="#000000" />
+  <link rel="canonical" href="https://tuckzed.com/mod" />
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="stylesheet" href="styles.css?v=11" />
+
+  <!-- Open Graph / Twitter (updated by JS once the mod loads) -->
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="tuckzed mods" />
+  <meta property="og:url" content="https://tuckzed.com/mod" />
+  <meta property="og:title" content="Mod Details — tuckzed mods" />
+  <meta property="og:description" content="View mod details, screenshots, and download links on tuckzed mods." />
+  <meta property="og:image" content="https://tuckzed.com/images/PREVIEW.png" />
   <meta name="twitter:card" content="summary_large_image" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <script>if(localStorage.getItem('theme')==='dark') document.documentElement.setAttribute('data-theme', 'dark');</script>
+  <meta name="twitter:title" content="Mod Details — tuckzed mods" />
+  <meta name="twitter:description" content="View mod details, screenshots, and download links on tuckzed mods." />
+  <meta name="twitter:image" content="https://tuckzed.com/images/PREVIEW.png" />
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js" defer></script>
 </head>
 <body>
 
@@ -42,13 +35,13 @@
     <div class="nav__inner">
       <a href="./" class="nav__logo" id="nav-logo">tuckzed <span>mods</span></a>
       <ul class="nav__links" role="list">
-        <li><a href="https://discord.gg/5nE69arMNP" target="_blank" class="nav__link" style="color: #5865F2; font-weight: bold; display: flex; align-items: center; gap: 6px;"><svg width="18" height="18" viewBox="0 0 127.14 96.36" fill="currentColor"><path d="M107.7 8.07A105.15 105.15 0 0 0 81.47 0a72.06 72.06 0 0 0-3.36 6.83 97.68 97.68 0 0 0-29.08 0A72.37 72.37 0 0 0 45.67 0a105.46 105.46 0 0 0-26.23 8.07C2.92 32.82-3.13 57.06 1.74 80.89a105.9 105.9 0 0 0 32.18 16.15 77.7 77.7 0 0 0 6.89-11.23 68.42 68.42 0 0 1-10.85-5.18c.91-.66 1.8-1.34 2.66-2a75.57 75.57 0 0 0 64.32 0c.87.71 1.76 1.39 2.68 2a67.62 67.62 0 0 1-10.87 5.19 77 77 0 0 0 6.89 11.22 105.45 105.45 0 0 0 32.19-16.15c5.38-27.13-2.18-50.62-17.72-72.82zM42.49 65.3c-5.74 0-10.46-5.26-10.46-11.75s4.64-11.75 10.46-11.75c5.88 0 10.53 5.31 10.46 11.75 0 6.49-4.64 11.75-10.46 11.75zm42.16 0c-5.74 0-10.46-5.26-10.46-11.75s4.64-11.75 10.46-11.75c5.88 0 10.53 5.31 10.46 11.75 0 6.49-4.63 11.75-10.46 11.75z"/></svg> Discord</a></li>
+        <li><a href="https://discord.gg/5nE69arMNP" target="_blank" rel="noopener noreferrer" class="nav__link nav__link--discord"><svg width="18" height="18" viewBox="0 0 127.14 96.36" fill="currentColor" aria-hidden="true"><path d="M107.7 8.07A105.15 105.15 0 0 0 81.47 0a72.06 72.06 0 0 0-3.36 6.83 97.68 97.68 0 0 0-29.08 0A72.37 72.37 0 0 0 45.67 0a105.46 105.46 0 0 0-26.23 8.07C2.92 32.82-3.13 57.06 1.74 80.89a105.9 105.9 0 0 0 32.18 16.15 77.7 77.7 0 0 0 6.89-11.23 68.42 68.42 0 0 1-10.85-5.18c.91-.66 1.8-1.34 2.66-2a75.57 75.57 0 0 0 64.32 0c.87.71 1.76 1.39 2.68 2a67.62 67.62 0 0 1-10.87 5.19 77 77 0 0 0 6.89 11.22 105.45 105.45 0 0 0 32.19-16.15c5.38-27.13-2.18-50.62-17.72-72.82zM42.49 65.3c-5.74 0-10.46-5.26-10.46-11.75s4.64-11.75 10.46-11.75c5.88 0 10.53 5.31 10.46 11.75 0 6.49-4.64 11.75-10.46 11.75zm42.16 0c-5.74 0-10.46-5.26-10.46-11.75s4.64-11.75 10.46-11.75c5.88 0 10.53 5.31 10.46 11.75 0 6.49-4.63 11.75-10.46 11.75z"/></svg> Discord</a></li>
         <li><a href="./#mods" class="nav__link" id="nav-browse">Browse</a></li>
         <li><a href="auth.html?redirect=upload" class="nav__link" id="nav-upload">Upload Mods</a></li>
         <li><a href="auth.html" class="nav__link" id="nav-signin">Sign In</a></li>
-        <li id="nav-user-pill" style="display:none;">
+        <li class="nav__user-pill" id="nav-user-pill" style="display:none;">
           <span class="nav__user-label" id="nav-user-label"></span>
-          <button class="btn btn--sm" id="nav-signout-btn">Sign Out</button>
+          <button type="button" class="btn btn--sm" id="nav-signout-btn">Sign Out</button>
         </li>
       </ul>
     </div>
@@ -59,22 +52,17 @@
 <main class="mod-detail-wrap" id="mod-detail-main">
   <div class="container">
 
-    <!-- Back button -->
-    <a href="./#mods" class="mod-detail-back" id="back-btn">
-      ← Back to all mods
-    </a>
+    <a href="./#mods" class="mod-detail-back" id="back-btn">← Back to all mods</a>
 
     <!-- Loading State -->
-    <div id="mod-loading" style="padding:40px 20px;">
-      <div class="mod-detail-grid">
-        <div class="mod-detail__main">
-          <div class="skeleton" style="height:400px; margin-bottom:24px;"></div>
-          <div class="skeleton" style="height:200px;"></div>
-        </div>
-        <aside class="mod-detail__sidebar">
-          <div class="skeleton" style="height:350px;"></div>
-        </aside>
+    <div id="mod-loading" class="mod-detail-grid" aria-busy="true" aria-label="Loading mod">
+      <div class="mod-detail__main-col">
+        <div class="skeleton" style="aspect-ratio:16/9; margin-bottom:24px;"></div>
+        <div class="skeleton" style="height:200px;"></div>
       </div>
+      <aside class="mod-detail__sidebar">
+        <div class="skeleton" style="height:350px;"></div>
+      </aside>
     </div>
 
     <!-- Error / Not Found State -->
@@ -82,7 +70,7 @@
       <div class="empty-state__icon">🔍</div>
       <h1 class="empty-state__title">Mod Not Found</h1>
       <p class="empty-state__desc">The mod you are looking for may have been removed or does not exist.</p>
-      <div style="margin-top:20px;">
+      <div class="mt-24">
         <a href="./#mods" class="btn btn--primary">Browse All Mods</a>
       </div>
     </div>
@@ -93,110 +81,60 @@
 
         <!-- Left Column: Gallery & Description -->
         <div class="mod-detail__main-col">
-          <!-- Gallery / Media Preview -->
           <div class="mod-detail__main-img-wrap" id="main-img-wrap" title="Click to expand screenshot">
             <img id="main-img" src="" alt="Mod screenshot preview" class="mod-detail__main-img" />
-            <button
-              type="button"
-              class="mod-expand-badge"
-              id="gallery-expand-btn"
-              onclick="event.stopPropagation(); openLightbox(event);"
-              aria-label="Expand screenshot"
-              title="Expand screenshot fullscreen"
-            >
-              ⛶ Expand
-            </button>
-            <button
-              type="button"
-              class="mod-detail__nav-btn mod-detail__nav-btn--prev"
-              id="gallery-prev-btn"
-              onclick="event.stopPropagation(); prevImage();"
-              aria-label="Previous screenshot"
-              style="display:none;"
-            >
-              ◀
-            </button>
-            <button
-              type="button"
-              class="mod-detail__nav-btn mod-detail__nav-btn--next"
-              id="gallery-next-btn"
-              onclick="event.stopPropagation(); nextImage();"
-              aria-label="Next screenshot"
-              style="display:none;"
-            >
-              ▶
-            </button>
+            <button type="button" class="mod-expand-badge" id="gallery-expand-btn" aria-label="Expand screenshot" title="Expand screenshot fullscreen">⛶ Expand</button>
+            <button type="button" class="mod-detail__nav-btn mod-detail__nav-btn--prev" id="gallery-prev-btn" onclick="event.stopPropagation(); prevImage();" aria-label="Previous screenshot" style="display:none;">◀</button>
+            <button type="button" class="mod-detail__nav-btn mod-detail__nav-btn--next" id="gallery-next-btn" onclick="event.stopPropagation(); nextImage();" aria-label="Next screenshot" style="display:none;">▶</button>
             <div class="mod-detail__counter" id="gallery-counter" style="display:none;"></div>
           </div>
 
-          <!-- Thumbnails Row -->
-          <div class="mod-detail__thumbs" id="gallery-thumbs" style="display:none;" role="tablist" aria-label="Mod screenshots">
-            <!-- Rendered by JS -->
-          </div>
+          <div class="mod-detail__thumbs" id="gallery-thumbs" style="display:none;" role="tablist" aria-label="Mod screenshots"></div>
 
-          <!-- Description Card -->
           <div class="mod-detail__desc-card">
             <h2 class="mod-detail__desc-title">About This Mod</h2>
             <div class="mod-detail__desc-content" id="mod-description"></div>
           </div>
 
-          <!-- Comments Card -->
-          <div class="mod-detail__desc-card" style="margin-top:24px;" id="comments-section">
+          <!-- Comments -->
+          <div class="mod-detail__desc-card mt-24" id="comments-section">
             <h2 class="mod-detail__desc-title">Comments (<span id="comments-count">0</span>)</h2>
-            <div id="comments-list" style="display:flex; flex-direction:column; gap:16px; margin-bottom:24px;">
-              <p style="color:var(--gray-600); font-size:.9rem;">Loading comments...</p>
+            <div id="comments-list" class="comments-list">
+              <p class="comments-empty">Loading comments…</p>
             </div>
             <div id="comment-form-wrap" style="display:none;">
-              <textarea id="comment-input" class="input" rows="3" placeholder="Add a comment..."></textarea>
-              <button class="btn btn--primary" style="margin-top:12px;" onclick="postComment()" id="comment-submit-btn">Post Comment</button>
+              <label class="sr-only" for="comment-input">Add a comment</label>
+              <textarea id="comment-input" class="input" rows="3" maxlength="2000" placeholder="Add a comment…"></textarea>
+              <button type="button" class="btn btn--primary mt-12" onclick="postComment()" id="comment-submit-btn">Post Comment</button>
             </div>
-            <div id="comment-login-prompt" style="display:none; text-align:center; padding:16px; background:var(--gray-50); border:2px solid var(--black); border-radius:var(--radius-sm);">
-              You must be signed in to leave a comment. <a href="auth.html" style="font-weight:700; color:var(--black);">Sign In</a>
+            <div id="comment-login-prompt" class="comment-login-prompt" style="display:none;">
+              You must be signed in to leave a comment. <a href="auth.html">Sign In</a>
             </div>
           </div>
         </div>
 
-        <!-- Right Column: Metadata & Download Card (That Box!) -->
+        <!-- Right Column: Metadata & Download Card -->
         <aside class="mod-detail__sidebar">
           <div class="mod-detail__info-card">
-            <!-- Badges -->
-            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;" id="mod-badges">
+            <div class="mod-detail__tags" id="mod-badges">
               <span class="badge badge--filled" id="mod-game-badge"></span>
               <span class="badge badge--gray" id="mod-cat-badge"></span>
               <span class="badge badge--gray" id="mod-version-badge"></span>
             </div>
+            <div class="mod-detail__tags" id="mod-tags" style="display:none;"></div>
 
-            <!-- Mod Title -->
             <h1 class="mod-detail__title" id="mod-title"></h1>
 
-            <!-- Download Button -->
-            <button
-              type="button"
-              onclick="handleModDownload(event)"
-              class="btn btn--primary mod-detail__dl-btn"
-              id="mod-dl-btn"
-            >
-              ⬇ Download Mod
-            </button>
-            
-            <button
-              type="button"
-              onclick="handleLikeToggle(event)"
-              class="btn btn--secondary mod-detail__dl-btn"
-              id="mod-like-btn"
-              style="margin-top:8px;background:var(--white);"
-            >
-              🤍 Like (<span id="mod-likes-count">0</span>)
-            </button>
-
-            <!-- Quick Admin Edit button if admin is viewing -->
-            <div id="admin-edit-wrap" style="display:none;margin-top:12px;">
-              <a href="admin.html" class="btn btn--sm" style="width:100%;justify-content:center;">
-                ✏️ Edit in Admin Panel
-              </a>
+            <div class="mod-detail__actions">
+              <button type="button" onclick="handleModDownload(event)" class="btn btn--primary mod-detail__dl-btn" id="mod-dl-btn">⬇ Download Mod</button>
+              <button type="button" onclick="handleLikeToggle(event)" class="btn btn--secondary mod-detail__dl-btn" id="mod-like-btn" aria-pressed="false"><span>🤍 Like (<span id="mod-likes-count">0</span>)</span></button>
+              <button type="button" onclick="handleShare(event)" class="btn btn--secondary btn--sm" id="mod-share-btn" style="justify-content:center;">🔗 Share</button>
             </div>
 
-            <!-- Mod Meta details -->
+            <div id="admin-edit-wrap" style="display:none;margin-top:12px;">
+              <a href="admin.html" class="btn btn--sm" style="width:100%;justify-content:center;">✏️ Edit in Admin Panel</a>
+            </div>
+
             <div class="mod-detail__meta-list">
               <div class="mod-detail__meta-item">
                 <span class="mod-detail__meta-label">Game</span>
@@ -228,27 +166,14 @@
               </div>
             </div>
 
-            <p style="font-size:.78rem;color:var(--gray-500);text-align:center;margin:0;">
-              Verified mod download for tuckzed mods community.
-            </p>
+            <p class="mod-detail__note">Verified mod download for tuckzed mods community.</p>
           </div>
 
           <!-- Socials Card -->
           <div class="mod-detail__social-card">
-            <h3 class="mod-detail__social-title">
-              <span>Follow Us</span>
-            </h3>
-            <p class="mod-detail__social-desc">
-              Follow our social for more mods!
-            </p>
-            <a
-              href="https://www.instagram.com/tuckzed/"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="social-link-item"
-              id="sidebar-social-instagram"
-              title="Follow @tuckzed on Instagram"
-            >
+            <h3 class="mod-detail__social-title"><span>Follow Us</span></h3>
+            <p class="mod-detail__social-desc">Follow our social for more mods!</p>
+            <a href="https://www.instagram.com/tuckzed/" target="_blank" rel="noopener noreferrer" class="social-link-item" id="sidebar-social-instagram" title="Follow @tuckzed on Instagram">
               <div class="social-link-item__left">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
@@ -264,17 +189,14 @@
 
       </div><!-- /.mod-detail-grid -->
 
-      <!-- More Mods from same game -->
-      <section style="margin-top:64px;padding-top:40px;border-top:2px solid var(--black);" id="related-section">
-        <h2 style="font-size:1.4rem;font-weight:700;margin-bottom:24px;">More Mods You Might Like</h2>
-        <div class="mod-grid" id="related-grid">
-          <!-- Rendered by JS -->
-        </div>
+      <!-- Related mods -->
+      <section class="related-section" id="related-section" aria-labelledby="related-title">
+        <h2 class="related-section__title" id="related-title">More Mods You Might Like</h2>
+        <div class="mod-grid" id="related-grid" role="list"></div>
       </section>
 
     </div><!-- /#mod-content -->
-
-  </div><!-- /.container -->
+  </div>
 </main>
 
 <!-- ── Footer ──────────────────────────────────────────────── -->
@@ -283,17 +205,17 @@
     <div class="footer__inner">
       <span class="footer__brand">tuckzed mods</span>
       <nav class="footer__links" aria-label="Footer navigation">
-        <a href="https://discord.gg/5nE69arMNP" target="_blank" class="footer__link" style="color: #5865F2; font-weight: bold;">Discord</a>
+        <a href="https://discord.gg/5nE69arMNP" target="_blank" rel="noopener noreferrer" class="footer__link footer__link--discord">Discord</a>
         <a href="./#mods" class="footer__link">Browse</a>
         <a href="auth.html" class="footer__link">Account</a>
       </nav>
-      <span class="footer__copy">© 2026 tuckzed mods.</span>
+      <span class="footer__copy">© <span data-year>2026</span> tuckzed mods.</span>
     </div>
   </div>
 </footer>
 
-<!-- ── Image Lightbox / Fullscreen Modal ────────────────────── -->
-<div class="lightbox-overlay" id="lightbox-overlay" role="dialog" aria-modal="true" aria-label="Expanded mod screenshot">
+<!-- ── Image Lightbox ───────────────────────────────────────── -->
+<div class="lightbox-overlay" id="lightbox-overlay" role="dialog" aria-modal="true" aria-label="Expanded mod screenshot" aria-hidden="true">
   <button type="button" class="lightbox-close-btn" id="lightbox-close-btn" aria-label="Close expanded view" title="Close (Esc)">✕</button>
   <button type="button" class="lightbox-nav-btn lightbox-nav-btn--prev" id="lightbox-prev-btn" aria-label="Previous screenshot" title="Previous (←)">◀</button>
   <button type="button" class="lightbox-nav-btn lightbox-nav-btn--next" id="lightbox-next-btn" aria-label="Next screenshot" title="Next (→)">▶</button>
@@ -303,783 +225,17 @@
   <div class="lightbox-counter" id="lightbox-counter">1 / 1</div>
 </div>
 
+<!-- ── Toast Container ──────────────────────────────────────── -->
+<div class="toast-container" aria-live="assertive" aria-atomic="true"></div>
+
 <!-- ── Scripts ─────────────────────────────────────────────── -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js?v=2"></script>
-<script src="store.js?v=9"></script>
+<script src="store.js?v=11"></script>
 <script src="firebase-config.js?v=3"></script>
-<script src="auth-nav.js?v=3"></script>
-
-<script>
-'use strict';
-
-let currentMod = null;
-let galleryImages = [];
-let activeImageIndex = 0;
-
-function truncateWords(text, limit = 40) {
-  if (!text) return '';
-  const words = text.trim().split(/\s+/);
-  if (words.length <= limit) return text;
-  return words.slice(0, limit).join(' ') + '…';
-}
-
-function goToMod(id, e) {
-  if (e && e.target && e.target.closest('.mod-card__dl-btn')) return;
-  window.location.href = `mod.html?id=${encodeURIComponent(id)}`;
-}
-window.goToMod = goToMod;
-
-document.addEventListener('DOMContentLoaded', async () => {
-  const params = new URLSearchParams(window.location.search);
-  const modId = params.get('id');
-
-  if (!modId) {
-    showNotFound();
-    return;
-  }
-
-  const { Store } = window.TZ;
-  currentMod = Store.getById(modId);
-
-  // If remote fetch is supported, load latest data
-  if (Store.fetchFromRemote) {
-    await Store.fetchFromRemote();
-    currentMod = Store.getById(modId);
-  }
-
-  if (!currentMod) {
-    showNotFound();
-  } else {
-    renderMod(currentMod);
-  }
-
-  // Explicit click listeners for image expansion
-  const expandBtn = document.getElementById('gallery-expand-btn');
-  if (expandBtn) {
-    expandBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      openLightbox(e);
-    });
-  }
-
-  const mainWrap = document.getElementById('main-img-wrap');
-  if (mainWrap) {
-    mainWrap.addEventListener('click', (e) => {
-      if (e.target && e.target.closest('.mod-detail__nav-btn')) return;
-      e.preventDefault();
-      openLightbox(e);
-    });
-  }
-
-  // Lightbox overlay controls
-  const lbCloseBtn = document.getElementById('lightbox-close-btn');
-  if (lbCloseBtn) {
-    lbCloseBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      closeLightbox();
-    });
-  }
-
-  const lbOverlay = document.getElementById('lightbox-overlay');
-  if (lbOverlay) {
-    lbOverlay.addEventListener('click', (e) => {
-      closeLightbox(e);
-    });
-  }
-
-  const lbPrevBtn = document.getElementById('lightbox-prev-btn');
-  if (lbPrevBtn) {
-    lbPrevBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      prevImage();
-    });
-  }
-
-  const lbNextBtn = document.getElementById('lightbox-next-btn');
-  if (lbNextBtn) {
-    lbNextBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      nextImage();
-    });
-  }
-
-  // Keyboard navigation for image gallery & lightbox
-  document.addEventListener('keydown', e => {
-    const tag = (e.target && e.target.tagName) || '';
-    const typing = tag === 'INPUT' || tag === 'TEXTAREA' || (e.target && e.target.isContentEditable);
-    if (e.key === 'Escape' && isLightboxOpen) {
-      closeLightbox();
-      return;
-    }
-    if (typing) return;
-    if (galleryImages.length <= 1) return;
-    if (e.key === 'ArrowLeft') prevImage();
-    if (e.key === 'ArrowRight') nextImage();
-  });
-
-  // Watch auth state changes to dynamically update the UI
-  if (window.TZ_AUTH && window.TZ_AUTH.onChange) {
-    window.TZ_AUTH.onChange(user => {
-      const editWrap = document.getElementById('admin-edit-wrap');
-      if (editWrap && user && user.email.toLowerCase() === window.TZ_AUTH.ADMIN_EMAIL.toLowerCase()) {
-        editWrap.style.display = 'block';
-      }
-      if (currentMod) {
-        updateAuthUI();
-      }
-    });
-  }
-});
-
-function updateAuthUI() {
-  const formWrap = document.getElementById('comment-form-wrap');
-  const loginPrompt = document.getElementById('comment-login-prompt');
-  
-  if(window.TZ_AUTH && window.TZ_AUTH.currentUser()) {
-    if (formWrap) formWrap.style.display = 'block';
-    if (loginPrompt) loginPrompt.style.display = 'none';
-    
-    // Also fetch the like status
-    if (currentMod) {
-      window.TZ.Store.getModLikeStatus(currentMod.id).then(isLiked => {
-        const likeBtn = document.getElementById('mod-like-btn');
-        if (likeBtn) {
-          if (isLiked) {
-            likeBtn.innerHTML = `❤️ Liked (<span id="mod-likes-count">${currentMod.likes || 0}</span>)`;
-            likeBtn.dataset.liked = 'true';
-          } else {
-            likeBtn.innerHTML = `🤍 Like (<span id="mod-likes-count">${currentMod.likes || 0}</span>)`;
-            likeBtn.dataset.liked = 'false';
-          }
-        }
-      });
-    }
-  } else {
-    if (formWrap) formWrap.style.display = 'none';
-    if (loginPrompt) loginPrompt.style.display = 'block';
-    const likeBtn = document.getElementById('mod-like-btn');
-    if (likeBtn && currentMod) {
-      likeBtn.innerHTML = `🤍 Like (<span id="mod-likes-count">${currentMod.likes || 0}</span>)`;
-      likeBtn.dataset.liked = 'false';
-    }
-  }
-}
-
-function showNotFound() {
-  document.getElementById('mod-loading').style.display = 'none';
-  document.getElementById('mod-content').style.display = 'none';
-  document.getElementById('mod-not-found').style.display = 'block';
-}
-
-function renderMod(mod) {
-  const { GAMES, CATEGORY_ICONS } = window.TZ;
-  const game = GAMES[mod.game];
-  const catIcon = CATEGORY_ICONS[mod.category] || '📦';
-
-  // Page title
-  document.title = `${mod.title} — tuckzed mods`;
-
-  // Badges & Titles
-  const gameBadge = document.getElementById('mod-game-badge');
-  if (gameBadge) gameBadge.textContent = game ? game.name : mod.game;
-  const catBadge = document.getElementById('mod-cat-badge');
-  if (catBadge) catBadge.textContent = `${catIcon} ${mod.category}`;
-  const verBadge = document.getElementById('mod-version-badge');
-  if (verBadge) verBadge.textContent = 'v' + mod.version;
-  const titleEl = document.getElementById('mod-title');
-  if (titleEl) titleEl.textContent = mod.title;
-
-  const badgesEl = document.getElementById('mod-badges');
-  if (badgesEl && mod.tags) {
-    const tagsArr = String(mod.tags).split(',').map(t => t.trim()).filter(Boolean);
-    tagsArr.forEach(t => {
-      const tagSpan = document.createElement('span');
-      tagSpan.className = 'badge badge--outline';
-      tagSpan.textContent = '#' + t;
-      badgesEl.appendChild(tagSpan);
-    });
-  }
-
-  // Metadata items
-  const gameName = document.getElementById('mod-game-name');
-  if (gameName) gameName.textContent = game ? game.name : mod.game;
-  const catName = document.getElementById('mod-cat-name');
-  if (catName) catName.textContent = mod.category;
-  const verEl = document.getElementById('mod-version');
-  if (verEl) verEl.textContent = 'v' + mod.version;
-  const dateEl = document.getElementById('mod-date');
-  if (dateEl) dateEl.textContent = mod.createdAt;
-  const authorEl = document.getElementById('mod-author');
-  if (authorEl) authorEl.textContent = mod.createdBy || 'admin';
-  const downloadsEl = document.getElementById('mod-downloads');
-  if (downloadsEl) downloadsEl.textContent = mod.downloads || 0;
-
-  // Images Setup (cover image first)
-  galleryImages = [];
-  let rawImages = [];
-  if (Array.isArray(mod.images)) {
-    rawImages = mod.images.filter(img => typeof img === 'string' && img.trim().length > 0);
-  } else if (typeof mod.images === 'string' && mod.images.trim()) {
-    try {
-      const parsed = JSON.parse(mod.images);
-      if (Array.isArray(parsed)) {
-        rawImages = parsed.filter(img => typeof img === 'string' && img.trim().length > 0);
-      } else if (typeof parsed === 'string' && parsed.trim()) {
-        rawImages = [parsed.trim()];
-      }
-    } catch (_) {
-      rawImages = [mod.images.trim()];
-    }
-  }
-
-  const cover = mod.coverImage || mod.cover_image || mod.image || (rawImages[0] || '');
-  if (cover) {
-    const withoutCover = rawImages.filter(img => img !== cover);
-    galleryImages = [cover, ...withoutCover];
-  } else if (rawImages.length > 0) {
-    galleryImages = [...rawImages];
-  }
-
-  const countEl = document.getElementById('mod-images-count');
-  if (countEl) countEl.textContent = galleryImages.length;
-
-  activeImageIndex = 0;
-  setupGallery();
-
-  // Description
-  const descEl = document.getElementById('mod-description');
-  if (descEl) {
-    if (window.marked && typeof marked.parse === 'function') {
-      descEl.innerHTML = window.DOMPurify ? window.DOMPurify.sanitize(marked.parse(mod.description || '')) : marked.parse(mod.description || '');
-    } else {
-      descEl.textContent = mod.description;
-    }
-  }
-
-  // Download Link Button Status
-  const dlBtn = document.getElementById('mod-dl-btn');
-  if (dlBtn) {
-    if (!mod.downloadUrl) {
-      dlBtn.classList.add('disabled');
-      dlBtn.textContent = 'No Download Link';
-    } else {
-      dlBtn.classList.remove('disabled');
-      dlBtn.textContent = '⬇ Download Mod';
-    }
-  }
-
-  // Load comments
-  if (typeof loadComments === 'function') {
-    loadComments(mod.id);
-  }
-
-  // Load likes status
-  const likesCountEl = document.getElementById('mod-likes-count');
-  if (likesCountEl) likesCountEl.textContent = mod.likes || 0;
-  
-  // Update Auth UI (comments form and like button state)
-  updateAuthUI();
-
-  // Related Mods
-  renderRelatedMods(mod);
-
-  // Show page
-  document.getElementById('mod-loading').style.display = 'none';
-  document.getElementById('mod-content').style.display = 'block';
-}
-
-function setupGallery() {
-  const mainImg = document.getElementById('main-img');
-  const prevBtn = document.getElementById('gallery-prev-btn');
-  const nextBtn = document.getElementById('gallery-next-btn');
-  const counter = document.getElementById('gallery-counter');
-  const thumbs = document.getElementById('gallery-thumbs');
-
-  if (galleryImages.length === 0) {
-    mainImg.src = 'https://placehold.co/1280x720?text=No+Preview+Available';
-    prevBtn.style.display = 'none';
-    nextBtn.style.display = 'none';
-    counter.style.display = 'none';
-    thumbs.style.display = 'none';
-    galleryImages = [mainImg.src];
-    return;
-  }
-
-  updateMainImage();
-
-  if (galleryImages.length > 1) {
-    prevBtn.style.display = 'flex';
-    nextBtn.style.display = 'flex';
-    counter.style.display = 'block';
-    thumbs.style.display = 'flex';
-
-    thumbs.innerHTML = galleryImages.map((url, idx) => `
-      <button
-        type="button"
-        class="mod-detail__thumb-btn ${idx === activeImageIndex ? 'active' : ''}"
-        id="thumb-btn-${idx}"
-        onclick="setImageIndex(${idx})"
-        aria-label="View screenshot ${idx + 1}"
-      >
-        <img src="${window.TZ.escapeHtml(url)}" alt="Thumbnail ${idx + 1}" class="mod-detail__thumb-img" onerror="this.src='https://placehold.co/200x120?text=Image'" />
-      </button>
-    `).join('');
-  } else {
-    prevBtn.style.display = 'none';
-    nextBtn.style.display = 'none';
-    counter.style.display = 'none';
-    thumbs.style.display = 'none';
-  }
-}
-
-let isLightboxOpen = false;
-let lightboxOpenTimestamp = 0;
-
-function openLightbox(e) {
-  if (e) {
-    if (typeof e.stopPropagation === 'function') e.stopPropagation();
-    if (typeof e.preventDefault === 'function') e.preventDefault();
-  }
-
-  // Guaranteed fallback: If galleryImages is empty, use current main-img src
-  if (!galleryImages || galleryImages.length === 0) {
-    const mainImg = document.getElementById('main-img');
-    if (mainImg && mainImg.src) {
-      galleryImages = [mainImg.src];
-      activeImageIndex = 0;
-    } else {
-      return;
-    }
-  }
-
-  if (activeImageIndex < 0 || activeImageIndex >= galleryImages.length) {
-    activeImageIndex = 0;
-  }
-
-  isLightboxOpen = true;
-  lightboxOpenTimestamp = Date.now();
-
-  const overlay = document.getElementById('lightbox-overlay');
-  if (overlay) {
-    overlay.classList.add('open');
-    overlay.style.display = 'flex';
-    overlay.setAttribute('aria-hidden', 'false');
-  }
-  document.body.style.overflow = 'hidden';
-  updateLightbox();
-}
-window.openLightbox = openLightbox;
-
-function closeLightbox(e) {
-  // Prevent immediate accidental close within 250ms of opening
-  if (Date.now() - lightboxOpenTimestamp < 250) {
-    return;
-  }
-
-  if (e) {
-    // If click is inside image or navigation controls, do not close
-    if (e.target && (e.target.closest('.lightbox-img-wrap') || e.target.closest('.lightbox-nav-btn') || e.target.closest('.lightbox-counter'))) {
-      return;
-    }
-  }
-
-  isLightboxOpen = false;
-  const overlay = document.getElementById('lightbox-overlay');
-  if (overlay) {
-    overlay.classList.remove('open');
-    overlay.style.display = 'none';
-    overlay.setAttribute('aria-hidden', 'true');
-  }
-  document.body.style.overflow = '';
-}
-window.closeLightbox = closeLightbox;
-
-function updateLightbox() {
-  if (!isLightboxOpen) return;
-  const lbImg = document.getElementById('lightbox-img');
-  const lbCounter = document.getElementById('lightbox-counter');
-  const lbPrev = document.getElementById('lightbox-prev-btn');
-  const lbNext = document.getElementById('lightbox-next-btn');
-
-  if (!galleryImages || galleryImages.length === 0) {
-    const mainImg = document.getElementById('main-img');
-    if (mainImg && mainImg.src) galleryImages = [mainImg.src];
-  }
-
-  const currentUrl = (galleryImages && galleryImages[activeImageIndex])
-    ? galleryImages[activeImageIndex]
-    : (document.getElementById('main-img')?.src || '');
-
-  if (currentUrl && lbImg) {
-    lbImg.src = currentUrl;
-  }
-
-  if (galleryImages && galleryImages.length > 1) {
-    if (lbCounter) lbCounter.textContent = `${activeImageIndex + 1} / ${galleryImages.length}`;
-    if (lbPrev) lbPrev.style.display = 'flex';
-    if (lbNext) lbNext.style.display = 'flex';
-  } else {
-    if (lbCounter) lbCounter.textContent = '1 / 1';
-    if (lbPrev) lbPrev.style.display = 'none';
-    if (lbNext) lbNext.style.display = 'none';
-  }
-}
-
-function updateMainImage() {
-  const mainImg = document.getElementById('main-img');
-  const counter = document.getElementById('gallery-counter');
-  const currentUrl = galleryImages[activeImageIndex];
-
-  if (currentUrl) {
-    mainImg.src = currentUrl;
-    mainImg.alt = `${currentMod ? currentMod.title : 'Mod'} screenshot ${activeImageIndex + 1}`;
-  }
-
-  if (counter && galleryImages.length > 1) {
-    counter.textContent = `${activeImageIndex + 1} / ${galleryImages.length}`;
-  }
-
-  galleryImages.forEach((_, idx) => {
-    const btn = document.getElementById(`thumb-btn-${idx}`);
-    if (btn) {
-      if (idx === activeImageIndex) {
-        btn.classList.add('active');
-        btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-      } else {
-        btn.classList.remove('active');
-      }
-    }
-  });
-
-  if (isLightboxOpen) {
-    updateLightbox();
-  }
-}
-
-function setImageIndex(idx) {
-  if (idx >= 0 && idx < galleryImages.length) {
-    activeImageIndex = idx;
-    updateMainImage();
-  }
-}
-window.setImageIndex = setImageIndex;
-
-function prevImage() {
-  if (galleryImages.length <= 1) return;
-  activeImageIndex = (activeImageIndex - 1 + galleryImages.length) % galleryImages.length;
-  updateMainImage();
-}
-window.prevImage = prevImage;
-
-function nextImage() {
-  if (galleryImages.length <= 1) return;
-  activeImageIndex = (activeImageIndex + 1) % galleryImages.length;
-  updateMainImage();
-}
-window.nextImage = nextImage;
-
-function renderRelatedMods(mod) {
-  const { Store, GAMES, CATEGORY_ICONS, escapeHtml } = window.TZ;
-  const relatedGrid = document.getElementById('related-grid');
-  const relatedSection = document.getElementById('related-section');
-
-  const allMods = Store.getAll();
-  const related = allMods
-    .filter(m => m.id !== mod.id && (m.game === mod.game || m.category === mod.category))
-    .slice(0, 3);
-
-  if (related.length === 0) {
-    relatedSection.style.display = 'none';
-    return;
-  }
-
-  relatedSection.style.display = 'block';
-  relatedGrid.innerHTML = related.map((m) => {
-    const game = GAMES[m.game];
-    const icon = CATEGORY_ICONS[m.category] || '📦';
-    const imgHtml = m.coverImage
-      ? `<img src="${escapeHtml(m.coverImage)}" alt="${escapeHtml(m.title)} cover" class="mod-card__img" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'mod-card__img-placeholder\\'>${icon}</div>'" />`
-      : `<div class="mod-card__img-placeholder">${icon}</div>`;
-    const imgBadge = (Array.isArray(m.images) && m.images.length > 1)
-      ? `<span style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,0.78);color:#fff;font-size:0.7rem;font-weight:700;padding:2px 7px;border-radius:4px;z-index:2;">📷 ${m.images.length}</span>`
-      : '';
-
-    return `
-      <article
-        class="mod-card"
-        id="rel-card-${m.id}"
-        role="listitem"
-        tabindex="0"
-        onclick="goToMod(this.dataset.modId, event)"
-        onkeydown="if(event.key==='Enter')goToMod(this.dataset.modId, event)"
-        data-mod-id="${escapeHtml(m.id)}"
-      >
-        <div class="mod-card__img-wrap">${imgHtml}${imgBadge}</div>
-        <div class="mod-card__body">
-          <div class="mod-card__tags">
-            <span class="badge badge--filled">${escapeHtml(game?.name || m.game)}</span>
-            <span class="badge badge--gray">${escapeHtml(m.category)}</span>
-          </div>
-          <h3 class="mod-card__title">${escapeHtml(m.title)}</h3>
-          <p class="mod-card__desc">${escapeHtml(truncateWords(m.description, 40))}</p>
-          <div class="mod-card__meta">
-            <span class="mod-card__version">v${escapeHtml(m.version)}</span>
-            <span>${escapeHtml(m.createdAt)}</span>
-          </div>
-        </div>
-        <div class="mod-card__footer">
-          ${m.downloadUrl ? `<a
-            href="${escapeHtml(m.downloadUrl)}"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="btn btn--primary mod-card__dl-btn"
-            id="rel-dl-btn-${m.id}"
-          >
-            ⬇ Download
-          </a>` : `<button type="button" class="btn btn--primary mod-card__dl-btn disabled" disabled>⬇ Download</button>`}
-        </div>
-      </article>
-    `;
-  }).join('');
-}
-
-window.handleLikeToggle = async function(e) {
-  e.preventDefault();
-  if (!window.TZ_AUTH || !window.TZ_AUTH.currentUser()) {
-    window.TZ.showToast('Please sign in to like mods!');
-    return;
-  }
-  const likeBtn = document.getElementById('mod-like-btn');
-  const isCurrentlyLiked = likeBtn.dataset.liked === 'true';
-  const newLikedState = !isCurrentlyLiked;
-
-  likeBtn.disabled = true;
-  const result = await window.TZ.Store.toggleLike(currentMod.id, newLikedState);
-
-  if (!result || !result.ok) {
-    window.TZ.showToast('❌ Could not update like. Please try again.');
-    likeBtn.disabled = false;
-    return;
-  }
-
-  const newLikes = result.likes;
-  currentMod.likes = newLikes;
-
-  if (newLikedState) {
-    likeBtn.innerHTML = `❤️ Liked (<span id="mod-likes-count">${newLikes}</span>)`;
-    likeBtn.dataset.liked = 'true';
-  } else {
-    likeBtn.innerHTML = `🤍 Like (<span id="mod-likes-count">${newLikes}</span>)`;
-    likeBtn.dataset.liked = 'false';
-  }
-  likeBtn.disabled = false;
-}
-
-window.handleModDownload = function(e) {
-  e.preventDefault();
-  if (currentMod && currentMod.downloadUrl) {
-    window.TZ.Store.incrementDownloads(currentMod.id);
-    window.open(currentMod.downloadUrl, '_blank', 'noopener,noreferrer');
-    const dlEl = document.getElementById('mod-downloads');
-    if (dlEl) dlEl.textContent = (parseInt(dlEl.textContent, 10) || 0) + 1;
-  } else {
-    window.TZ.showToast('No download link is available for this mod.');
-  }
-}
-
-async function loadComments(modId) {
-  const commentsList = document.getElementById('comments-list');
-  const countEl = document.getElementById('comments-count');
-  
-  updateAuthUI();
-  const comments = await window.TZ.Store.getComments(modId);
-  if (comments === null) {
-    commentsList.innerHTML = '<p style="color:var(--gray-600); font-size:.9rem;">Failed to load comments. Please try again later.</p>';
-    countEl.textContent = '0';
-    return;
-  }
-  countEl.textContent = comments.length;
-  
-  if (comments.length === 0) {
-    commentsList.innerHTML = '<p style="color:var(--gray-600); font-size:.9rem;">No comments yet. Be the first!</p>';
-    return;
-  }
-
-  const commentsByParent = {};
-  comments.forEach(c => {
-    const pid = c.parent_id || 'root';
-    if (!commentsByParent[pid]) commentsByParent[pid] = [];
-    commentsByParent[pid].push(c);
-  });
-
-  const currentUser = window.TZ_AUTH ? window.TZ_AUTH.currentUser() : null;
-
-  function renderCommentNode(c, depth = 0) {
-    const avatarHtml = c.avatar_url 
-      ? `<img src="${window.TZ.escapeHtml(c.avatar_url)}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">`
-      : `<div style="width:40px;height:40px;border-radius:50%;background:var(--black);color:var(--white);display:flex;align-items:center;justify-content:center;font-weight:700;">${(c.display_name || c.user_email || '?')[0].toUpperCase()}</div>`;
-      
-    const isOwner = currentUser && currentUser.email === c.user_email;
-    const isLoggedIn = !!currentUser;
-    
-    const actionsHtml = isOwner ? `
-      <button type="button" style="background:none; border:none; color:var(--primary); cursor:pointer; font-size:.8rem; padding:0 4px;" onclick="editComment('${c.id}', this)" data-text="${window.TZ.escapeHtml(c.comment)}">Edit</button>
-      <button type="button" style="background:none; border:none; color:red; cursor:pointer; font-size:.8rem; padding:0 4px;" onclick="deleteComment('${c.id}')">Delete</button>
-    ` : '';
-
-    const replyBtnHtml = isLoggedIn && depth < 3 ? `
-      <button type="button" style="background:none; border:none; color:var(--gray-600); cursor:pointer; font-size:.8rem; padding:0; margin-top:8px; font-weight:700;" onclick="showReplyForm('${c.id}')">↩ Reply</button>
-    ` : '';
-      
-    const children = commentsByParent[c.id] || [];
-    const childrenHtml = children.map(child => renderCommentNode(child, depth + 1)).join('');
-
-    // Indent children
-    const marginLeft = depth > 0 ? 'margin-left: 20px; border-left: 2px solid var(--gray-200); padding-left: 10px;' : '';
-
-    return `
-      <div style="${marginLeft} margin-top:16px;">
-        <div style="padding:12px; border:1px solid var(--gray-200); border-radius:var(--radius-sm); background:var(--white); display:flex; gap:12px;">
-          ${avatarHtml}
-          <div style="flex:1;">
-            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-              <span style="font-weight:700;">${window.TZ.escapeHtml(c.display_name || c.username || c.user_email)}</span>
-              <div style="display:flex; gap:8px; align-items:center;">
-                ${actionsHtml}
-                <span style="font-size:.8rem; color:var(--gray-600);">${new Date(c.created_at).toLocaleDateString()}</span>
-                <button type="button" class="btn btn--sm" style="background:transparent; border:none; color:var(--gray-500); padding:0; cursor:pointer;" onclick="reportComment('${c.id}')" title="Report this comment">🚩</button>
-              </div>
-            </div>
-            <p style="margin:0; font-size:.95rem; line-height:1.4; white-space: pre-wrap;">${window.TZ.escapeHtml(c.comment)}</p>
-            ${replyBtnHtml}
-            <div id="reply-form-${c.id}" style="display:none; margin-top:12px;">
-               <textarea class="input" rows="2" placeholder="Write a reply..." style="margin-bottom:8px;"></textarea>
-               <div style="display:flex; gap:8px; justify-content:flex-end;">
-                  <button class="btn btn--sm" style="background:transparent; border:1px solid var(--gray-300); color:var(--black);" onclick="hideReplyForm('${c.id}')">Cancel</button>
-                  <button class="btn btn--sm btn--primary" onclick="submitReply('${c.id}', this)">Post Reply</button>
-               </div>
-            </div>
-          </div>
-        </div>
-        <div style="margin-top: 8px;">
-          ${childrenHtml}
-        </div>
-      </div>
-    `;
-  }
-
-  const rootComments = commentsByParent['root'] || [];
-  commentsList.innerHTML = rootComments.map(c => renderCommentNode(c, 0)).join('');
-}
-
-window.showReplyForm = function(commentId) {
-  document.getElementById('reply-form-' + commentId).style.display = 'block';
-}
-
-window.hideReplyForm = function(commentId) {
-  document.getElementById('reply-form-' + commentId).style.display = 'none';
-}
-
-window.submitReply = async function(parentId, btnEl) {
-  const container = document.getElementById('reply-form-' + parentId);
-  const textarea = container.querySelector('textarea');
-  const text = textarea.value.trim();
-  if(!text || !currentMod) return;
-  
-  btnEl.disabled = true;
-  btnEl.textContent = 'Posting...';
-  
-  const user = window.TZ_AUTH && window.TZ_AUTH.currentUser();
-  if (!user) {
-    window.TZ.showToast('Please sign in to reply.');
-    return;
-  }
-  const username = (user.displayName || user.email.split('@')[0] || 'user');
-  
-  const success = await window.TZ.Store.addComment(currentMod.id, username, text, parentId);
-  btnEl.disabled = false;
-  btnEl.textContent = 'Post Reply';
-  
-  if (success) {
-    loadComments(currentMod.id);
-  } else {
-    window.TZ.showToast('❌ Failed to post reply.');
-  }
-}
-
-window.deleteComment = async function(commentId) {
-  if (!confirm('Are you sure you want to delete this comment?')) return;
-  const success = await window.TZ.Store.deleteComment(commentId);
-  if (success) {
-    loadComments(currentMod.id);
-  } else {
-    window.TZ.showToast('❌ Failed to delete comment.');
-  }
-}
-
-window.editComment = async function(commentId, btnEl) {
-  const oldText = btnEl.getAttribute('data-text');
-  const newText = prompt('Edit your comment:', oldText);
-  if (!newText || !newText.trim() || newText.trim() === oldText) return;
-  const success = await window.TZ.Store.editComment(commentId, newText.trim());
-  if (success) {
-    loadComments(currentMod.id);
-  } else {
-    window.TZ.showToast('❌ Failed to edit comment.');
-  }
-}
-
-window.reportComment = async function(commentId) {
-  if (!window.TZ_AUTH || !window.TZ_AUTH.currentUser()) {
-    window.TZ.showToast('Please sign in to report comments!');
-    return;
-  }
-  const reason = prompt('Why are you reporting this comment? (e.g. spam, offensive)');
-  if (!reason) return;
-  
-  const success = await window.TZ.Store.submitReport(commentId, 'comment', reason);
-  if (success) {
-    window.TZ.showToast('✅ Report submitted successfully.');
-  } else {
-    window.TZ.showToast('❌ Failed to submit report.');
-  }
-}
-
-window.postComment = async function() {
-  const input = document.getElementById('comment-input');
-  const btn = document.getElementById('comment-submit-btn');
-  const text = input.value.trim();
-  if (!text || !currentMod) return;
-
-  const user = window.TZ_AUTH && window.TZ_AUTH.currentUser();
-  if (!user) {
-    window.TZ.showToast('Please sign in to comment.');
-    return;
-  }
-
-  btn.disabled = true;
-  btn.textContent = 'Posting...';
-
-  const username = (user.displayName || user.email.split('@')[0] || 'user');
-  const created = await window.TZ.Store.addComment(currentMod.id, username, text);
-  btn.disabled = false;
-  btn.textContent = 'Post Comment';
-
-  if (!created) {
-    window.TZ.showToast('❌ Failed to post comment.');
-    return;
-  }
-
-  input.value = '';
-  loadComments(currentMod.id);
-}
-</script>
+<script src="auth-nav.js?v=11"></script>
+<script src="mod.js?v=11"></script>
 </body>
 </html>
