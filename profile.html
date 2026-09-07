@@ -536,13 +536,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
     reauth(curPass)
       .then(function () {
-        return firebase.auth().currentUser.updateEmail(newEmail);
+        var user = firebase.auth().currentUser;
+        if (typeof user.verifyBeforeUpdateEmail === 'function') {
+          return user.verifyBeforeUpdateEmail(newEmail);
+        } else {
+          return user.updateEmail(newEmail);
+        }
       })
       .then(function () {
-        showStatus('status-email', '✓ Email updated!', 'success');
-        window.TZ.showToast('Email address updated!');
+        showStatus('status-email', '✓ Verification link sent to new email!', 'success');
+        window.TZ.showToast('Please check your new email to verify the change.');
         document.getElementById('f-email-pass').value = '';
-        populateSidebar(firebase.auth().currentUser);
+        // The email won't actually update in the UI until the user clicks the verification link
       })
       .catch(function (err) {
         showStatus('status-email', friendlyErr(err.code), 'error');
