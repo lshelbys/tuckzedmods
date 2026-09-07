@@ -287,6 +287,46 @@ const Store = {
     }, {});
   },
 
+  /** Upload Avatar to Supabase */
+  async uploadAvatar(file) {
+    const sb = this.getSb();
+    if (!sb) throw new Error('Supabase is not configured.');
+
+    const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_').slice(0, 30);
+    const filename = 'avatar-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7) + '-' + safeName;
+
+    const { data, error } = await sb.storage.from('avatars').upload(filename, file, {
+      cacheControl: '3600',
+      upsert: false
+    });
+    if (error) throw error;
+
+    const { data: pubData } = sb.storage.from('avatars').getPublicUrl(filename);
+    return pubData.publicUrl;
+  },
+
+  /** Get Profile */
+  async getProfile(email) {
+    const sb = this.getSb();
+    if (!sb) return null;
+    const { data, error } = await sb.from('profiles').select('*').eq('email', email).single();
+    if (error) return null;
+    return data;
+  },
+
+  /** Update Profile */
+  async updateProfile(profileData) {
+    const sb = this.getSb();
+    if (!sb) return null;
+    profileData.updated_at = new Date().toISOString();
+    const { error } = await sb.from('profiles').upsert([profileData]);
+    if (error) {
+      console.error('Update profile error:', error);
+      throw error;
+    }
+    return true;
+  },
+
   /** Increment downloads counter */
   async incrementDownloads(id) {
     const sb = this.getSb();
@@ -300,6 +340,82 @@ const Store = {
         this.save(this.getAll());
       }
     } catch(e) { console.error('Increment downloads error:', e); }
+  },
+
+  /** Mod Likes */
+  async getModLikeStatus(modId) {
+    const sb = this.getSb();
+    const user = window.TZ_AUTH ? window.TZ_AUTH.getUser() : null;
+    if (!sb || !user) return false;
+    
+    const { data } = await sb.from('mod_likes').select('mod_id').eq('mod_id', modId).eq('user_email', user.email).single();
+    return !!data;
+  },
+
+  async toggleLike(modId, isLiking) {
+    const sb = this.getSb();
+    const user = window.TZ_AUTH ? window.TZ_AUTH.getUser() : null;
+    if (!sb || !user) return false;
+
+    if (isLiking) {
+      const { error } = await sb.from('mod_likes').insert([{ mod_id: modId, user_email: user.email }]);
+      if (!error) {
+        // Optimistically update local
+        const mods = this.getAll();
+        const mod = mods.find(m => m.id === modId);
+        if (mod) {
+          mod.likes = (mod.likes || 0) + 1;
+          this.save(mods);
+          // Update remote
+          await sb.from('mods').update({ likes: mod.likes }).eq('id', modId);
+        }
+      }
+    } else {
+      const { error } = await sb.from('mod_likes').delete().eq('mod_id', modId).eq('user_email', user.email);
+      if (!error) {
+        // Optimistically update local
+        const mods = this.getAll();
+        const mod = mods.find(m => m.id === modId);
+        if (mod && mod.likes > 0) {
+          mod.likes -= 1;
+          this.save(mods);
+          // Update remote
+          await sb.from('mods').update({ likes: mod.likes }).eq('id', modId);
+        }
+      }
+    }
+    return true;
+  },
+
+  /** Reporting System */
+  async submitReport(targetId, targetType, reason) {
+    const sb = this.getSb();
+    const user = window.TZ_AUTH ? window.TZ_AUTH.getUser() : null;
+    if (!sb) return false;
+    
+    const { error } = await sb.from('reports').insert([{
+      target_id: targetId,
+      target_type: targetType,
+      reported_by: user ? user.email : 'anonymous',
+      reason: reason
+    }]);
+    if (error) { console.error('Report error:', error); return false; }
+    return true;
+  },
+
+  async getReports() {
+    const sb = this.getSb();
+    if (!sb) return [];
+    const { data, error } = await sb.from('reports').select('*').order('created_at', { ascending: false });
+    if (error) { console.error('Get reports error:', error); return []; }
+    return data || [];
+  },
+
+  async resolveReport(reportId) {
+    const sb = this.getSb();
+    if (!sb) return false;
+    const { error } = await sb.from('reports').update({ status: 'resolved' }).eq('id', reportId);
+    return !error;
   },
 
   /** Add a comment */
@@ -322,9 +438,27 @@ const Store = {
   async getComments(modId) {
     const sb = this.getSb();
     if (!sb) return [];
-    const { data, error } = await sb.from('mod_comments').select('*').eq('mod_id', modId).order('created_at', { ascending: true });
+    const { data: comments, error } = await sb.from('mod_comments').select('*').eq('mod_id', modId).order('created_at', { ascending: true });
     if (error) { console.error('Get comments error:', error); return []; }
-    return data || [];
+    if (!comments || comments.length === 0) return [];
+
+    const emails = [...new Set(comments.map(c => c.user_email).filter(Boolean))];
+    let profiles = {};
+    if (emails.length > 0) {
+      const { data: profs } = await sb.from('profiles').select('*').in('email', emails);
+      if (profs) {
+        profs.forEach(p => { profiles[p.email] = p; });
+      }
+    }
+
+    return comments.map(c => {
+      const p = profiles[c.user_email];
+      return {
+        ...c,
+        display_name: p?.display_name || c.username,
+        avatar_url: p?.avatar_url || null
+      };
+    });
   }
 };
 

@@ -76,6 +76,13 @@
         Manage Mods
       </button>
     </div>
+    <div class="admin-sidebar__section">
+      <div class="admin-sidebar__label">Community</div>
+      <button class="admin-nav-item" id="nav-reports" onclick="showPanel('reports')">
+        <span class="admin-nav-item__icon" aria-hidden="true">🚩</span>
+        Moderation
+      </button>
+    </div>
     <div class="admin-sidebar__section" style="margin-top:auto;padding-top:24px;">
       <div class="admin-sidebar__label">Site</div>
       <a href="./" class="admin-nav-item" id="nav-view-site">
@@ -118,6 +125,31 @@
             </tr>
           </thead>
           <tbody id="recent-tbody">
+            <!-- Rendered by JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── Moderation Panel ────────────────────────────────── -->
+    <div class="panel" id="panel-reports">
+      <div class="admin-header">
+        <h1 class="admin-header__title">Moderation</h1>
+        <p class="admin-header__sub">Review user reports.</p>
+      </div>
+      <div class="table-wrap">
+        <table class="table" id="reports-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Target</th>
+              <th>Reported By</th>
+              <th>Reason</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="reports-tbody">
             <!-- Rendered by JS -->
           </tbody>
         </table>
@@ -195,6 +227,19 @@
             <span class="form-error" id="err-category" role="alert">Please select a category.</span>
           </div>
 
+          <div class="form-field form-field--full" id="field-tags">
+            <label class="form-label" for="f-tags">
+              Tags
+            </label>
+            <input
+              type="text"
+              class="input"
+              id="f-tags"
+              placeholder="e.g. drift, f1, realistic (comma separated)"
+              autocomplete="off"
+            />
+          </div>
+
           <div class="form-field form-field--full" id="field-desc">
             <label class="form-label" for="f-desc">
               Description <span>*</span>
@@ -203,7 +248,7 @@
               class="input"
               id="f-desc"
               rows="4"
-              placeholder="Describe what this mod adds, changes, or improves…"
+              placeholder="Describe this mod. You can use Markdown (e.g., **bold**, *italics*, - lists)!"
               aria-required="true"
               oninput="autoExpandDesc(this)"
             ></textarea>
@@ -424,6 +469,7 @@ function showPanel(name) {
 
   if (name === 'overview') renderOverview();
   if (name === 'manage')   renderManageTable();
+  if (name === 'reports')  renderReportsTable();
   if (name === 'create' && document.getElementById('edit-id').value === '') resetForm();
 }
 
@@ -554,6 +600,42 @@ function initManageSearch() {
     renderManageTable();
   });
 }
+
+// ── Reports Table ──────────────────────────────────────────
+async function renderReportsTable() {
+  const tbody = document.getElementById('reports-tbody');
+  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:32px;">Loading reports...</td></tr>';
+  
+  const reports = await Store.getReports();
+  if (reports.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--gray-400);padding:32px;">No reports found.</td></tr>';
+    return;
+  }
+  
+  tbody.innerHTML = reports.map(r => `
+    <tr>
+      <td>${new Date(r.created_at).toLocaleDateString()}</td>
+      <td><span class="badge badge--gray">${escapeHtml(r.target_type)}</span><br/><small>${escapeHtml(r.target_id)}</small></td>
+      <td>${escapeHtml(r.reported_by)}</td>
+      <td>${escapeHtml(r.reason)}</td>
+      <td>
+        ${r.status === 'resolved' 
+          ? '<span class="badge badge--filled" style="background:#10b981;color:#fff;">Resolved</span>' 
+          : '<span class="badge badge--gray">Pending</span>'}
+      </td>
+      <td>
+        ${r.status !== 'resolved' ? `<button class="btn btn--sm" onclick="resolveReport('${r.id}')">Resolve</button>` : ''}
+      </td>
+    </tr>
+  `).join('');
+}
+
+window.resolveReport = async function(id) {
+  if (confirm('Mark this report as resolved?')) {
+    await Store.resolveReport(id);
+    renderReportsTable();
+  }
+};
 
 // ── Description Auto-expansion ──────────────────────────────
 function autoExpandDesc(el) {
@@ -797,6 +879,9 @@ function openEdit(id) {
   document.getElementById('f-game').value     = mod.game;
   document.getElementById('f-category').value = mod.category;
   
+  const tagsEl = document.getElementById('f-tags');
+  if (tagsEl) tagsEl.value = mod.tags || '';
+  
   const descEl = document.getElementById('f-desc');
   descEl.value = mod.description || '';
   autoExpandDesc(descEl);
@@ -887,6 +972,7 @@ async function handleFormSubmit(e) {
     version:     document.getElementById('f-version').value.trim(),
     game:        document.getElementById('f-game').value,
     category:    document.getElementById('f-category').value,
+    tags:        document.getElementById('f-tags').value.trim(),
     description: document.getElementById('f-desc').value.trim(),
     downloadUrl: document.getElementById('f-dl').value.trim(),
     coverImage:  finalCoverUrl,

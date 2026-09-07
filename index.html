@@ -119,6 +119,7 @@
         <select class="input" id="sort-select" style="padding:8px 12px; font-weight:700; width:auto; height:100%; border-radius:999px;" onchange="setSort(this.value)">
           <option value="newest">Sort by: Newest</option>
           <option value="popular">Sort by: Most Popular</option>
+          <option value="liked">Sort by: Most Liked</option>
         </select>
       </div>
     </div>
@@ -304,11 +305,16 @@ function goToMod(id, e) {
 }
 window.goToMod = goToMod;
 
-// ── Mod Rendering ──────────────────────────────────────────
-function renderMods() {
+let observer = null;
+
+function renderMods(append = false) {
   const { Store, GAMES, CATEGORY_ICONS, escapeHtml } = window.TZ;
   const grid = document.getElementById('mod-grid');
   const countEl = document.getElementById('mods-count');
+
+  if (!append) {
+    state.page = 1;
+  }
 
   let mods = Store.getAll();
 
@@ -324,13 +330,16 @@ function renderMods() {
   if (state.searchQuery) {
     mods = mods.filter(m =>
       m.title.toLowerCase().includes(state.searchQuery) ||
-      m.description.toLowerCase().includes(state.searchQuery)
+      m.description.toLowerCase().includes(state.searchQuery) ||
+      (m.tags && m.tags.toLowerCase().includes(state.searchQuery))
     );
   }
 
   // Sort
   if (state.sort === 'popular') {
     mods.sort((a, b) => (b.downloads || 0) - (a.downloads || 0));
+  } else if (state.sort === 'liked') {
+    mods.sort((a, b) => (b.likes || 0) - (a.likes || 0));
   } else {
     // Newest is default from store (already sorted by created_at)
   }
@@ -347,7 +356,10 @@ function renderMods() {
     return;
   }
 
-  grid.innerHTML = mods.map((mod, i) => {
+  const PAGE_SIZE = 12;
+  const pageMods = mods.slice((state.page - 1) * PAGE_SIZE, state.page * PAGE_SIZE);
+
+  const html = pageMods.map((mod, i) => {
     const game = GAMES[mod.game];
     const icon = CATEGORY_ICONS[mod.category] || '📦';
     const imgHtml = mod.coverImage
@@ -373,13 +385,17 @@ function renderMods() {
           <div class="mod-card__tags">
             <span class="badge badge--filled">${escapeHtml(game?.name || mod.game)}</span>
             <span class="badge badge--gray">${escapeHtml(mod.category)}</span>
+            ${mod.tags ? mod.tags.split(',').map(t => `<span class="badge badge--outline" onclick="event.stopPropagation(); searchTag('${escapeHtml(t.trim())}')" style="cursor:pointer; z-index:2; position:relative;">#${escapeHtml(t.trim())}</span>`).join(' ') : ''}
           </div>
           <h3 class="mod-card__title">${escapeHtml(mod.title)}</h3>
           <p class="mod-card__desc">${escapeHtml(truncateWords(mod.description, 40))}</p>
           <div class="mod-card__meta">
             <span class="mod-card__version">v${escapeHtml(mod.version)}</span>
             <span>${escapeHtml(mod.createdAt)}</span>
-            <span style="margin-left:auto; font-weight:700; color:var(--gray-600);">⬇ ${mod.downloads || 0}</span>
+            <div style="margin-left:auto; display:flex; gap:12px; font-weight:700; color:var(--gray-600);">
+              <span>❤️ ${mod.likes || 0}</span>
+              <span>⬇ ${mod.downloads || 0}</span>
+            </div>
           </div>
         </div>
         <div class="mod-card__footer">
@@ -395,6 +411,34 @@ function renderMods() {
         </div>
       </article>`;
   }).join('');
+
+  if (!append) {
+    grid.innerHTML = html;
+  } else {
+    const oldSentinel = document.getElementById('scroll-sentinel');
+    if (oldSentinel) oldSentinel.remove();
+    grid.insertAdjacentHTML('beforeend', html);
+  }
+
+  if (state.page * PAGE_SIZE < mods.length) {
+    grid.insertAdjacentHTML('beforeend', `<div id="scroll-sentinel" style="height:20px; width:100%; grid-column:1/-1;"></div>`);
+    if (observer) observer.disconnect();
+    observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        state.page++;
+        renderMods(true);
+      }
+    });
+    observer.observe(document.getElementById('scroll-sentinel'));
+  }
+}
+
+function searchTag(tag) {
+  const input = document.getElementById('search-input');
+  if (input) input.value = tag;
+  state.searchQuery = tag.toLowerCase();
+  renderMods();
+  document.getElementById('mod-grid').scrollIntoView({ behavior: 'smooth' });
 }
 
 // ── Refresh on storage change (admin panel edits) ──────────

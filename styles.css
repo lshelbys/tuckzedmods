@@ -1240,3 +1240,6 @@ textarea.input {
 .skeleton * {
   visibility: hidden;
 }
+
+.badge--outline { background: transparent; border: 1px solid var(--gray-300); color: var(--black); }
+

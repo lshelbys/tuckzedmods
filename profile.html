@@ -190,25 +190,34 @@
       <!-- Cards -->
       <div class="profile-cards">
 
-        <!-- ── Username ──────────────────────────────── -->
-        <section class="profile-card" aria-labelledby="card-username-title">
-          <h2 class="profile-card__title" id="card-username-title">Username</h2>
-          <p class="profile-card__sub">Update your display name across the site.</p>
+        <!-- ── Public Profile ──────────────────────────────── -->
+        <section class="profile-card" aria-labelledby="card-profile-title">
+          <h2 class="profile-card__title" id="card-profile-title">Public Profile</h2>
+          <p class="profile-card__sub">Update your avatar and display name across the site.</p>
           <hr class="profile-card__divider" />
-          <form id="form-username" novalidate>
+          <form id="form-profile" novalidate>
             <div class="profile-fields">
+              <div class="form-field" id="field-avatar">
+                <label class="form-label">Avatar</label>
+                <div style="display:flex; align-items:center; gap:16px;">
+                  <img id="avatar-preview" src="" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid var(--black);display:none;" />
+                  <div id="avatar-placeholder" style="width:80px;height:80px;border-radius:50%;background:var(--black);color:var(--white);display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:700;">?</div>
+                  <input type="file" id="f-avatar" accept="image/*" style="display:none;" />
+                  <button type="button" class="btn btn--secondary btn--sm" onclick="document.getElementById('f-avatar').click()">Change Avatar</button>
+                </div>
+              </div>
               <div class="form-field" id="field-username">
-                <label class="form-label" for="f-username">New Username</label>
+                <label class="form-label" for="f-username">Display Name</label>
                 <input type="text" class="input" id="f-username"
                   placeholder="e.g. speedracer99"
                   maxlength="30"
                   autocomplete="username" />
-                <span class="form-error" role="alert">Username must be 3–30 characters.</span>
+                <span class="form-error" role="alert">Display name must be 3–30 characters.</span>
               </div>
             </div>
             <div class="profile-actions">
-              <button type="submit" class="btn btn--primary btn--sm" id="btn-username">Save Username</button>
-              <span class="profile-status" id="status-username" role="status"></span>
+              <button type="submit" class="btn btn--primary btn--sm" id="btn-profile">Save Profile</button>
+              <span class="profile-status" id="status-profile" role="status"></span>
             </div>
           </form>
         </section>
@@ -349,7 +358,13 @@ document.addEventListener('DOMContentLoaded', function () {
     var name   = user.displayName || user.email.split('@')[0];
     var letter = name.charAt(0).toUpperCase();
 
-    document.getElementById('profile-avatar').textContent  = letter;
+    const avatarEl = document.getElementById('profile-avatar');
+    if (user.photoURL) {
+      avatarEl.innerHTML = `<img src="${window.TZ.escapeHtml(user.photoURL)}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" />`;
+    } else {
+      avatarEl.textContent = letter;
+    }
+    
     document.getElementById('sidebar-name').textContent    = name;
     document.getElementById('sidebar-email').textContent   = user.email;
 
@@ -363,6 +378,11 @@ document.addEventListener('DOMContentLoaded', function () {
   function prefillForms(user) {
     document.getElementById('f-username').value  = user.displayName || '';
     document.getElementById('f-new-email').value = user.email || '';
+    if (user.photoURL) {
+      document.getElementById('avatar-preview').src = user.photoURL;
+      document.getElementById('avatar-preview').style.display = 'block';
+      document.getElementById('avatar-placeholder').style.display = 'none';
+    }
   }
 
   // ── Password toggle helper ─────────────────────────────────
@@ -386,6 +406,79 @@ document.addEventListener('DOMContentLoaded', function () {
   function setErr(id)  { document.getElementById(id).classList.add('error'); }
   function clrErr(id)  { document.getElementById(id).classList.remove('error'); }
   function isEmail(s)  { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s); }
+
+  // ── Avatar Preview & Compress ───────────────────────────────
+  let avatarFile = null;
+  document.getElementById('f-avatar').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const img = new Image();
+    const objUrl = URL.createObjectURL(file);
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let { width, height } = img;
+      const MAX_WIDTH = 256;
+      if (width > MAX_WIDTH) {
+        height = Math.round((height * MAX_WIDTH) / width);
+        width = MAX_WIDTH;
+      }
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob(blob => {
+        URL.revokeObjectURL(objUrl);
+        avatarFile = new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' });
+        
+        const previewUrl = URL.createObjectURL(avatarFile);
+        const imgEl = document.getElementById('avatar-preview');
+        imgEl.src = previewUrl;
+        imgEl.style.display = 'block';
+        document.getElementById('avatar-placeholder').style.display = 'none';
+      }, 'image/jpeg', 0.8);
+    };
+    img.src = objUrl;
+  });
+
+  // ── 1. Profile form ───────────────────────────────────────
+  document.getElementById('form-profile').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var username = document.getElementById('f-username').value.trim();
+
+    if (!username || username.length < 3) { setErr('field-username'); return; }
+    clrErr('field-username');
+
+    setLoading('btn-profile', true, 'Save Profile');
+
+    try {
+      const user = firebase.auth().currentUser;
+      let avatarUrl = null;
+      if (avatarFile) {
+        avatarUrl = await window.TZ.Store.uploadAvatar(avatarFile);
+      }
+      
+      const newPhotoURL = avatarUrl || user.photoURL;
+      await user.updateProfile({ displayName: username, photoURL: newPhotoURL });
+      
+      if (window.TZ.Store.updateProfile) {
+        await window.TZ.Store.updateProfile({
+          email: user.email,
+          display_name: username,
+          avatar_url: newPhotoURL
+        });
+      }
+
+      showStatus('status-profile', '✓ Profile updated!', 'success');
+      window.TZ.showToast('Profile updated!');
+      populateSidebar(user);
+    } catch(err) {
+      console.error(err);
+      showStatus('status-profile', 'Failed to update profile', 'error');
+    }
+
+    setLoading('btn-profile', false, 'Save Profile');
+  });
 
   // ── Status message helpers ─────────────────────────────────
   function showStatus(id, msg, type) {
@@ -415,41 +508,12 @@ document.addEventListener('DOMContentLoaded', function () {
     };
     return map[code] || 'Something went wrong. Please try again.';
   }
-
   // ── Re-authenticate helper ─────────────────────────────────
   function reauth(currentPassword) {
     var user       = firebase.auth().currentUser;
     var credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPassword);
     return user.reauthenticateWithCredential(credential);
   }
-
-  // ── 1. Username form ───────────────────────────────────────
-  document.getElementById('form-username').addEventListener('submit', function (e) {
-    e.preventDefault();
-    var username = document.getElementById('f-username').value.trim();
-
-    if (!username || username.length < 3) { setErr('field-username'); return; }
-    clrErr('field-username');
-
-    setLoading('btn-username', true, 'Save Username');
-
-    firebase.auth().currentUser.updateProfile({ displayName: username })
-      .then(function () {
-        showStatus('status-username', '✓ Username updated!', 'success');
-        window.TZ.showToast('Username updated!');
-        // Refresh sidebar
-        populateSidebar(firebase.auth().currentUser);
-        // Refresh nav label
-        var navLabel = document.getElementById('nav-user-label');
-        if (navLabel) navLabel.textContent = username;
-      })
-      .catch(function (err) {
-        showStatus('status-username', friendlyErr(err.code), 'error');
-      })
-      .finally(function () {
-        setLoading('btn-username', false, 'Save Username');
-      });
-  });
 
   // ── 2. Email form ──────────────────────────────────────────
   document.getElementById('form-email').addEventListener('submit', function (e) {
