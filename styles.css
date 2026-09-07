@@ -540,6 +540,7 @@ textarea.input {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   padding-top: 12px;
   border-top: 1.5px solid var(--gray-100);
   font-size: .78rem;
