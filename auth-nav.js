@@ -65,7 +65,14 @@
       } else {
         // Regular user: label links to their profile page
         if (userLabel) {
-          userLabel.textContent  = user.email.split('@')[0];
+          const name = user.displayName || user.email.split('@')[0];
+          const escapedName = window.TZ ? window.TZ.escapeHtml(name) : name;
+          let avatarHtml = '';
+          if (user.photoURL) {
+            const escapedUrl = window.TZ ? window.TZ.escapeHtml(user.photoURL) : user.photoURL;
+            avatarHtml = `<img src="${escapedUrl}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:6px; display:inline-block;" />`;
+          }
+          userLabel.innerHTML  = `${avatarHtml}<span style="vertical-align:middle;">${escapedName}</span>`;
           userLabel.style.cursor = 'pointer';
           userLabel.title        = 'My Profile';
           userLabel.setAttribute('role', 'button');
@@ -186,6 +193,13 @@
   } else {
     attachListener();
     initThemeToggle();
+  }
+
+  // Expose so profile page can force an update
+  if (window.TZ_AUTH) {
+    window.TZ_AUTH.applyNavState = applyNavState;
+  } else {
+    setTimeout(() => { if (window.TZ_AUTH) window.TZ_AUTH.applyNavState = applyNavState; }, 500);
   }
 
 })();

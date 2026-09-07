@@ -469,6 +469,9 @@ document.addEventListener('DOMContentLoaded', function () {
       showStatus('status-profile', '✓ Profile updated!', 'success');
       window.TZ.showToast('Profile updated!');
       populateSidebar(user);
+      if (window.TZ_AUTH && window.TZ_AUTH.applyNavState) {
+        window.TZ_AUTH.applyNavState(user);
+      }
     } catch(err) {
       console.error(err);
       showStatus('status-profile', 'Failed to update profile', 'error');
