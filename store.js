@@ -348,7 +348,7 @@ const Store = {
     const user = window.TZ_AUTH ? window.TZ_AUTH.currentUser() : null;
     if (!sb || !user) return false;
     
-    const { data } = await sb.from('mod_likes').select('mod_id').eq('mod_id', modId).eq('user_email', user.email).single();
+    const { data } = await sb.from('mod_likes').select('mod_id').eq('mod_id', modId).eq('user_email', user.email).maybeSingle();
     return !!data;
   },
 
