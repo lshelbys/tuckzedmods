@@ -6,18 +6,6 @@
 
 'use strict';
 
-// ── Clean URLs (strip .html from address bar) ───────────────
-(function cleanUrl() {
-  try {
-    var path = window.location.pathname;
-    if (path.endsWith('.html')) {
-      var clean = path.replace(/\.html$/, '');
-      if (clean.endsWith('/index')) clean = clean.slice(0, -6) || '/';
-      window.history.replaceState(null, '', clean + window.location.search + window.location.hash);
-    }
-  } catch (_) {}
-})();
-
 (function initAuthNav() {
 
   /**
@@ -74,9 +62,9 @@
           let avatarHtml = '';
           if (user.photoURL) {
             const escapedUrl = window.TZ ? window.TZ.escapeHtml(user.photoURL) : user.photoURL;
-            avatarHtml = `<img src="${escapedUrl}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:6px; display:inline-block;" />`;
+            avatarHtml = `<img src="${escapedUrl}" alt="" class="nav__avatar" />`;
           }
-          userLabel.innerHTML  = `${avatarHtml}<span style="vertical-align:middle;">${escapedName}</span>`;
+          userLabel.innerHTML  = `${avatarHtml}<span class="nav__user-name">${escapedName}</span>`;
           userLabel.style.cursor = 'pointer';
           userLabel.title        = 'My Profile';
           userLabel.setAttribute('role', 'button');
@@ -96,7 +84,10 @@
       // Sign Out handler
       if (signoutBtn) {
         signoutBtn.onclick = async function () {
-          if (confirm('Are you sure you want to sign out?')) {
+          const ok = window.TZ && window.TZ.confirmDialog
+            ? await window.TZ.confirmDialog('You will be signed out of your account on this device.', { title: 'Sign out?', confirmText: 'Sign Out' })
+            : confirm('Are you sure you want to sign out?');
+          if (ok) {
             await window.TZ_AUTH.signOut();
             // Always redirect to homepage on sign-out
             window.location.href = './';
@@ -174,15 +165,16 @@
     const btn = document.createElement('button');
     btn.id = 'theme-toggle-btn';
     btn.type = 'button';
-    btn.className = 'btn btn--sm';
-    btn.setAttribute('aria-label', 'Toggle dark mode');
-    btn.style.cssText = 'padding:4px 8px; font-size:1.2rem; background:transparent; border:none; box-shadow:none; cursor:pointer; margin-left: 8px;';
-    
+    btn.className = 'theme-toggle';
+
     function updateIcon() {
-      btn.textContent = document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙';
+      const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+      btn.textContent = dark ? '☀️' : '🌙';
+      btn.setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode');
+      btn.title = dark ? 'Switch to light mode' : 'Switch to dark mode';
     }
     updateIcon();
-    
+
     btn.onclick = () => {
       const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
       if (isDark) {
@@ -199,11 +191,21 @@
     navLinks.appendChild(li);
   }
   
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => { attachListener(); initThemeToggle(); });
-  } else {
+  // Keep the footer copyright year current without editing every page
+  function fillYear() {
+    document.querySelectorAll('[data-year]').forEach(el => { el.textContent = new Date().getFullYear(); });
+  }
+
+  function boot() {
     attachListener();
     initThemeToggle();
+    fillYear();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
   }
 
   // Expose so profile page can force an update

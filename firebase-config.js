@@ -44,7 +44,7 @@ window.TZ_AUTH = {
   /** True if the current user is the admin */
   isAdmin() {
     const u = this.currentUser();
-    return u && u.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+    return !!(u && u.email && u.email.toLowerCase() === ADMIN_EMAIL.toLowerCase());
   },
 
   /** Sign in with email + password */

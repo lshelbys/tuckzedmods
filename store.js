@@ -1,6 +1,7 @@
 /**
  * tuckzed mods — Shared Data Store & Utilities
- * Uses localStorage for persistence across index.html and admin.html
+ * Supabase is the source of truth; localStorage is a read cache so pages
+ * can render instantly while fresh data is fetched.
  */
 
 'use strict';
@@ -50,6 +51,7 @@ const Store = {
     if (images.length === 0 && row.cover_image) {
       images = [row.cover_image];
     }
+    const createdAtIso = toIsoDate(row.created_at);
     return {
       id: row.id,
       title: row.title,
@@ -63,7 +65,8 @@ const Store = {
       likes: Number(row.likes) || 0,
       coverImage: row.cover_image || (images[0] || ''),
       images: images,
-      createdAt: row.created_at ? String(row.created_at).slice(0, 10) : today(),
+      createdAt: createdAtIso.slice(0, 10),
+      createdAtIso: createdAtIso,
       createdBy: row.created_by || 'admin'
     };
   },
@@ -86,7 +89,7 @@ const Store = {
       downloads: Number(mod.downloads) || 0,
       likes: Number(mod.likes) || 0,
       cover_image: mod.coverImage || (images[0] || ''),
-      created_at: toIsoDate(mod.createdAt),
+      created_at: toIsoDate(mod.createdAtIso || mod.createdAt),
       created_by: mod.createdBy || 'admin'
     };
     if (includeImages) {
@@ -182,19 +185,29 @@ const Store = {
     }
   },
 
+  /** Error from the most recent fetchFromRemote(), or null if it succeeded */
+  lastFetchError: null,
+
+  /** True once fetchFromRemote() has completed at least once this page load */
+  hasFetched: false,
+
   /** Fetch fresh mods from Supabase, updates local cache, and returns mods */
   async fetchFromRemote() {
     const sb = this.getSb();
-    if (!sb) return this.getAll();
+    if (!sb) { this.hasFetched = true; return this.getAll(); }
     try {
       const { data, error } = await sb.from('mods').select('*').order('created_at', { ascending: false });
       if (error) throw error;
       const mods = (data || []).map(this.rowToMod);
       this.save(mods);
+      this.lastFetchError = null;
       return mods;
     } catch (err) {
       console.warn('Supabase fetch error, using local cache:', err);
+      this.lastFetchError = err;
       return this.getAll();
+    } finally {
+      this.hasFetched = true;
     }
   },
 
@@ -208,8 +221,17 @@ const Store = {
     return this.getAll().find(m => m.id === id) || null;
   },
 
+  /** Newest-first ordering, using the full timestamp when available */
+  sortNewest(mods) {
+    return [...mods].sort((a, b) =>
+      String(b.createdAtIso || b.createdAt || '').localeCompare(String(a.createdAtIso || a.createdAt || ''))
+    );
+  },
+
   /** Add a new mod (persists to Supabase and cache) */
   async add(mod) {
+    if (!mod.createdAtIso) mod.createdAtIso = new Date().toISOString();
+    if (!mod.createdAt) mod.createdAt = mod.createdAtIso.slice(0, 10);
     const result = await this.persistRow('insert', mod);
     if (!result.ok) {
       console.error('Supabase insert error:', result.error);
@@ -471,11 +493,16 @@ const Store = {
     return data;
   },
 
-  /** Edit a comment */
+  /** Edit a comment (marks it as edited when the column exists) */
   async editComment(commentId, newText) {
     const sb = this.getSb();
     if (!sb) return false;
-    const { error } = await sb.from('mod_comments').update({ comment: newText }).eq('id', commentId);
+    let { error } = await sb.from('mod_comments')
+      .update({ comment: newText, updated_at: new Date().toISOString() })
+      .eq('id', commentId);
+    if (error && (error.code === '42703' || error.code === 'PGRST204' || /updated_at/i.test(error.message || ''))) {
+      ({ error } = await sb.from('mod_comments').update({ comment: newText }).eq('id', commentId));
+    }
     if (error) { console.error('Edit comment error:', error); return false; }
     return true;
   },
@@ -539,6 +566,64 @@ function normalizeTags(tags) {
   return String(tags);
 }
 
+/** Split a comma-separated tag string into a clean, de-duplicated array */
+function parseTags(tags) {
+  const list = Array.isArray(tags) ? tags : String(tags || '').split(',');
+  const seen = new Set();
+  return list
+    .map(t => String(t).trim().replace(/^#/, ''))
+    .filter(t => t && !seen.has(t.toLowerCase()) && seen.add(t.toLowerCase()));
+}
+
+/** "2026-09-07" / ISO string → "7 Sep 2026" */
+function formatDate(value) {
+  if (!value) return '';
+  const d = new Date(/^\d{4}-\d{2}-\d{2}$/.test(String(value)) ? value + 'T00:00:00' : value);
+  if (isNaN(d.getTime())) return String(value);
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+/** ISO string → "just now" / "5 min ago" / "3 days ago" / formatted date */
+function timeAgo(value) {
+  if (!value) return '';
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return String(value);
+  const diff = Math.max(0, Date.now() - d.getTime());
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return 'just now';
+  if (min < 60) return min + ' min ago';
+  const hrs = Math.floor(min / 60);
+  if (hrs < 24) return hrs + (hrs === 1 ? ' hour ago' : ' hours ago');
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return days + (days === 1 ? ' day ago' : ' days ago');
+  return formatDate(d.toISOString());
+}
+
+/** Reduce Markdown to plain text for card excerpts and meta descriptions */
+function stripMarkdown(text) {
+  return String(text || '')
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/`([^`]*)`/g, '$1')
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/^\s{0,3}(#{1,6}|>|[-*+]|\d+[.)])\s+/gm, '')
+    .replace(/(\*\*|__)(.*?)\1/g, '$2')
+    .replace(/(\*|_)(.*?)\1/g, '$2')
+    .replace(/~~(.*?)~~/g, '$1')
+    .replace(/^\s*([-*_]){3,}\s*$/gm, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** Format large counts compactly: 1200 → "1.2k" */
+function formatCount(n) {
+  n = Number(n) || 0;
+  if (n < 1000) return String(n);
+  if (n < 1000000) return (n / 1000).toFixed(n < 10000 ? 1 : 0).replace(/\.0$/, '') + 'k';
+  return (n / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+}
+
 function escapeHtml(str) {
   return String(str)
     .replace(/&/g, '&amp;')
@@ -569,5 +654,110 @@ function showToast(message, duration = 3000) {
   }, duration);
 }
 
+// ── Dialogs (replacement for window.confirm / window.prompt) ─
+let dialogCounter = 0;
+
+/**
+ * Opens an accessible modal dialog.
+ * Resolves with `true` / `false` for confirm dialogs, or with the entered
+ * string / `null` when `input` options are supplied.
+ */
+function openDialog(opts = {}) {
+  return new Promise(resolve => {
+    const id = 'tz-dialog-' + (++dialogCounter);
+    const hasInput = !!opts.input;
+    const input = opts.input || {};
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.id = id;
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-labelledby', id + '-title');
+
+    const inputHtml = !hasInput ? '' : (input.multiline
+      ? `<textarea class="input modal__input" id="${id}-input" rows="3" placeholder="${escapeHtml(input.placeholder || '')}" maxlength="${Number(input.maxlength) || 2000}"></textarea>`
+      : `<input type="${input.type === 'password' ? 'password' : 'text'}" class="input modal__input" id="${id}-input" placeholder="${escapeHtml(input.placeholder || '')}" maxlength="${Number(input.maxlength) || 300}" autocomplete="${input.type === 'password' ? 'current-password' : 'off'}" />`);
+
+    overlay.innerHTML = `
+      <div class="modal">
+        <h2 class="modal__title" id="${id}-title">${escapeHtml(opts.title || 'Are you sure?')}</h2>
+        ${opts.message ? `<p class="modal__sub">${escapeHtml(opts.message)}</p>` : ''}
+        ${inputHtml}
+        <div class="modal__actions">
+          <button type="button" class="btn btn--ghost" data-action="cancel">${escapeHtml(opts.cancelText || 'Cancel')}</button>
+          <button type="button" class="btn btn--primary${opts.danger ? ' btn--danger' : ''}" data-action="confirm">${escapeHtml(opts.confirmText || 'OK')}</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+
+    const inputEl = hasInput ? overlay.querySelector('.modal__input') : null;
+    if (inputEl && input.defaultValue) inputEl.value = input.defaultValue;
+    const previouslyFocused = document.activeElement;
+    let settled = false;
+
+    function close(result) {
+      if (settled) return;
+      settled = true;
+      overlay.classList.remove('open');
+      document.removeEventListener('keydown', onKey);
+      setTimeout(() => overlay.remove(), 200);
+      if (previouslyFocused && typeof previouslyFocused.focus === 'function') {
+        try { previouslyFocused.focus(); } catch (_) {}
+      }
+      resolve(result);
+    }
+    function confirm() {
+      if (!hasInput) return close(true);
+      const val = inputEl.value.trim();
+      if (input.required !== false && !val) {
+        inputEl.classList.add('modal__input--error');
+        inputEl.focus();
+        return;
+      }
+      close(val);
+    }
+    function cancel() { close(hasInput ? null : false); }
+    function onKey(e) {
+      if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+      else if (e.key === 'Enter' && (!hasInput || !input.multiline || e.ctrlKey || e.metaKey)) {
+        if (!hasInput || document.activeElement === inputEl) { e.preventDefault(); confirm(); }
+      }
+    }
+
+    overlay.querySelector('[data-action="confirm"]').addEventListener('click', confirm);
+    overlay.querySelector('[data-action="cancel"]').addEventListener('click', cancel);
+    overlay.addEventListener('click', e => { if (e.target === overlay) cancel(); });
+    document.addEventListener('keydown', onKey);
+    if (inputEl) inputEl.addEventListener('input', () => inputEl.classList.remove('modal__input--error'));
+
+    requestAnimationFrame(() => {
+      overlay.classList.add('open');
+      const focusTarget = inputEl || overlay.querySelector('[data-action="confirm"]');
+      if (focusTarget) focusTarget.focus();
+      if (inputEl && typeof inputEl.select === 'function' && !input.multiline) inputEl.select();
+    });
+  });
+}
+
+/** Promise<boolean> replacement for window.confirm() */
+function confirmDialog(message, opts = {}) {
+  return openDialog({ title: opts.title || 'Are you sure?', message, confirmText: opts.confirmText || 'Confirm', cancelText: opts.cancelText, danger: !!opts.danger });
+}
+
+/** Promise<string|null> replacement for window.prompt() */
+function promptDialog(message, opts = {}) {
+  return openDialog({
+    title: opts.title || message,
+    message: opts.title ? message : '',
+    confirmText: opts.confirmText || 'Submit',
+    cancelText: opts.cancelText,
+    input: { placeholder: opts.placeholder || '', defaultValue: opts.defaultValue || '', multiline: !!opts.multiline, maxlength: opts.maxlength, required: opts.required, type: opts.type }
+  });
+}
+
 // ── Export globals ───────────────────────────────────────────
-window.TZ = { Store, GAMES, CATEGORIES, CATEGORY_ICONS, generateId, today, escapeHtml, showToast, normalizeTags };
+window.TZ = {
+  Store, GAMES, CATEGORIES, CATEGORY_ICONS,
+  generateId, today, escapeHtml, showToast, normalizeTags, parseTags,
+  formatDate, timeAgo, formatCount, stripMarkdown, confirmDialog, promptDialog
+};
