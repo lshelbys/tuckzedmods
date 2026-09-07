@@ -80,9 +80,11 @@ function showPanel(name) {
   currentPanel = name;
   try { window.history.replaceState(null, '', window.location.pathname + '#' + name); } catch (_) {}
 
-  if (name === 'overview') renderOverview();
-  if (name === 'manage')   renderManageTable();
-  if (name === 'reports')  renderReportsTable();
+  if (name === 'overview')  renderOverview();
+  if (name === 'manage')    renderManageTable();
+  if (name === 'reports')   renderReportsTable();
+  if (name === 'comments')  renderCommentsInbox();
+  if (name === 'tags')      renderTagManager();
 
   // Keep the main column scrolled to the top when switching panels on mobile
   if (window.innerWidth <= 768) window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -107,7 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const editId = new URLSearchParams(window.location.search).get('edit');
   const hashPanel = (window.location.hash || '').replace('#', '');
   if (editId) openEdit(editId);
-  else if (['overview', 'manage', 'reports'].includes(hashPanel)) showPanel(hashPanel);
+  else if (['overview', 'manage', 'reports', 'comments', 'tags', 'health'].includes(hashPanel)) showPanel(hashPanel);
   else if (hashPanel === 'create') startNewMod();
 
   document.getElementById('delete-modal').addEventListener('click', e => {
@@ -166,7 +168,7 @@ function renderOverview() {
 
   tbody.innerHTML = recent.map(mod => `
     <tr id="recent-row-${escapeHtml(mod.id)}">
-      <td class="table__title-cell table__truncate" title="${escapeHtml(mod.title)}">${escapeHtml(mod.title)}</td>
+      <td class="table__title-cell table__truncate" title="${escapeHtml(mod.title)}">${mod.featured ? '★ ' : ''}${escapeHtml(mod.title)}</td>
       <td><span class="badge badge--filled">${escapeHtml(GAMES[mod.game]?.name || mod.game)}</span></td>
       <td><span class="badge badge--gray">${escapeHtml(mod.category)}</span></td>
       <td><time datetime="${escapeHtml(mod.createdAt)}">${escapeHtml(window.TZ.formatDate(mod.createdAt))}</time></td>
@@ -178,17 +180,100 @@ function renderOverview() {
       </td>
     </tr>
   `).join('');
+
+  renderOverviewCharts(mods);
+  renderDuplicateWarnings(mods);
+}
+
+function renderBarChart(title, entries) {
+  if (!entries.length) return '';
+  const max = Math.max(...entries.map(e => e.count), 1);
+  return `
+    <div class="admin-chart">
+      <h3 class="admin-chart__title">${escapeHtml(title)}</h3>
+      <div class="admin-chart__bars">
+        ${entries.map(e => `
+          <div class="admin-chart__row">
+            <span class="admin-chart__label" title="${escapeHtml(e.label)}">${escapeHtml(e.label)}</span>
+            <div class="admin-chart__track"><div class="admin-chart__fill" style="width:${Math.round((e.count / max) * 100)}%"></div></div>
+            <span class="admin-chart__count">${e.count}</span>
+          </div>`).join('')}
+      </div>
+    </div>`;
+}
+
+function renderOverviewCharts(mods) {
+  const host = document.getElementById('admin-charts');
+  if (!host) return;
+
+  const byCategory = {};
+  const byGame = {};
+  const byTag = {};
+  mods.forEach(m => {
+    byCategory[m.category || 'Other'] = (byCategory[m.category || 'Other'] || 0) + 1;
+    const g = GAMES[m.game]?.name || m.game || 'Other';
+    byGame[g] = (byGame[g] || 0) + 1;
+    window.TZ.parseTags(m.tags).forEach(t => { byTag[t] = (byTag[t] || 0) + 1; });
+  });
+
+  const top = (obj, n = 6) => Object.entries(obj)
+    .map(([label, count]) => ({ label, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, n);
+
+  host.innerHTML = [
+    renderBarChart('By category', top(byCategory)),
+    renderBarChart('By game', top(byGame)),
+    renderBarChart('Top tags', top(byTag, 8))
+  ].join('');
+}
+
+function renderDuplicateWarnings(mods) {
+  const host = document.getElementById('admin-dupes');
+  if (!host) return;
+  const byTitle = {};
+  const byUrl = {};
+  mods.forEach(m => {
+    const t = String(m.title || '').trim().toLowerCase();
+    const u = String(m.downloadUrl || '').trim().toLowerCase();
+    if (t) (byTitle[t] = byTitle[t] || []).push(m);
+    if (u) (byUrl[u] = byUrl[u] || []).push(m);
+  });
+  const titleDupes = Object.values(byTitle).filter(g => g.length > 1);
+  const urlDupes = Object.values(byUrl).filter(g => g.length > 1);
+  if (!titleDupes.length && !urlDupes.length) {
+    host.style.display = 'none';
+    host.innerHTML = '';
+    return;
+  }
+  host.style.display = '';
+  const renderGroup = (label, groups) => groups.length ? `
+    <div class="admin-dupes__block">
+      <h3 class="admin-chart__title">${label}</h3>
+      <ul class="admin-dupes__list">
+        ${groups.slice(0, 8).map(g => `
+          <li>${g.map(m => `<a href="#" onclick="event.preventDefault();openEdit('${escapeHtml(m.id)}')">${escapeHtml(m.title)}</a>`).join(' · ')}
+          <span class="form-hint">(${g.length})</span></li>`).join('')}
+      </ul>
+    </div>` : '';
+  host.innerHTML = `<h2 class="section__title" style="margin-bottom:12px;">Possible duplicates</h2>
+    ${renderGroup('Same title', titleDupes)}
+    ${renderGroup('Same download URL', urlDupes)}`;
 }
 
 // ── Manage Table ───────────────────────────────────────────
 let manageFilterQuery = '';
 let manageFilterGame  = '';
+let manageFilterCategory = '';
+let managePreset = '';
 let manageSort        = 'newest';
 let managePage        = 1;
+const manageSelected = new Set();
 
 function getManagedMods() {
   let mods = Store.getAll();
   if (manageFilterGame) mods = mods.filter(m => m.game === manageFilterGame);
+  if (manageFilterCategory) mods = mods.filter(m => m.category === manageFilterCategory);
   if (manageFilterQuery) {
     const q = manageFilterQuery.toLowerCase();
     mods = mods.filter(m =>
@@ -197,11 +282,18 @@ function getManagedMods() {
       String(m.tags || '').toLowerCase().includes(q)
     );
   }
+  if (managePreset === 'featured') mods = mods.filter(m => m.featured);
+  if (managePreset === 'no-images') mods = mods.filter(m => !(m.coverImage || (m.images && m.images.length)));
+  if (managePreset === 'no-tags') mods = mods.filter(m => window.TZ.parseTags(m.tags).length === 0);
+  if (managePreset === 'no-download') mods = mods.filter(m => !m.downloadUrl);
+  if (managePreset === 'zero-downloads') mods = mods.filter(m => !(m.downloads > 0));
+
   switch (manageSort) {
     case 'oldest':    return Store.sortNewest(mods).reverse();
     case 'title':     return [...mods].sort((a, b) => String(a.title || '').localeCompare(String(b.title || '')));
     case 'downloads': return [...mods].sort((a, b) => (b.downloads || 0) - (a.downloads || 0));
     case 'likes':     return [...mods].sort((a, b) => (b.likes || 0) - (a.likes || 0));
+    case 'featured':  return [...mods].sort((a, b) => Number(!!b.featured) - Number(!!a.featured) || String(b.createdAtIso || '').localeCompare(String(a.createdAtIso || '')));
     default:          return Store.sortNewest(mods);
   }
 }
@@ -228,8 +320,9 @@ function renderManageTable() {
   const pageMods = mods.slice(start, start + MANAGE_PAGE_SIZE);
 
   tbody.innerHTML = pageMods.map(mod => `
-    <tr id="manage-row-${escapeHtml(mod.id)}">
-      <td class="table__title-cell table__truncate" title="${escapeHtml(mod.title)}">${escapeHtml(mod.title)}</td>
+    <tr id="manage-row-${escapeHtml(mod.id)}" class="${manageSelected.has(mod.id) ? 'is-selected' : ''}">
+      <td class="table__check"><input type="checkbox" ${manageSelected.has(mod.id) ? 'checked' : ''} onchange="toggleManageSelect('${escapeHtml(mod.id)}', this.checked)" aria-label="Select ${escapeHtml(mod.title)}" /></td>
+      <td class="table__title-cell table__truncate" title="${escapeHtml(mod.title)}">${mod.featured ? '<span class="badge badge--filled" title="Featured">★</span> ' : ''}${escapeHtml(mod.title)}</td>
       <td><span class="badge badge--filled">${escapeHtml(GAMES[mod.game]?.name || mod.game)}</span></td>
       <td><span class="badge badge--gray">${escapeHtml(mod.category)}</span></td>
       <td>v${escapeHtml(mod.version)}</td>
@@ -237,6 +330,7 @@ function renderManageTable() {
       <td><time datetime="${escapeHtml(mod.createdAt)}">${escapeHtml(window.TZ.formatDate(mod.createdAt))}</time></td>
       <td>
         <div class="table__actions">
+          <button type="button" class="btn btn--sm btn--ghost" title="${mod.featured ? 'Unfeature' : 'Feature'}" onclick="toggleFeatured('${escapeHtml(mod.id)}')">${mod.featured ? '★' : '☆'}</button>
           <a class="btn btn--sm btn--ghost" href="mod.html?id=${encodeURIComponent(mod.id)}" target="_blank" rel="noopener" title="View on site">👁</a>
           <button type="button" class="btn btn--sm" id="edit-btn-${escapeHtml(mod.id)}" onclick="openEdit('${escapeHtml(mod.id)}')">✏️ Edit</button>
           <button type="button" class="btn btn--sm btn--ghost" id="clone-btn-${escapeHtml(mod.id)}" onclick="cloneMod('${escapeHtml(mod.id)}')">⧉ Clone</button>
@@ -245,6 +339,10 @@ function renderManageTable() {
       </td>
     </tr>
   `).join('');
+
+  updateBulkBar();
+  const selectAll = document.getElementById('manage-select-all');
+  if (selectAll) selectAll.checked = pageMods.length > 0 && pageMods.every(m => manageSelected.has(m.id));
 
   if (totalPages <= 1) {
     pager.innerHTML = `<span>Showing ${mods.length} ${mods.length === 1 ? 'mod' : 'mods'}</span>`;
@@ -285,12 +383,28 @@ function initManageSearch() {
     managePage = 1;
     renderManageTable();
   });
+  const cat = document.getElementById('manage-category-filter');
+  if (cat) cat.addEventListener('change', e => {
+    manageFilterCategory = e.target.value;
+    managePage = 1;
+    renderManageTable();
+  });
   document.getElementById('manage-sort').addEventListener('change', e => {
     manageSort = e.target.value;
     managePage = 1;
     renderManageTable();
   });
 }
+
+window.setManagePreset = function (preset, btn) {
+  managePreset = preset || '';
+  managePage = 1;
+  if (btn && btn.parentElement) {
+    btn.parentElement.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+  renderManageTable();
+};
 
 // ── Reports Table ──────────────────────────────────────────
 let reportsFilter = 'pending';
@@ -619,6 +733,7 @@ function serializeForm() {
     tags: document.getElementById('f-tags').value,
     desc: document.getElementById('f-desc').value,
     dl: document.getElementById('f-dl').value,
+    featured: !!(document.getElementById('f-featured') && document.getElementById('f-featured').checked),
     images: currentImages.map(i => i.url || i.preview),
     cover: coverId
   });
@@ -671,6 +786,8 @@ function openEdit(id) {
   updateDescPreview();
 
   document.getElementById('f-dl').value = mod.downloadUrl || '';
+  const featuredEl = document.getElementById('f-featured');
+  if (featuredEl) featuredEl.checked = !!mod.featured;
 
   const existingUrls = (Array.isArray(mod.images) && mod.images.length > 0)
     ? mod.images
@@ -751,6 +868,7 @@ async function handleFormSubmit(e) {
     tags:        window.TZ.parseTags(document.getElementById('f-tags').value).join(', '),
     description: document.getElementById('f-desc').value.trim(),
     downloadUrl: document.getElementById('f-dl').value.trim(),
+    featured:    !!(document.getElementById('f-featured') && document.getElementById('f-featured').checked),
     coverImage:  finalCoverUrl,
     images:      finalImageUrls,
   };
@@ -918,3 +1036,322 @@ window.downloadSitemap = function () {
   URL.revokeObjectURL(url);
   showToast('📄 Sitemap downloaded — replace the file in the repo if needed.');
 };
+
+// ── Selection / bulk actions ───────────────────────────────
+function updateBulkBar() {
+  const bar = document.getElementById('manage-bulk-bar');
+  const count = document.getElementById('manage-bulk-count');
+  if (!bar || !count) return;
+  const n = manageSelected.size;
+  bar.style.display = n ? '' : 'none';
+  count.textContent = n + ' selected';
+}
+
+window.toggleManageSelect = function (id, checked) {
+  if (checked) manageSelected.add(id); else manageSelected.delete(id);
+  updateBulkBar();
+};
+
+window.toggleSelectAllManaged = function (checked) {
+  const mods = getManagedMods();
+  const start = (managePage - 1) * MANAGE_PAGE_SIZE;
+  const pageMods = mods.slice(start, start + MANAGE_PAGE_SIZE);
+  pageMods.forEach(m => { if (checked) manageSelected.add(m.id); else manageSelected.delete(m.id); });
+  renderManageTable();
+};
+
+window.clearManageSelection = function () {
+  manageSelected.clear();
+  renderManageTable();
+};
+
+window.toggleFeatured = async function (id) {
+  const mod = Store.getById(id);
+  if (!mod) return;
+  const next = !mod.featured;
+  await Store.setFeatured(id, next);
+  showToast(next ? '★ Featured on homepage.' : 'Removed from featured.');
+  renderManageTable();
+  if (currentPanel === 'overview') renderOverview();
+};
+
+window.bulkSetFeatured = async function (featured) {
+  if (!manageSelected.size) return;
+  const ids = [...manageSelected];
+  for (const id of ids) await Store.setFeatured(id, featured);
+  showToast((featured ? '★ Featured ' : 'Unfeatured ') + ids.length + ' mod(s).');
+  clearManageSelection();
+  renderManageTable();
+};
+
+window.bulkAppendTag = async function () {
+  if (!manageSelected.size) return;
+  const tag = await window.TZ.promptDialog('Tag to add to the selected mods:', {
+    title: 'Add tag',
+    placeholder: 'e.g. drift',
+    confirmText: 'Add tag'
+  });
+  if (!tag) return;
+  const clean = window.TZ.parseTags(tag)[0];
+  if (!clean) return;
+  const ids = [...manageSelected];
+  for (const id of ids) {
+    const mod = Store.getById(id);
+    if (!mod) continue;
+    const tags = window.TZ.parseTags(mod.tags);
+    if (!tags.map(t => t.toLowerCase()).includes(clean.toLowerCase())) tags.push(clean);
+    await Store.update(id, { tags: tags.join(', ') });
+  }
+  showToast('Tagged ' + ids.length + ' mod(s) with #' + clean);
+  clearManageSelection();
+  renderManageTable();
+};
+
+window.bulkDeleteSelected = async function () {
+  if (!manageSelected.size) return;
+  const ok = await window.TZ.confirmDialog('Permanently delete ' + manageSelected.size + ' selected mod(s)?', {
+    title: 'Bulk delete?',
+    confirmText: 'Delete all',
+    danger: true
+  });
+  if (!ok) return;
+  const ids = [...manageSelected];
+  for (const id of ids) {
+    try { await Store.delete(id); } catch (_) {}
+  }
+  showToast('🗑 Deleted ' + ids.length + ' mod(s).');
+  clearManageSelection();
+  renderManageTable();
+  renderOverview();
+};
+
+// ── Export CSV ─────────────────────────────────────────────
+window.exportModsCsv = function () {
+  const mods = Store.getAll();
+  const cols = ['id','title','game','category','version','tags','downloads','likes','featured','downloadUrl','createdAt','coverImage'];
+  const esc = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+  const lines = [cols.join(',')].concat(mods.map(m => cols.map(c => esc(m[c])).join(',')));
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'tuckzed-mods.csv';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  showToast('⬇ Exported ' + mods.length + ' mods to CSV.');
+};
+
+// ── Comments inbox ─────────────────────────────────────────
+async function renderCommentsInbox() {
+  const tbody = document.getElementById('comments-inbox-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="5" class="table__empty">Loading comments…</td></tr>';
+  const comments = await Store.listRecentComments(50);
+  if (!comments.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="table__empty">No comments yet.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = comments.map(c => `
+    <tr>
+      <td class="table__nowrap"><time datetime="${escapeHtml(c.created_at || '')}">${escapeHtml(window.TZ.timeAgo(c.created_at))}</time></td>
+      <td class="table__truncate" title="${escapeHtml(c.mod_title || '')}">
+        <a href="mod.html?id=${encodeURIComponent(c.mod_id)}#comment-${encodeURIComponent(c.id)}" target="_blank" rel="noopener">${escapeHtml(c.mod_title || c.mod_id)}</a>
+      </td>
+      <td class="table__truncate">${escapeHtml(c.username || c.user_email || '?')}</td>
+      <td class="table__wrap">${escapeHtml(String(c.comment || '').slice(0, 180))}</td>
+      <td class="table__nowrap">
+        <button type="button" class="btn btn--sm btn--danger" onclick="adminDeleteComment('${escapeHtml(c.id)}')">Delete</button>
+      </td>
+    </tr>`).join('');
+}
+
+window.adminDeleteComment = async function (id) {
+  const ok = await window.TZ.confirmDialog('Delete this comment and its replies?', {
+    title: 'Delete comment?',
+    confirmText: 'Delete',
+    danger: true
+  });
+  if (!ok) return;
+  const success = await Store.deleteComment(id);
+  showToast(success ? 'Comment deleted.' : 'Could not delete comment.');
+  renderCommentsInbox();
+};
+
+// ── Tag manager ────────────────────────────────────────────
+function getTagInventory() {
+  const map = {};
+  Store.getAll().forEach(m => {
+    window.TZ.parseTags(m.tags).forEach(t => {
+      const key = t.toLowerCase();
+      if (!map[key]) map[key] = { label: t, count: 0, ids: [] };
+      map[key].count += 1;
+      map[key].ids.push(m.id);
+    });
+  });
+  return Object.values(map).sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+}
+
+function renderTagManager() {
+  const host = document.getElementById('tag-manager-list');
+  if (!host) return;
+  const q = ((document.getElementById('tag-search') || {}).value || '').trim().toLowerCase();
+  let tags = getTagInventory();
+  if (q) tags = tags.filter(t => t.label.toLowerCase().includes(q));
+  if (!tags.length) {
+    host.innerHTML = '<p class="form-hint">No tags found.</p>';
+    return;
+  }
+  host.innerHTML = tags.map(t => `
+    <div class="tag-manager-row">
+      <div>
+        <strong>#${escapeHtml(t.label)}</strong>
+        <span class="form-hint"> · ${t.count} mod${t.count === 1 ? '' : 's'}</span>
+      </div>
+      <div class="table__actions">
+        <button type="button" class="btn btn--sm" onclick="renameTag('${escapeHtml(t.label)}')">Rename</button>
+        <button type="button" class="btn btn--sm btn--ghost" onclick="mergeTag('${escapeHtml(t.label)}')">Merge into…</button>
+        <button type="button" class="btn btn--sm btn--ghost" onclick="filterManageByTag('${escapeHtml(t.label)}')">View mods</button>
+      </div>
+    </div>`).join('');
+
+  const search = document.getElementById('tag-search');
+  if (search && !search._bound) {
+    search._bound = true;
+    search.addEventListener('input', () => renderTagManager());
+  }
+}
+
+window.filterManageByTag = function (tag) {
+  manageFilterQuery = tag;
+  const input = document.getElementById('manage-search');
+  if (input) input.value = tag;
+  showPanel('manage');
+};
+
+window.renameTag = async function (fromTag) {
+  const toTag = await window.TZ.promptDialog('Rename #' + fromTag + ' to:', {
+    title: 'Rename tag',
+    defaultValue: fromTag,
+    confirmText: 'Rename'
+  });
+  if (!toTag) return;
+  const next = window.TZ.parseTags(toTag)[0];
+  if (!next || next.toLowerCase() === fromTag.toLowerCase()) return;
+  await rewriteTag(fromTag, next);
+  showToast('Renamed #' + fromTag + ' → #' + next);
+  renderTagManager();
+};
+
+window.mergeTag = async function (fromTag) {
+  const toTag = await window.TZ.promptDialog('Merge #' + fromTag + ' into this existing tag:', {
+    title: 'Merge tag',
+    placeholder: 'target-tag',
+    confirmText: 'Merge'
+  });
+  if (!toTag) return;
+  const next = window.TZ.parseTags(toTag)[0];
+  if (!next) return;
+  await rewriteTag(fromTag, next);
+  showToast('Merged #' + fromTag + ' into #' + next);
+  renderTagManager();
+};
+
+async function rewriteTag(fromTag, toTag) {
+  const from = fromTag.toLowerCase();
+  const mods = Store.getAll();
+  for (const mod of mods) {
+    const tags = window.TZ.parseTags(mod.tags);
+    let changed = false;
+    const next = [];
+    const seen = new Set();
+    tags.forEach(t => {
+      const value = t.toLowerCase() === from ? toTag : t;
+      const key = value.toLowerCase();
+      if (seen.has(key)) { changed = true; return; }
+      seen.add(key);
+      if (value !== t) changed = true;
+      next.push(value);
+    });
+    if (changed) await Store.update(mod.id, { tags: next.join(', ') });
+  }
+}
+
+// ── Health checks ──────────────────────────────────────────
+function probeImage(url, timeoutMs = 8000) {
+  return new Promise(resolve => {
+    if (!url) return resolve(false);
+    const img = new Image();
+    const timer = setTimeout(() => { img.src = ''; resolve(false); }, timeoutMs);
+    img.onload = () => { clearTimeout(timer); resolve(true); };
+    img.onerror = () => { clearTimeout(timer); resolve(false); };
+    img.referrerPolicy = 'no-referrer';
+    img.src = url + (url.includes('?') ? '&' : '?') + 'tz_cb=' + Date.now();
+  });
+}
+
+window.runLinkHealthCheck = async function () {
+  const host = document.getElementById('health-results');
+  if (!host) return;
+  const mods = Store.getAll();
+  host.innerHTML = '<p class="form-hint">Checking ' + mods.length + ' download URLs…</p>';
+  const issues = [];
+  for (const mod of mods) {
+    const url = (mod.downloadUrl || '').trim();
+    if (!url) {
+      issues.push({ mod, kind: 'Missing download URL' });
+      continue;
+    }
+    if (!/^https:\/\//i.test(url)) {
+      issues.push({ mod, kind: 'Not HTTPS', detail: url });
+      continue;
+    }
+    try {
+      await fetch(url, { method: 'HEAD', mode: 'no-cors' });
+      // Opaque success — we can only confirm the request was sent.
+    } catch (_) {
+      issues.push({ mod, kind: 'Request failed', detail: url });
+    }
+  }
+  renderHealthResults(host, 'Download link scan', issues, true);
+};
+
+window.runImageHealthCheck = async function () {
+  const host = document.getElementById('health-results');
+  if (!host) return;
+  const mods = Store.getAll();
+  host.innerHTML = '<p class="form-hint">Probing cover images…</p>';
+  const issues = [];
+  for (const mod of mods) {
+    const urls = [mod.coverImage].concat(Array.isArray(mod.images) ? mod.images : []).filter(Boolean);
+    if (!urls.length) {
+      issues.push({ mod, kind: 'No images' });
+      continue;
+    }
+    const coverOk = await probeImage(mod.coverImage || urls[0]);
+    if (!coverOk) issues.push({ mod, kind: 'Cover failed to load', detail: mod.coverImage || urls[0] });
+  }
+  renderHealthResults(host, 'Image scan', issues, false);
+};
+
+function renderHealthResults(host, title, issues, isLink) {
+  if (!issues.length) {
+    host.innerHTML = '<p class="form-hint">✅ ' + title + ' found no obvious problems.</p>';
+    return;
+  }
+  host.innerHTML = `
+    <h3 class="admin-chart__title">${escapeHtml(title)} — ${issues.length} issue${issues.length === 1 ? '' : 's'}</h3>
+    <div class="table-wrap"><table class="table"><thead><tr><th>Mod</th><th>Issue</th><th>Detail</th><th></th></tr></thead>
+    <tbody>
+      ${issues.map(i => `
+        <tr>
+          <td class="table__truncate">${escapeHtml(i.mod.title)}</td>
+          <td>${escapeHtml(i.kind)}</td>
+          <td class="table__truncate" title="${escapeHtml(i.detail || '')}">${escapeHtml(i.detail || '—')}</td>
+          <td><button type="button" class="btn btn--sm" onclick="openEdit('${escapeHtml(i.mod.id)}')">Edit</button>
+          ${isLink && i.mod.downloadUrl ? ` <a class="btn btn--sm btn--ghost" href="${escapeHtml(i.mod.downloadUrl)}" target="_blank" rel="noopener">Open</a>` : ''}
+          </td>
+        </tr>`).join('')}
+    </tbody></table></div>`;
+}

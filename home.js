@@ -323,7 +323,11 @@ function getFilteredMods() {
   } else {
     mods = Store.sortNewest(mods);
   }
-  return mods;
+
+  // Curated featured mods always float to the top of the current view
+  const featured = mods.filter(m => m.featured);
+  const rest = mods.filter(m => !m.featured);
+  return featured.concat(rest);
 }
 
 function renderSkeletons(grid, count = 6) {
@@ -350,6 +354,9 @@ function renderModCard(mod, i) {
   const imgBadge = (Array.isArray(mod.images) && mod.images.length > 1)
     ? `<span class="mod-card__img-badge">📷 ${mod.images.length}</span>`
     : '';
+  const featuredBadge = mod.featured
+    ? `<span class="mod-card__featured-badge">★ Featured</span>`
+    : '';
   const tagsHtml = parseTags(mod.tags).slice(0, 4).map(t =>
     `<button type="button" class="badge badge--outline mod-card__tag" data-tag="${escapeHtml(t)}" onclick="event.preventDefault(); event.stopPropagation(); searchTag(this.dataset.tag)">#${escapeHtml(t)}</button>`
   ).join(' ');
@@ -363,7 +370,7 @@ function renderModCard(mod, i) {
       data-mod-id="${escapeHtml(mod.id)}"
     >
       <a href="${href}" class="mod-card__hit" aria-label="${escapeHtml(mod.title)} — ${escapeHtml(mod.category)} mod for ${escapeHtml(game?.name || mod.game)}">
-        <div class="mod-card__img-wrap">${imgHtml}${imgBadge}</div>
+        <div class="mod-card__img-wrap">${imgHtml}${imgBadge}${featuredBadge}</div>
         <div class="mod-card__body">
           <div class="mod-card__tags">
             <span class="badge badge--filled">${escapeHtml(game?.name || mod.game)}</span>

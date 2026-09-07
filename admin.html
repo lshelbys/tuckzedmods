@@ -13,7 +13,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Comic+Relief:wght@400;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=14" />
+  <link rel="stylesheet" href="styles.css?v=15" />
 </head>
 <body>
 <a class="skip-link" href="#main-content">Skip to content</a>
@@ -69,8 +69,23 @@
       <div class="admin-sidebar__label">Community</div>
       <button type="button" class="admin-nav-item" id="nav-reports" onclick="showPanel('reports')">
         <span class="admin-nav-item__icon" aria-hidden="true">🚩</span>
-        Moderation
+        Reports
         <span class="admin-nav-item__count" id="reports-pending-badge" style="display:none;" aria-label="pending reports"></span>
+      </button>
+      <button type="button" class="admin-nav-item" id="nav-comments" onclick="showPanel('comments')">
+        <span class="admin-nav-item__icon" aria-hidden="true">💬</span>
+        Comments
+      </button>
+    </div>
+    <div class="admin-sidebar__section">
+      <div class="admin-sidebar__label">Tools</div>
+      <button type="button" class="admin-nav-item" id="nav-tags" onclick="showPanel('tags')">
+        <span class="admin-nav-item__icon" aria-hidden="true">🏷️</span>
+        Tag Manager
+      </button>
+      <button type="button" class="admin-nav-item" id="nav-health" onclick="showPanel('health')">
+        <span class="admin-nav-item__icon" aria-hidden="true">🩺</span>
+        Health Checks
       </button>
     </div>
     <div class="admin-sidebar__section" style="margin-top:auto;padding-top:24px;">
@@ -97,11 +112,18 @@
             <h1 class="admin-header__title">Dashboard</h1>
             <p class="admin-header__sub">Welcome to the tuckzed mods admin panel.</p>
           </div>
-          <button type="button" class="btn btn--ghost btn--sm" onclick="downloadSitemap()">📄 Download sitemap.xml</button>
+          <div class="admin-header__actions">
+            <button type="button" class="btn btn--ghost btn--sm" onclick="exportModsCsv()">⬇ Export CSV</button>
+            <button type="button" class="btn btn--ghost btn--sm" onclick="downloadSitemap()">📄 Sitemap</button>
+          </div>
         </div>
       </div>
 
       <div class="stat-grid" id="stat-grid"></div>
+
+      <div class="admin-charts" id="admin-charts" aria-label="Catalog breakdown"></div>
+
+      <div class="admin-dupes" id="admin-dupes" style="display:none;"></div>
 
       <h2 class="section__title" style="margin-bottom:20px;">Recent Mods</h2>
       <div class="table-wrap">
@@ -211,6 +233,13 @@
             </div>
           </div>
 
+          <div class="form-field form-field--full" id="field-featured">
+            <label class="form-label" for="f-featured" style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+              <input type="checkbox" id="f-featured" />
+              ★ Feature this mod on the homepage (pinned to the top of browse results)
+            </label>
+          </div>
+
           <div class="form-field form-field--full" id="field-dl">
             <label class="form-label" for="f-dl">Download URL <span>*</span></label>
             <input type="url" class="input" id="f-dl" placeholder="https://example.com/mod-download" autocomplete="off" aria-required="true" />
@@ -274,19 +303,46 @@
           <option value="ac">Assetto Corsa</option>
           <option value="beamng">BeamNG.drive</option>
         </select>
+        <select class="input" id="manage-category-filter" aria-label="Filter by category">
+          <option value="">All Categories</option>
+          <option value="Cars">Cars</option>
+          <option value="Tracks">Tracks</option>
+          <option value="Maps">Maps</option>
+          <option value="Physics">Physics</option>
+        </select>
         <select class="input" id="manage-sort" aria-label="Sort mods">
           <option value="newest">Newest first</option>
           <option value="oldest">Oldest first</option>
           <option value="title">Title A–Z</option>
           <option value="downloads">Most downloaded</option>
           <option value="likes">Most liked</option>
+          <option value="featured">Featured first</option>
         </select>
+      </div>
+
+      <div class="filter-tabs manage-presets" role="group" aria-label="Quick filters">
+        <button type="button" class="filter-btn active" data-preset="" onclick="setManagePreset('', this)">All</button>
+        <button type="button" class="filter-btn" data-preset="featured" onclick="setManagePreset('featured', this)">★ Featured</button>
+        <button type="button" class="filter-btn" data-preset="no-images" onclick="setManagePreset('no-images', this)">No images</button>
+        <button type="button" class="filter-btn" data-preset="no-tags" onclick="setManagePreset('no-tags', this)">No tags</button>
+        <button type="button" class="filter-btn" data-preset="no-download" onclick="setManagePreset('no-download', this)">Missing download</button>
+        <button type="button" class="filter-btn" data-preset="zero-downloads" onclick="setManagePreset('zero-downloads', this)">0 downloads</button>
+      </div>
+
+      <div class="bulk-bar" id="manage-bulk-bar" style="display:none;">
+        <span id="manage-bulk-count">0 selected</span>
+        <button type="button" class="btn btn--sm" onclick="bulkSetFeatured(true)">★ Feature</button>
+        <button type="button" class="btn btn--sm" onclick="bulkSetFeatured(false)">Unfeature</button>
+        <button type="button" class="btn btn--sm" onclick="bulkAppendTag()">Add tag…</button>
+        <button type="button" class="btn btn--sm btn--danger" onclick="bulkDeleteSelected()">Delete</button>
+        <button type="button" class="btn btn--sm btn--ghost" onclick="clearManageSelection()">Clear</button>
       </div>
 
       <div class="table-wrap">
         <table class="table" id="manage-table" aria-label="All mods management table">
           <thead>
             <tr>
+              <th class="table__check"><input type="checkbox" id="manage-select-all" aria-label="Select all on page" onclick="toggleSelectAllManaged(this.checked)" /></th>
               <th>Title</th>
               <th>Game</th>
               <th>Category</th>
@@ -306,6 +362,64 @@
           <div class="empty-state__title">No mods found</div>
           <div class="empty-state__desc">Add a new mod using the button above, or adjust your filters.</div>
         </div>
+      </div>
+    </div>
+
+    <!-- ── Comments Inbox ──────────────────────────────────── -->
+    <div class="panel" id="panel-comments">
+      <div class="admin-header">
+        <h1 class="admin-header__title">Recent Comments</h1>
+        <p class="admin-header__sub">Newest community comments across all mods.</p>
+      </div>
+      <div class="table-wrap">
+        <table class="table" aria-label="Recent comments">
+          <thead>
+            <tr>
+              <th>When</th>
+              <th>Mod</th>
+              <th>Author</th>
+              <th>Comment</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="comments-inbox-tbody">
+            <tr><td colspan="5" class="table__empty">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── Tag Manager ─────────────────────────────────────── -->
+    <div class="panel" id="panel-tags">
+      <div class="admin-header">
+        <h1 class="admin-header__title">Tag Manager</h1>
+        <p class="admin-header__sub">See every tag in use, rename typos, or merge duplicates.</p>
+      </div>
+      <div class="toolbar manage-toolbar">
+        <div class="toolbar__search-wrap">
+          <span class="toolbar__search-icon" aria-hidden="true">🔍</span>
+          <input type="search" class="input toolbar__search" id="tag-search" placeholder="Filter tags…" aria-label="Filter tags" autocomplete="off" />
+        </div>
+      </div>
+      <div id="tag-manager-list" class="tag-manager-list"></div>
+    </div>
+
+    <!-- ── Health Checks ───────────────────────────────────── -->
+    <div class="panel" id="panel-health">
+      <div class="admin-header">
+        <div class="admin-header__row">
+          <div>
+            <h1 class="admin-header__title">Health Checks</h1>
+            <p class="admin-header__sub">Scan download links and cover images for problems.</p>
+          </div>
+          <div class="admin-header__actions">
+            <button type="button" class="btn btn--sm" onclick="runLinkHealthCheck()">🔗 Check download links</button>
+            <button type="button" class="btn btn--sm" onclick="runImageHealthCheck()">🖼️ Check images</button>
+          </div>
+        </div>
+      </div>
+      <div id="health-results" class="health-results">
+        <p class="form-hint">Run a scan to see mods with missing or broken assets.</p>
       </div>
     </div>
 
@@ -334,9 +448,9 @@
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
 <script src="supabase-config.js?v=2"></script>
-<script src="store.js?v=13"></script>
+<script src="store.js?v=15"></script>
 <script src="firebase-config.js?v=3"></script>
-<script src="auth-nav.js?v=14"></script>
-<script src="admin.js?v=13"></script>
+<script src="auth-nav.js?v=15"></script>
+<script src="admin.js?v=15"></script>
 </body>
 </html>

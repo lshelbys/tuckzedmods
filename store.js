@@ -65,6 +65,7 @@ const Store = {
       likes: Number(row.likes) || 0,
       coverImage: row.cover_image || (images[0] || ''),
       images: images,
+      featured: !!row.featured,
       createdAt: createdAtIso.slice(0, 10),
       createdAtIso: createdAtIso,
       createdBy: row.created_by || 'admin'
@@ -89,6 +90,7 @@ const Store = {
       downloads: Number(mod.downloads) || 0,
       likes: Number(mod.likes) || 0,
       cover_image: mod.coverImage || (images[0] || ''),
+      featured: !!mod.featured,
       created_at: toIsoDate(mod.createdAtIso || mod.createdAt),
       created_by: mod.createdBy || 'admin'
     };
@@ -103,15 +105,17 @@ const Store = {
     const sb = this.getSb();
     if (!sb) return { ok: true, localOnly: true };
 
-    const payloads = [
-      this.modToRow(mod, true),
-      this.modToRow(mod, false)
-    ];
+    const full = this.modToRow(mod, true);
+    const noImages = this.modToRow(mod, false);
+    const noFeatured = { ...full }; delete noFeatured.featured;
+    const noFeaturedNoImages = { ...noImages }; delete noFeaturedNoImages.featured;
     const slim = this.modToRow(mod, false);
     delete slim.tags;
     delete slim.likes;
     delete slim.downloads;
-    payloads.push(slim);
+    delete slim.featured;
+
+    const payloads = [full, noImages, noFeatured, noFeaturedNoImages, slim];
 
     let lastError = null;
     try {
@@ -127,7 +131,8 @@ const Store = {
         lastError = result.error;
         const msg = ((result.error.message || '') + ' ' + (result.error.code || '')).toLowerCase();
         const schemaMiss = result.error.code === '42703' || result.error.code === 'PGRST204'
-          || msg.includes('images') || msg.includes('likes') || msg.includes('tags') || msg.includes('downloads');
+          || msg.includes('images') || msg.includes('likes') || msg.includes('tags')
+          || msg.includes('downloads') || msg.includes('featured');
         if (!schemaMiss) break;
       }
     } catch (err) {
@@ -761,6 +766,44 @@ const Store = {
     );
     const body = urls.map(u => `  <url><loc>${u}</loc></url>`).join('\n');
     return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</urlset>\n`;
+  },
+
+  /** Recent comments across all mods (admin inbox) */
+  async listRecentComments(limit = 40) {
+    const sb = this.getSb();
+    if (!sb) return [];
+    try {
+      const { data, error } = await sb
+        .from('mod_comments')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(limit);
+      if (error) throw error;
+      const modsById = Object.fromEntries(this.getAll().map(m => [m.id, m]));
+      return (data || []).map(c => ({
+        ...c,
+        mod_title: (modsById[c.mod_id] && modsById[c.mod_id].title) || c.mod_id
+      }));
+    } catch (err) {
+      console.error('listRecentComments error:', err);
+      return [];
+    }
+  },
+
+  /** Toggle featured flag (falls back to local-only if column missing) */
+  async setFeatured(id, featured) {
+    const mod = this.getById(id);
+    if (!mod) return false;
+    try {
+      await this.update(id, { featured: !!featured });
+      return true;
+    } catch (err) {
+      console.error('setFeatured error:', err);
+      // Still flip local cache so the admin UI can curate until SQL is applied
+      mod.featured = !!featured;
+      this.save(this.getAll());
+      return true;
+    }
   }
 };
 

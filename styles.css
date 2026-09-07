@@ -2019,4 +2019,73 @@ textarea.modal__input { min-height: 90px; }
   animation: likePop .45s ease;
 }
 
+/* Featured badge on homepage cards */
+.mod-card__featured-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 2;
+  background: var(--black);
+  color: var(--white);
+  font-size: .7rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  letter-spacing: .03em;
+}
+
+/* Admin tools */
+.admin-header__actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.admin-charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin: 28px 0 36px;
+}
+.admin-chart {
+  border: 2px solid var(--black);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  background: var(--white);
+}
+.admin-chart__title { font-size: .95rem; font-weight: 700; margin-bottom: 12px; }
+.admin-chart__bars { display: flex; flex-direction: column; gap: 8px; }
+.admin-chart__row { display: grid; grid-template-columns: 88px 1fr 28px; gap: 8px; align-items: center; }
+.admin-chart__label { font-size: .75rem; color: var(--gray-600); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-chart__track { height: 8px; background: var(--gray-100); border-radius: 999px; overflow: hidden; }
+.admin-chart__fill { height: 100%; background: var(--black); border-radius: 999px; }
+.admin-chart__count { font-size: .75rem; font-weight: 700; text-align: right; }
+.admin-dupes { margin-bottom: 36px; }
+.admin-dupes__block { margin-bottom: 16px; }
+.admin-dupes__list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.admin-dupes__list a { font-weight: 700; text-decoration: underline; }
+.manage-presets { margin: 0 0 14px; flex-wrap: wrap; }
+.bulk-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border: 2px solid var(--black);
+  border-radius: var(--radius-sm);
+  background: var(--gray-50);
+  font-weight: 700;
+  font-size: .85rem;
+}
+.table__check { width: 36px; text-align: center; }
+.table tr.is-selected { background: var(--gray-50); }
+.tag-manager-list { display: flex; flex-direction: column; gap: 8px; }
+.tag-manager-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  border: 2px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+}
+.health-results { margin-top: 8px; }
+
 
