@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="head.js?v=3"></script>
+  <title>Submit a Mod — tuckzed mods</title>
+  <meta name="description" content="Suggest a mod for tuckzed mods. Submissions are reviewed by the team before publishing." />
+  <meta name="theme-color" content="#000000" />
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Comic+Relief:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css?v=16" />
+</head>
+<body>
+<a class="skip-link" href="#main-content">Skip to content</a>
+
+<nav class="nav" role="navigation" aria-label="Main navigation">
+  <div class="container">
+    <div class="nav__inner">
+      <a href="./" class="nav__logo" id="nav-logo">tuckzed <span>mods</span></a>
+      <ul class="nav__links" role="list">
+        <li><a href="https://discord.gg/5nE69arMNP" target="_blank" rel="noopener noreferrer" class="nav__link nav__link--discord"><svg width="18" height="18" viewBox="0 0 127.14 96.36" fill="currentColor" aria-hidden="true"><path d="M107.7 8.07A105.15 105.15 0 0 0 81.47 0a72.06 72.06 0 0 0-3.36 6.83 97.68 97.68 0 0 0-29.08 0A72.37 72.37 0 0 0 45.67 0a105.46 105.46 0 0 0-26.23 8.07C2.92 32.82-3.13 57.06 1.74 80.89a105.9 105.9 0 0 0 32.18 16.15 77.7 77.7 0 0 0 6.89-11.23 68.42 68.42 0 0 1-10.85-5.18c.91-.66 1.8-1.34 2.66-2a75.57 75.57 0 0 0 64.32 0c.87.71 1.76 1.39 2.68 2a67.62 67.62 0 0 1-10.87 5.19 77 77 0 0 0 6.89 11.22 105.45 105.45 0 0 0 32.19-16.15c5.38-27.13-2.18-50.62-17.72-72.82zM42.49 65.3c-5.74 0-10.46-5.26-10.46-11.75s4.64-11.75 10.46-11.75c5.88 0 10.53 5.31 10.46 11.75 0 6.49-4.64 11.75-10.46 11.75zm42.16 0c-5.74 0-10.46-5.26-10.46-11.75s4.64-11.75 10.46-11.75c5.88 0 10.53 5.31 10.46 11.75 0 6.49-4.63 11.75-10.46 11.75z"/></svg> Discord</a></li>
+        <li><a href="./#mods" class="nav__link" id="nav-browse">Browse</a></li>
+        <li><a href="submit.html" class="nav__link active" id="nav-upload">Submit a Mod</a></li>
+        <li><a href="auth.html" class="nav__link" id="nav-signin">Sign In</a></li>
+        <li class="nav__user-pill" id="nav-user-pill" style="display:none;">
+          <span class="nav__user-label" id="nav-user-label"></span>
+          <button type="button" class="btn btn--sm" id="nav-signout-btn">Sign Out</button>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<main id="main-content" class="section">
+  <div class="container" style="max-width:720px;">
+    <h1 class="section-title" style="margin-bottom:8px;">Submit a Mod</h1>
+    <p class="section-sub" style="margin-bottom:24px;">Suggest a mod for the catalog. Our team reviews every submission before it goes live.</p>
+
+    <form id="submit-form" class="profile-card" novalidate>
+      <div class="profile-fields">
+        <div class="form-field" id="field-title">
+          <label class="form-label" for="s-title">Title</label>
+          <input type="text" class="input" id="s-title" maxlength="120" required placeholder="Mod name" />
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="s-game">Game</label>
+          <select class="input" id="s-game" required>
+            <option value="ac">Assetto Corsa</option>
+            <option value="beamng">BeamNG.drive</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="s-category">Category</label>
+          <select class="input" id="s-category" required>
+            <option>Cars</option>
+            <option>Tracks</option>
+            <option>Maps</option>
+            <option>Physics</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="s-version">Version</label>
+          <input type="text" class="input" id="s-version" maxlength="40" placeholder="1.0.0" value="1.0.0" />
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="s-compat">Compatibility</label>
+          <input type="text" class="input" id="s-compat" maxlength="200" placeholder="e.g. AC 1.16+, CSP recommended" />
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="s-tags">Tags</label>
+          <input type="text" class="input" id="s-tags" maxlength="200" placeholder="drift, ferrari, night" />
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="s-url">Download URL</label>
+          <input type="url" class="input" id="s-url" maxlength="500" placeholder="https://…" required />
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="s-desc">Description</label>
+          <textarea class="input" id="s-desc" rows="5" maxlength="4000" placeholder="What does this mod include?"></textarea>
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="s-name">Your name (optional)</label>
+          <input type="text" class="input" id="s-name" maxlength="60" placeholder="Display name" />
+        </div>
+      </div>
+      <p class="form-hint" id="submit-hint">You can submit while signed out, but signing in helps us follow up.</p>
+      <div class="profile-actions">
+        <button type="submit" class="btn btn--primary" id="s-submit-btn">Send Submission</button>
+        <span class="profile-status" id="s-status" role="status"></span>
+      </div>
+    </form>
+  </div>
+</main>
+
+<footer class="footer" role="contentinfo">
+  <div class="container">
+    <div class="footer__inner">
+      <span class="footer__brand">tuckzed mods</span>
+      <nav class="footer__links" aria-label="Footer navigation">
+        <a href="https://discord.gg/5nE69arMNP" target="_blank" rel="noopener noreferrer" class="footer__link footer__link--discord">Discord</a>
+        <a href="./#mods" class="footer__link">Mods</a>
+        <a href="feed.xml" class="footer__link">RSS</a>
+        <a href="admin.html" class="footer__link" id="footer-admin">Admin</a>
+      </nav>
+      <span class="footer__copy">© <span data-year>2026</span> tuckzed mods.</span>
+    </div>
+  </div>
+</footer>
+
+<div class="toast-container" aria-live="assertive" aria-atomic="true"></div>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js?v=2"></script>
+<script src="store.js?v=16"></script>
+<script src="firebase-config.js?v=3"></script>
+<script src="auth-nav.js?v=16"></script>
+<script src="submit.js?v=16"></script>
+</body>
+</html>

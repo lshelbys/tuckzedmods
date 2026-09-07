@@ -10,3 +10,4 @@ Disallow: /profile
 Disallow: /profile.html
 
 Sitemap: https://tuckzed.com/sitemap.xml
+# RSS: https://tuckzed.com/feed.xml

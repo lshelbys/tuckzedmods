@@ -13,7 +13,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Comic+Relief:wght@400;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=15" />
+  <link rel="stylesheet" href="styles.css?v=16" />
 
   <!-- Open Graph / Twitter (updated by JS once the mod loads) -->
   <meta property="og:type" content="article" />
@@ -41,7 +41,7 @@
       <ul class="nav__links" role="list">
         <li><a href="https://discord.gg/5nE69arMNP" target="_blank" rel="noopener noreferrer" class="nav__link nav__link--discord"><svg width="18" height="18" viewBox="0 0 127.14 96.36" fill="currentColor" aria-hidden="true"><path d="M107.7 8.07A105.15 105.15 0 0 0 81.47 0a72.06 72.06 0 0 0-3.36 6.83 97.68 97.68 0 0 0-29.08 0A72.37 72.37 0 0 0 45.67 0a105.46 105.46 0 0 0-26.23 8.07C2.92 32.82-3.13 57.06 1.74 80.89a105.9 105.9 0 0 0 32.18 16.15 77.7 77.7 0 0 0 6.89-11.23 68.42 68.42 0 0 1-10.85-5.18c.91-.66 1.8-1.34 2.66-2a75.57 75.57 0 0 0 64.32 0c.87.71 1.76 1.39 2.68 2a67.62 67.62 0 0 1-10.87 5.19 77 77 0 0 0 6.89 11.22 105.45 105.45 0 0 0 32.19-16.15c5.38-27.13-2.18-50.62-17.72-72.82zM42.49 65.3c-5.74 0-10.46-5.26-10.46-11.75s4.64-11.75 10.46-11.75c5.88 0 10.53 5.31 10.46 11.75 0 6.49-4.64 11.75-10.46 11.75zm42.16 0c-5.74 0-10.46-5.26-10.46-11.75s4.64-11.75 10.46-11.75c5.88 0 10.53 5.31 10.46 11.75 0 6.49-4.63 11.75-10.46 11.75z"/></svg> Discord</a></li>
         <li><a href="./#mods" class="nav__link" id="nav-browse">Browse</a></li>
-        <li><a href="https://discord.gg/5nE69arMNP" target="_blank" rel="noopener noreferrer" class="nav__link" id="nav-upload">Submit a Mod</a></li>
+        <li><a href="submit.html" class="nav__link" id="nav-upload">Submit a Mod</a></li>
         <li><a href="auth.html" class="nav__link" id="nav-signin">Sign In</a></li>
         <li class="nav__user-pill" id="nav-user-pill" style="display:none;">
           <span class="nav__user-label" id="nav-user-label"></span>
@@ -98,6 +98,7 @@
           <div class="mod-detail__desc-card">
             <h2 class="mod-detail__desc-title">About This Mod</h2>
             <div class="mod-detail__desc-content" id="mod-description"></div>
+            <div class="mod-changelog" id="mod-changelog" style="display:none;"></div>
           </div>
 
           <!-- Comments -->
@@ -135,6 +136,7 @@
             <div class="mod-detail__actions">
               <button type="button" onclick="handleModDownload(event)" class="btn btn--primary mod-detail__dl-btn" id="mod-dl-btn">⬇ Download Mod</button>
               <button type="button" onclick="handleLikeToggle(event)" class="btn btn--secondary mod-detail__dl-btn" id="mod-like-btn" aria-pressed="false"><span>🤍 Like (<span id="mod-likes-count">0</span>)</span></button>
+              <button type="button" onclick="handleWishlistToggle(event)" class="btn btn--secondary mod-detail__dl-btn" id="mod-wishlist-btn" aria-pressed="false"><span>☆ Wishlist</span></button>
               <button type="button" onclick="handleShare(event)" class="btn btn--secondary btn--sm" id="mod-share-btn" style="justify-content:center;">🔗 Share</button>
               <button type="button" onclick="handleReportMod()" class="btn btn--ghost btn--sm" id="mod-report-btn" style="justify-content:center;">🚩 Report</button>
             </div>
@@ -155,6 +157,10 @@
               <div class="mod-detail__meta-item">
                 <span class="mod-detail__meta-label">Version</span>
                 <span class="mod-detail__meta-val" id="mod-version"></span>
+              </div>
+              <div class="mod-detail__meta-item" id="meta-compat-row" style="display:none;">
+                <span class="mod-detail__meta-label">Compatibility</span>
+                <span class="mod-detail__meta-val" id="mod-compatibility"></span>
               </div>
               <div class="mod-detail__meta-item">
                 <span class="mod-detail__meta-label">Release Date</span>
@@ -242,9 +248,9 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js?v=2"></script>
-<script src="store.js?v=15"></script>
+<script src="store.js?v=16"></script>
 <script src="firebase-config.js?v=3"></script>
-<script src="auth-nav.js?v=15"></script>
-<script src="mod.js?v=15"></script>
+<script src="auth-nav.js?v=16"></script>
+<script src="mod.js?v=16"></script>
 </body>
 </html>

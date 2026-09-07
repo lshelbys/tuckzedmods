@@ -22,6 +22,8 @@ document.addEventListener('DOMContentLoaded', function () {
       populateSidebar(user);
       prefillForms(user);
       loadLikedMods(user && user.email);
+      loadWishlistMods(user && user.email);
+      loadNotifications(user && user.email);
       maybeMigrateEmail(user);
     } catch (err) {
       console.error('Profile render error:', err);
@@ -91,6 +93,72 @@ document.addEventListener('DOMContentLoaded', function () {
       wrap.innerHTML = '<p class="form-hint">Could not load liked mods right now.</p>';
     }
   }
+
+  async function loadWishlistMods(email) {
+    var wrap = document.getElementById('wishlist-mods-list');
+    if (!wrap || !window.TZ.Store.getWishlistMods) return;
+    if (!email) {
+      wrap.innerHTML = '<p class="form-hint">Sign in to manage a wishlist.</p>';
+      return;
+    }
+    wrap.innerHTML = '<p class="form-hint">Loading wishlist…</p>';
+    try {
+      var mods = await window.TZ.Store.getWishlistMods(email);
+      if (!mods.length) {
+        wrap.innerHTML = '<p class="form-hint">Your wishlist is empty. Tap ☆ Wishlist on a mod page to save it here.</p>';
+        return;
+      }
+      var escapeHtml = window.TZ.escapeHtml;
+      wrap.innerHTML = '<ul class="liked-mods">' + mods.map(function (m) {
+        return '<li class="liked-mods__item"><a class="liked-mods__link" href="mod.html?id=' + encodeURIComponent(m.id) + '">' +
+          '<span class="liked-mods__title">' + escapeHtml(m.title) + '</span>' +
+          '<span class="liked-mods__meta">' + escapeHtml(m.category) + ' · v' + escapeHtml(m.version) + '</span>' +
+          '</a></li>';
+      }).join('') + '</ul>';
+    } catch (err) {
+      console.error(err);
+      wrap.innerHTML = '<p class="form-hint">Could not load wishlist right now.</p>';
+    }
+  }
+
+  async function loadNotifications(email) {
+    var wrap = document.getElementById('notifications-list');
+    if (!wrap || !window.TZ.Store.getNotifications) return;
+    if (!email) {
+      wrap.innerHTML = '<p class="form-hint">Sign in to see notifications.</p>';
+      return;
+    }
+    wrap.innerHTML = '<p class="form-hint">Loading notifications…</p>';
+    try {
+      var items = await window.TZ.Store.getNotifications(email, { limit: 40 });
+      if (!items.length) {
+        wrap.innerHTML = '<p class="form-hint">No notifications yet. You\'ll get one when someone replies to your comments.</p>';
+        return;
+      }
+      var escapeHtml = window.TZ.escapeHtml;
+      var timeAgo = window.TZ.timeAgo;
+      wrap.innerHTML = items.map(function (n) {
+        var unread = !n.read ? ' notif-item--unread' : '';
+        var href = n.link ? escapeHtml(n.link) : '#';
+        return '<a class="notif-item' + unread + '" href="' + href + '">' +
+          '<div class="notif-item__body">' +
+          '<p class="notif-item__msg">' + escapeHtml(n.message || 'Notification') + '</p>' +
+          '<span class="notif-item__time">' + escapeHtml(timeAgo(n.created_at)) + (n.read ? '' : ' · unread') + '</span>' +
+          '</div></a>';
+      }).join('');
+    } catch (err) {
+      console.error(err);
+      wrap.innerHTML = '<p class="form-hint">Could not load notifications right now.</p>';
+    }
+  }
+
+  window.markAllNotificationsRead = async function () {
+    var user = window.TZ_AUTH && window.TZ_AUTH.currentUser();
+    if (!user || !user.email) return;
+    await window.TZ.Store.markNotificationsRead(user.email);
+    window.TZ.showToast('All notifications marked as read.');
+    loadNotifications(user.email);
+  };
 
   // ── Sidebar ────────────────────────────────────────────────
   function populateSidebar(user) {

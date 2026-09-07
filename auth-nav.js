@@ -61,9 +61,9 @@
       } else {
         if (uploadLi) uploadLi.style.display = 'none';
         if (heroUpload) {
-          heroUpload.href = DISCORD_URL;
-          heroUpload.target = '_blank';
-          heroUpload.rel = 'noopener noreferrer';
+          heroUpload.href = 'submit.html';
+          heroUpload.removeAttribute('target');
+          heroUpload.removeAttribute('rel');
           heroUpload.textContent = 'Submit a Mod';
         }
       }
@@ -74,6 +74,7 @@
       if (isAdmin) {
         if (userLabel) {
           userLabel.textContent  = '⚡ Admin';
+          userLabel.dataset.base = '⚡ Admin';
           userLabel.style.cursor = 'pointer';
           userLabel.title        = 'Go to Admin Panel';
           userLabel.setAttribute('role', 'button');
@@ -90,7 +91,7 @@
         }
       } else {
         if (userLabel) {
-          const name = user.displayName || user.email.split('@')[0];
+          const name = user.displayName || (user.email ? user.email.split('@')[0] : 'Profile');
           const escapedName = window.TZ ? window.TZ.escapeHtml(name) : name;
           let avatarHtml = '';
           if (user.photoURL) {
@@ -98,6 +99,7 @@
             avatarHtml = `<img src="${escapedUrl}" alt="" class="nav__avatar" />`;
           }
           userLabel.innerHTML  = `${avatarHtml}<span class="nav__user-name">${escapedName}</span>`;
+          userLabel.dataset.base = name;
           userLabel.style.cursor = 'pointer';
           userLabel.title        = 'My Profile';
           userLabel.setAttribute('role', 'button');
@@ -114,6 +116,16 @@
         }
       }
 
+      // Unread notification badge on profile pill (non-admin)
+      if (!isAdmin && user.email && userLabel && window.TZ && window.TZ.Store && window.TZ.Store.getUnreadNotificationCount) {
+        window.TZ.Store.getUnreadNotificationCount(user.email).then(n => {
+          if (!userLabel || n <= 0) return;
+          const nameEl = userLabel.querySelector('.nav__user-name');
+          if (nameEl) nameEl.textContent = (userLabel.dataset.base || nameEl.textContent) + ` (${n})`;
+          userLabel.title = n + ' unread notification' + (n === 1 ? '' : 's');
+        }).catch(() => {});
+      }
+
       if (signoutBtn) {
         signoutBtn.onclick = async function () {
           const ok = window.TZ && window.TZ.confirmDialog
@@ -127,18 +139,18 @@
       }
 
     } else {
-      // Guests: point "Upload" at Discord — uploads are admin-curated
+      // Guests: community submit form
       if (uploadLi) uploadLi.style.display = '';
       if (uploadLink) {
-        uploadLink.href = DISCORD_URL;
-        uploadLink.target = '_blank';
-        uploadLink.rel = 'noopener noreferrer';
+        uploadLink.href = 'submit.html';
+        uploadLink.removeAttribute('target');
+        uploadLink.removeAttribute('rel');
         uploadLink.textContent = 'Submit a Mod';
       }
       if (heroUpload) {
-        heroUpload.href = DISCORD_URL;
-        heroUpload.target = '_blank';
-        heroUpload.rel = 'noopener noreferrer';
+        heroUpload.href = 'submit.html';
+        heroUpload.removeAttribute('target');
+        heroUpload.removeAttribute('rel');
         heroUpload.textContent = 'Submit a Mod';
       }
       if (signinLink) {

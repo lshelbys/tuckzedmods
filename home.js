@@ -25,6 +25,8 @@ document.addEventListener('DOMContentLoaded', () => {
   applyFiltersFromUrl();
   renderGameCards();
   renderMods();
+  renderPopularTags();
+  renderCollections();
   initSearch();
   initHeroButton();
 
@@ -33,6 +35,8 @@ document.addEventListener('DOMContentLoaded', () => {
     Store.fetchFromRemote().then(() => {
       renderGameCards();
       renderMods();
+      renderPopularTags();
+      renderCollections();
     });
   }
 
@@ -105,9 +109,9 @@ function initHeroButton() {
   window.TZ_AUTH.onChange(user => {
     if (!user) {
       btn.style.display = '';
-      btn.href = 'https://discord.gg/5nE69arMNP';
-      btn.target = '_blank';
-      btn.rel = 'noopener noreferrer';
+      btn.href = 'submit.html';
+      btn.removeAttribute('target');
+      btn.removeAttribute('rel');
       btn.textContent = 'Submit a Mod';
       return;
     }
@@ -120,9 +124,9 @@ function initHeroButton() {
       btn.textContent = '⚡ Admin Panel';
     } else {
       btn.style.display = '';
-      btn.href = 'https://discord.gg/5nE69arMNP';
-      btn.target = '_blank';
-      btn.rel = 'noopener noreferrer';
+      btn.href = 'submit.html';
+      btn.removeAttribute('target');
+      btn.removeAttribute('rel');
       btn.textContent = 'Submit a Mod';
     }
   });
@@ -310,9 +314,10 @@ function getFilteredMods() {
     mods = mods.filter(m => parseTags(m.tags).some(t => t.toLowerCase() === wanted));
   }
   if (state.searchQuery) {
+    const { fuzzyMatch, parseTags: pt, stripMarkdown } = window.TZ;
     mods = mods.filter(m => {
-      const haystack = `${m.title || ''} ${m.description || ''} ${parseTags(m.tags).join(' ')}`.toLowerCase();
-      return haystack.includes(state.searchQuery);
+      const haystack = `${m.title || ''} ${stripMarkdown ? stripMarkdown(m.description || '') : (m.description || '')} ${pt(m.tags).join(' ')} ${m.compatibility || ''}`;
+      return fuzzyMatch(haystack, state.searchQuery);
     });
   }
 
@@ -523,11 +528,53 @@ function retryFetch() {
 }
 window.retryFetch = retryFetch;
 
+function renderPopularTags() {
+  const { Store, escapeHtml } = window.TZ;
+  const el = document.getElementById('popular-tags');
+  if (!el) return;
+  const tags = Store.getPopularTags(14);
+  if (!tags.length) {
+    el.style.display = 'none';
+    el.innerHTML = '';
+    return;
+  }
+  el.style.display = '';
+  el.innerHTML = `<span class="popular-tags__label">Popular tags</span>` + tags.map(t =>
+    `<button type="button" class="popular-tags__chip${state.activeTag.toLowerCase() === t.tag.toLowerCase() ? ' is-active' : ''}" onclick="searchTag('${escapeHtml(t.tag).replace(/'/g, "\\'")}')">#${escapeHtml(t.tag)} <span class="popular-tags__count">${t.count}</span></button>`
+  ).join('');
+}
+
+async function renderCollections() {
+  const { Store, escapeHtml } = window.TZ;
+  const section = document.getElementById('collections');
+  const grid = document.getElementById('collections-grid');
+  if (!section || !grid) return;
+  const cols = await Store.listCollections();
+  if (!cols.length) {
+    section.style.display = 'none';
+    return;
+  }
+  section.style.display = '';
+  grid.innerHTML = cols.slice(0, 8).map(c => {
+    const cover = c.cover_image
+      ? `<img src="${escapeHtml(c.cover_image)}" alt="" class="collection-card__img" loading="lazy" />`
+      : `<div class="collection-card__img collection-card__img--empty" aria-hidden="true">📦</div>`;
+    return `<a class="collection-card" href="collection.html?id=${encodeURIComponent(c.id)}" role="listitem">
+      <div class="collection-card__media">${cover}</div>
+      <div class="collection-card__body">
+        <h3 class="collection-card__title">${escapeHtml(c.title)}</h3>
+        <p class="collection-card__desc">${escapeHtml((c.description || '').slice(0, 120))}</p>
+      </div>
+    </a>`;
+  }).join('');
+}
+
 // ── Refresh when another tab (e.g. the admin panel) edits mods ──
 window.addEventListener('storage', e => {
   if (e.key === 'tuckzed_mods_v2') {
     if (window.TZ && window.TZ.Store) window.TZ.Store._cache = null;
     renderGameCards();
     renderMods();
+    renderPopularTags();
   }
 });

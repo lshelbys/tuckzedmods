@@ -133,6 +133,7 @@ function updateAuthUI() {
     if (loginPrompt) loginPrompt.style.display = 'none';
     if (currentMod) {
       window.TZ.Store.getModLikeStatus(currentMod.id).then(isLiked => setLikeButton(isLiked, currentMod.likes || 0));
+      window.TZ.Store.getWishlistStatus(currentMod.id).then(isWished => setWishlistButton(isWished));
     }
   } else {
     if (formWrap) formWrap.style.display = 'none';
@@ -142,6 +143,7 @@ function updateAuthUI() {
       if (link && window.TZ.authRedirectUrl) link.href = window.TZ.authRedirectUrl();
     }
     if (likeBtn && currentMod) setLikeButton(false, currentMod.likes || 0);
+    setWishlistButton(false);
   }
 }
 
@@ -157,6 +159,14 @@ function setLikeButton(isLiked, count, animate) {
     void likeBtn.offsetWidth;
     likeBtn.classList.add('btn--pop');
   }
+}
+
+function setWishlistButton(isWished) {
+  const btn = document.getElementById('mod-wishlist-btn');
+  if (!btn) return;
+  btn.innerHTML = `<span>${isWished ? '★ Wishlisted' : '☆ Wishlist'}</span>`;
+  btn.dataset.wished = isWished ? 'true' : 'false';
+  btn.setAttribute('aria-pressed', isWished ? 'true' : 'false');
 }
 
 function requireSignIn(message) {
@@ -264,6 +274,16 @@ function renderMod(mod) {
   setText('mod-game-name', game ? game.name : mod.game);
   setText('mod-cat-name', mod.category);
   setText('mod-version', 'v' + mod.version);
+  const compatRow = document.getElementById('meta-compat-row');
+  const compatEl = document.getElementById('mod-compatibility');
+  if (compatRow && compatEl) {
+    if (mod.compatibility) {
+      compatEl.textContent = mod.compatibility;
+      compatRow.style.display = '';
+    } else {
+      compatRow.style.display = 'none';
+    }
+  }
   const dateEl = document.getElementById('mod-date');
   if (dateEl) {
     dateEl.textContent = formatDate(mod.createdAt);
@@ -308,6 +328,23 @@ function renderMod(mod) {
       });
     } else {
       descEl.textContent = mod.description || '';
+    }
+  }
+
+  const changelogEl = document.getElementById('mod-changelog');
+  if (changelogEl) {
+    const entries = Array.isArray(mod.changelog) ? mod.changelog : [];
+    if (entries.length) {
+      changelogEl.style.display = '';
+      changelogEl.innerHTML = `<h3 class="mod-changelog__title">Changelog</h3>` + entries.map(e => {
+        const ver = escapeHtml(e.version || e.v || '');
+        const notes = escapeHtml(e.notes || e.text || e.changes || '');
+        const when = e.date ? ` <time>${escapeHtml(formatDate(e.date))}</time>` : '';
+        return `<p class="mod-changelog__item"><span class="mod-changelog__ver">v${ver}</span>${when}${notes ? ' — ' + notes : ''}</p>`;
+      }).join('');
+    } else {
+      changelogEl.style.display = 'none';
+      changelogEl.innerHTML = '';
     }
   }
 
@@ -610,6 +647,27 @@ window.handleLikeToggle = async function (e) {
   setLikeButton(newLikedState, result.likes);
 };
 
+window.handleWishlistToggle = async function (e) {
+  e.preventDefault();
+  if (!window.TZ_AUTH || !window.TZ_AUTH.currentUser()) {
+    requireSignIn('Sign in to save this mod to your wishlist.');
+    return;
+  }
+  if (!currentMod) return;
+  const btn = document.getElementById('mod-wishlist-btn');
+  const next = btn.dataset.wished !== 'true';
+  setWishlistButton(next);
+  btn.disabled = true;
+  const result = await window.TZ.Store.toggleWishlist(currentMod.id, next);
+  btn.disabled = false;
+  if (!result || !result.ok) {
+    setWishlistButton(!next);
+    window.TZ.showToast('Could not update wishlist. Please try again.');
+    return;
+  }
+  window.TZ.showToast(next ? '★ Added to wishlist' : 'Removed from wishlist');
+};
+
 window.handleModDownload = function (e) {
   e.preventDefault();
   if (!currentMod || !currentMod.downloadUrl) {
@@ -705,6 +763,9 @@ async function loadComments(modId, append = false) {
     (commentsByParent[pid] = commentsByParent[pid] || []).push(c);
   });
 
+  const reactionMap = await window.TZ.Store.getCommentReactionCounts(comments.map(c => c.id));
+  if (!currentMod || currentMod.id !== modId) return;
+
   const currentUser = window.TZ_AUTH ? window.TZ_AUTH.currentUser() : null;
   const isAdmin = isAdminUser(currentUser);
 
@@ -719,6 +780,7 @@ async function loadComments(modId, append = false) {
     const canReply = !!currentUser && depth < 3;
     const created = c.created_at ? new Date(c.created_at) : null;
     const edited = c.updated_at && c.created_at && (new Date(c.updated_at) - new Date(c.created_at) > 60000);
+    const rx = reactionMap[c.id] || { count: 0, mine: false };
 
     const actionsHtml = `
       ${isOwner ? `<button type="button" class="comment__action" onclick="editComment('${escapeHtml(c.id)}')">Edit</button>` : ''}
@@ -741,7 +803,10 @@ async function loadComments(modId, append = false) {
             </div>
             <p class="comment__text" id="comment-text-${escapeHtml(c.id)}" data-raw="${escapeHtml(c.comment)}">${escapeHtml(c.comment)}</p>
             <div class="comment__edit-form" id="comment-edit-${escapeHtml(c.id)}" style="display:none;"></div>
-            ${canReply ? `<button type="button" class="comment__action comment__reply-btn" onclick="showReplyForm('${escapeHtml(c.id)}')">↩ Reply</button>` : ''}
+            <div class="comment__footer-actions">
+              <button type="button" class="comment__action comment__react-btn${rx.mine ? ' is-active' : ''}" data-count="${rx.count}" aria-pressed="${rx.mine ? 'true' : 'false'}" onclick="toggleCommentReaction('${escapeHtml(c.id)}', this)">👍 ${rx.count || ''}</button>
+              ${canReply ? `<button type="button" class="comment__action comment__reply-btn" onclick="showReplyForm('${escapeHtml(c.id)}')">↩ Reply</button>` : ''}
+            </div>
             <div class="comment__form" id="reply-form-${escapeHtml(c.id)}" style="display:none;">
               <label class="sr-only" for="reply-input-${escapeHtml(c.id)}">Write a reply</label>
               <textarea class="input" id="reply-input-${escapeHtml(c.id)}" rows="2" maxlength="2000" placeholder="Write a reply…"></textarea>
@@ -771,6 +836,28 @@ async function loadComments(modId, append = false) {
 window.loadMoreComments = function () {
   if (!currentMod || !commentsHasMore) return;
   loadComments(currentMod.id, true);
+};
+
+window.toggleCommentReaction = async function (commentId, btn) {
+  if (!window.TZ_AUTH || !window.TZ_AUTH.currentUser()) {
+    requireSignIn('Sign in to react to comments.');
+    return;
+  }
+  const mine = btn.classList.contains('is-active');
+  const prev = Number(btn.dataset.count) || 0;
+  const nextCount = Math.max(0, prev + (mine ? -1 : 1));
+  btn.classList.toggle('is-active', !mine);
+  btn.dataset.count = String(nextCount);
+  btn.setAttribute('aria-pressed', (!mine).toString());
+  btn.textContent = '👍 ' + (nextCount || '');
+  const result = await window.TZ.Store.toggleCommentReaction(Number(commentId) || commentId, !mine);
+  if (!result || !result.ok) {
+    btn.classList.toggle('is-active', mine);
+    btn.dataset.count = String(prev);
+    btn.setAttribute('aria-pressed', mine.toString());
+    btn.textContent = '👍 ' + (prev || '');
+    window.TZ.showToast('Could not update reaction.');
+  }
 };
 
 window.showReplyForm = function (commentId) {
