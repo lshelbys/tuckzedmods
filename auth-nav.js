@@ -57,12 +57,12 @@
           userLabel.setAttribute('role', 'button');
           userLabel.setAttribute('tabindex', '0');
           userLabel.onclick = function () {
-            window.location.href = 'admin';
+            window.location.href = 'admin.html';
           };
           userLabel.onkeydown = function (e) {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault();
-              window.location.href = 'admin';
+              window.location.href = 'admin.html';
             }
           };
         }
@@ -82,12 +82,12 @@
           userLabel.setAttribute('role', 'button');
           userLabel.setAttribute('tabindex', '0');
           userLabel.onclick = function () {
-            window.location.href = 'profile';
+            window.location.href = 'profile.html';
           };
           userLabel.onkeydown = function (e) {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault();
-              window.location.href = 'profile';
+              window.location.href = 'profile.html';
             }
           };
         }
@@ -108,7 +108,7 @@
       // ── Signed out ────────────────────────────────────────────
       // Show "Upload Mods" and "Sign In" links
       if (uploadLi) uploadLi.style.display = '';
-      if (uploadLink) uploadLink.href = 'auth?redirect=upload';
+      if (uploadLink) uploadLink.href = 'auth.html?redirect=upload';
       signinLink.style.display = '';
       if (userPill) userPill.style.display = 'none';
     }
