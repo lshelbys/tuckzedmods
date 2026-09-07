@@ -419,7 +419,7 @@ const Store = {
   },
 
   /** Add a comment */
-  async addComment(modId, username, text) {
+  async addComment(modId, username, text, parentId = null) {
     const sb = this.getSb();
     if (!sb) return null;
     const user = window.TZ_AUTH ? window.TZ_AUTH.currentUser() : null;
@@ -428,7 +428,8 @@ const Store = {
       mod_id: modId,
       user_email: userEmail,
       username: username,
-      comment: text
+      comment: text,
+      parent_id: parentId
     }]).select().single();
     if (error) { console.error('Add comment error:', error); return null; }
     return data;
