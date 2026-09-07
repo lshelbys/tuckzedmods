@@ -2,6 +2,7 @@
 -- tuckzed mods — Supabase Database & Storage Setup
 -- Copy and run this script in your Supabase SQL Editor:
 -- https://supabase.com/dashboard/project/_/sql/new
+-- Safe to run more than once: existing tables/policies are skipped.
 -- ============================================================
 
 -- 1. Create the `mods` table
