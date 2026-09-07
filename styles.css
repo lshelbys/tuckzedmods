@@ -677,6 +677,105 @@ textarea.input {
   font-weight: 600;
   margin-left: 2px;
 }
+.hero__stats { margin: 8px 0 0; font-weight: 700; opacity: .75; }
+.view-toggle { display: flex; gap: 6px; }
+.view-toggle__btn {
+  border: 1.5px solid var(--black);
+  background: var(--white);
+  font-family: var(--font);
+  font-weight: 700;
+  font-size: .8rem;
+  padding: 4px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.view-toggle__btn.is-active { background: var(--black); color: var(--white); }
+.continue-browse { margin: 0 0 16px; }
+.continue-browse__chip {
+  display: inline-flex;
+  border: 2px solid var(--black);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-weight: 700;
+  text-decoration: none;
+  color: inherit;
+}
+.home-rail { margin: 0 0 20px; }
+.home-rail__title { margin: 0 0 10px; font-size: 1rem; }
+.home-rail__row { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; }
+.home-rail__card {
+  min-width: 180px;
+  max-width: 220px;
+  border: 2px solid var(--black);
+  border-radius: 10px;
+  padding: 10px 12px;
+  text-decoration: none;
+  color: inherit;
+  background: var(--white);
+}
+.home-rail__card-title { display: block; font-weight: 800; margin-bottom: 4px; }
+.home-rail__card-meta { font-size: .78rem; opacity: .7; }
+.toolbar__search-wrap { position: relative; }
+.search-suggest {
+  position: absolute;
+  left: 0; right: 0; top: calc(100% + 4px);
+  z-index: 20;
+  border: 2px solid var(--black);
+  border-radius: 10px;
+  background: var(--white);
+  overflow: hidden;
+}
+.search-suggest__item {
+  display: block; width: 100%; text-align: left;
+  border: 0; background: none; padding: 8px 12px;
+  font-family: var(--font); font-weight: 700; cursor: pointer;
+}
+.search-suggest__item:hover { background: var(--gray-100, #f3f3f3); }
+.search-suggest__item--tag { font-weight: 600; opacity: .85; }
+.results-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; margin: 0 0 14px; font-size: .9rem; font-weight: 700;
+}
+.mod-grid--list { grid-template-columns: 1fr; }
+.mod-grid--list .mod-card { flex-direction: row; align-items: stretch; }
+.mod-grid--list .mod-card__hit { flex-direction: row; }
+.mod-grid--list .mod-card__img-wrap { width: 180px; min-width: 180px; aspect-ratio: auto; }
+.mod-card__quick { display: flex; gap: 6px; margin-left: auto; }
+.mod-card__icon-btn {
+  border: 1.5px solid var(--black);
+  background: var(--white);
+  border-radius: 8px;
+  width: 36px; height: 36px;
+  cursor: pointer;
+}
+.mod-card__footer { display: flex; align-items: center; gap: 8px; }
+.empty-suggest { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; justify-content: center; }
+.empty-close { text-align: left; margin: 8px auto 0; max-width: 28rem; }
+.mod-detail-navrow { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.mod-video { margin-bottom: 16px; aspect-ratio: 16/9; border: 2px solid var(--black); border-radius: var(--radius-md); overflow: hidden; }
+.mod-video iframe { width: 100%; height: 100%; border: 0; }
+.mod-install { margin-top: 16px; }
+.mod-install__list { margin: 0; padding-left: 18px; }
+.mod-mirrors { margin-top: 12px; }
+.mod-mirrors__label { font-weight: 800; margin: 0 0 6px; }
+.mod-mirrors__link { margin-right: 10px; }
+.comments-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+.mod-detail__desc-content.is-clamped { max-height: 280px; overflow: hidden; position: relative; }
+.mod-detail__desc-content.is-clamped:not(.is-expanded)::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 56px;
+  background: linear-gradient(transparent, var(--white));
+}
+.mod-detail__desc-content.is-expanded { max-height: none; }
+.mod-sticky-dl {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 16px;
+  border-top: 2px solid var(--black);
+  background: var(--white);
+}
+.mod-sticky-dl[hidden] { display: none !important; }
+.mod-sticky-dl__title { font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (min-width: 901px) { .mod-sticky-dl { display: none !important; } }
 .collections-section { padding-top: 8px; }
 .collections-grid {
   display: grid;

@@ -58,6 +58,7 @@ const Store = {
       try { changelog = JSON.parse(row.changelog); } catch (_) { changelog = []; }
     }
     const createdAtIso = toIsoDate(row.created_at);
+    const updatedAtIso = row.updated_at ? toIsoDate(row.updated_at) : createdAtIso;
     return {
       id: row.id,
       title: row.title,
@@ -67,6 +68,7 @@ const Store = {
       category: row.category,
       tags: normalizeTags(row.tags),
       downloadUrl: row.download_url || '',
+      downloadMirrors: normalizeTags(row.download_mirrors),
       downloads: Number(row.downloads) || 0,
       likes: Number(row.likes) || 0,
       coverImage: row.cover_image || (images[0] || ''),
@@ -74,9 +76,15 @@ const Store = {
       featured: !!row.featured,
       compatibility: row.compatibility || '',
       changelog: Array.isArray(changelog) ? changelog : [],
+      fileSize: row.file_size || '',
+      requirements: row.requirements || '',
+      installPath: row.install_path || '',
+      videoUrl: row.video_url || '',
       deletedAt: row.deleted_at || null,
       createdAt: createdAtIso.slice(0, 10),
       createdAtIso: createdAtIso,
+      updatedAt: updatedAtIso.slice(0, 10),
+      updatedAtIso: updatedAtIso,
       createdBy: row.created_by || 'admin'
     };
   },
@@ -96,12 +104,17 @@ const Store = {
       category: mod.category,
       tags: normalizeTags(mod.tags),
       download_url: mod.downloadUrl || '',
+      download_mirrors: normalizeTags(mod.downloadMirrors),
       downloads: Number(mod.downloads) || 0,
       likes: Number(mod.likes) || 0,
       cover_image: mod.coverImage || (images[0] || ''),
       featured: !!mod.featured,
       compatibility: mod.compatibility || '',
       changelog: Array.isArray(mod.changelog) ? mod.changelog : [],
+      file_size: mod.fileSize || '',
+      requirements: mod.requirements || '',
+      install_path: mod.installPath || '',
+      video_url: mod.videoUrl || '',
       deleted_at: mod.deletedAt || null,
       created_at: toIsoDate(mod.createdAtIso || mod.createdAt),
       created_by: mod.createdBy || 'admin'
@@ -118,7 +131,7 @@ const Store = {
     if (!sb) return { ok: true, localOnly: true };
 
     const full = this.modToRow(mod, true);
-    const optionalKeys = ['images', 'featured', 'compatibility', 'changelog', 'deleted_at', 'tags', 'likes', 'downloads'];
+    const optionalKeys = ['images', 'featured', 'compatibility', 'changelog', 'deleted_at', 'tags', 'likes', 'downloads', 'file_size', 'requirements', 'install_path', 'video_url', 'download_mirrors'];
     const payloads = [full];
     // Progressively strip optional columns for older schemas
     let cur = { ...full };
@@ -819,6 +832,15 @@ const Store = {
     return true;
   },
 
+  /** Pin or unpin a comment (admin install notes) */
+  async pinComment(commentId, pinned) {
+    const sb = this.getSb();
+    if (!sb) return false;
+    const { error } = await sb.from('mod_comments').update({ pinned: !!pinned }).eq('id', commentId);
+    if (error) { console.warn('pinComment:', error); return false; }
+    return true;
+  },
+
   /** Delete a comment and its replies */
   async deleteComment(commentId) {
     const sb = this.getSb();
@@ -1165,6 +1187,50 @@ const Store = {
     }
   },
 
+  async getCollectionsForMod(modId) {
+    const sb = this.getSb();
+    if (!sb || !modId) return [];
+    try {
+      const { data: links, error } = await sb.from('collection_mods').select('collection_id').eq('mod_id', modId);
+      if (error) throw error;
+      const ids = [...new Set((links || []).map(l => l.collection_id).filter(Boolean))];
+      if (!ids.length) return [];
+      const { data: cols } = await sb.from('collections').select('*').in('id', ids);
+      return cols || [];
+    } catch (err) {
+      console.warn('getCollectionsForMod:', err);
+      return [];
+    }
+  },
+
+  async getAlsoLikedMods(modId, limit = 4) {
+    const sb = this.getSb();
+    if (!sb || !modId) return [];
+    try {
+      const { data: likers, error } = await sb.from('mod_likes').select('user_email').eq('mod_id', modId).limit(50);
+      if (error) throw error;
+      const emails = [...new Set((likers || []).map(r => r.user_email).filter(Boolean))];
+      if (!emails.length) return [];
+      const { data: others } = await sb.from('mod_likes').select('mod_id').in('user_email', emails).neq('mod_id', modId);
+      const counts = {};
+      (others || []).forEach(r => {
+        if (!r.mod_id) return;
+        counts[r.mod_id] = (counts[r.mod_id] || 0) + 1;
+      });
+      const ranked = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, limit);
+      const byId = Object.fromEntries(this.getAll().map(m => [m.id, m]));
+      const missing = ranked.map(([id]) => id).filter(id => !byId[id]);
+      if (missing.length) {
+        const { data: rows } = await sb.from('mods').select('*').in('id', missing);
+        (rows || []).forEach(r => { byId[r.id] = this.rowToMod(r); });
+      }
+      return ranked.map(([id]) => byId[id]).filter(m => m && !m.deletedAt);
+    } catch (err) {
+      console.warn('getAlsoLikedMods:', err);
+      return [];
+    }
+  },
+
   async saveCollection(col, modIds = []) {
     const sb = this.getSb();
     if (!sb) return false;
@@ -1459,6 +1525,19 @@ function fuzzyMatch(haystack, query) {
   });
 }
 
+function parseYoutubeId(url) {
+  const s = String(url || '').trim();
+  if (!s) return '';
+  const m = s.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|v\/))([\w-]{11})/)
+    || s.match(/^([\w-]{11})$/);
+  return m ? m[1] : '';
+}
+
+function parseMirrors(value) {
+  const list = Array.isArray(value) ? value : String(value || '').split(/[\n,]+/);
+  return list.map(u => String(u).trim()).filter(u => /^https?:\/\//i.test(u));
+}
+
 function levenshtein(a, b) {
   a = String(a); b = String(b);
   if (a === b) return 0;
@@ -1665,5 +1744,5 @@ window.TZ = {
   Store, GAMES, CATEGORIES, CATEGORY_ICONS,
   generateId, today, escapeHtml, escapeXml, showToast, normalizeTags, parseTags,
   formatDate, timeAgo, formatCount, stripMarkdown, confirmDialog, promptDialog,
-  authRedirectUrl, fuzzyMatch
+  authRedirectUrl, fuzzyMatch, parseYoutubeId, parseMirrors
 };

@@ -764,6 +764,11 @@ function serializeForm() {
     tags: document.getElementById('f-tags').value,
     compatibility: (document.getElementById('f-compatibility') || {}).value || '',
     changelog: (document.getElementById('f-changelog') || {}).value || '',
+    fileSize: (document.getElementById('f-file-size') || {}).value || '',
+    requirements: (document.getElementById('f-requirements') || {}).value || '',
+    installPath: (document.getElementById('f-install-path') || {}).value || '',
+    videoUrl: (document.getElementById('f-video-url') || {}).value || '',
+    mirrors: (document.getElementById('f-mirrors') || {}).value || '',
     desc: document.getElementById('f-desc').value,
     dl: document.getElementById('f-dl').value,
     featured: !!(document.getElementById('f-featured') && document.getElementById('f-featured').checked),
@@ -825,6 +830,12 @@ function openEdit(id) {
   if (compatEl) compatEl.value = mod.compatibility || '';
   const changelogEl = document.getElementById('f-changelog');
   if (changelogEl) changelogEl.value = formatChangelogForInput(mod.changelog);
+  const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+  setVal('f-file-size', mod.fileSize);
+  setVal('f-requirements', mod.requirements);
+  setVal('f-install-path', mod.installPath);
+  setVal('f-video-url', mod.videoUrl);
+  setVal('f-mirrors', (mod.downloadMirrors || '').replace(/,\s*/g, '\n'));
 
   const existingUrls = (Array.isArray(mod.images) && mod.images.length > 0)
     ? mod.images
@@ -908,6 +919,11 @@ async function handleFormSubmit(e) {
     featured:    !!(document.getElementById('f-featured') && document.getElementById('f-featured').checked),
     compatibility: ((document.getElementById('f-compatibility') || {}).value || '').trim(),
     changelog:   parseChangelogInput((document.getElementById('f-changelog') || {}).value || ''),
+    fileSize:    ((document.getElementById('f-file-size') || {}).value || '').trim(),
+    requirements: ((document.getElementById('f-requirements') || {}).value || '').trim(),
+    installPath: ((document.getElementById('f-install-path') || {}).value || '').trim(),
+    videoUrl:    ((document.getElementById('f-video-url') || {}).value || '').trim(),
+    downloadMirrors: ((document.getElementById('f-mirrors') || {}).value || '').trim(),
     coverImage:  finalCoverUrl,
     images:      finalImageUrls,
   };
@@ -1052,6 +1068,12 @@ window.cloneMod = function (id) {
   if (compatEl) compatEl.value = mod.compatibility || '';
   const changelogEl = document.getElementById('f-changelog');
   if (changelogEl) changelogEl.value = formatChangelogForInput(mod.changelog);
+  const setClone = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+  setClone('f-file-size', mod.fileSize);
+  setClone('f-requirements', mod.requirements);
+  setClone('f-install-path', mod.installPath);
+  setClone('f-video-url', mod.videoUrl);
+  setClone('f-mirrors', (mod.downloadMirrors || '').replace(/,\s*/g, '\n'));
   autoExpandDesc(document.getElementById('f-desc'));
   updateDescPreview();
   // Keep image URLs (shared assets) so a version bump is quick

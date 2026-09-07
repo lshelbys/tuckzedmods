@@ -13,7 +13,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Comic+Relief:wght@400;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=17" />
+  <link rel="stylesheet" href="styles.css?v=18" />
 
   <!-- Open Graph / Twitter (updated by JS once the mod loads) -->
   <meta property="og:type" content="article" />
@@ -56,7 +56,13 @@
 <main id="main-content" class="mod-detail-wrap">
   <div class="container">
 
-    <a href="./#mods" class="mod-detail-back" id="back-btn">← Back to all mods</a>
+    <div class="mod-detail-navrow">
+      <a href="./#mods" class="mod-detail-back" id="back-btn">← Back to all mods</a>
+      <div class="mod-detail-siblings" id="mod-siblings" style="display:none;">
+        <a class="btn btn--ghost btn--sm" id="mod-prev-link" href="#">← Prev</a>
+        <a class="btn btn--ghost btn--sm" id="mod-next-link" href="#">Next →</a>
+      </div>
+    </div>
 
     <!-- Loading State -->
     <div id="mod-loading" class="mod-detail-grid" aria-busy="true" aria-label="Loading mod">
@@ -85,6 +91,7 @@
 
         <!-- Left Column: Gallery & Description -->
         <div class="mod-detail__main-col">
+          <div class="mod-video" id="mod-video" style="display:none;"></div>
           <div class="mod-detail__main-img-wrap" id="main-img-wrap" title="Click to expand screenshot">
             <img id="main-img" src="" alt="Mod screenshot preview" class="mod-detail__main-img" />
             <button type="button" class="mod-expand-badge" id="gallery-expand-btn" aria-label="Expand screenshot" title="Expand screenshot fullscreen">⛶ Expand</button>
@@ -98,12 +105,23 @@
           <div class="mod-detail__desc-card">
             <h2 class="mod-detail__desc-title">About This Mod</h2>
             <div class="mod-detail__desc-content" id="mod-description"></div>
+            <button type="button" class="btn btn--ghost btn--sm" id="desc-more-btn" style="display:none;margin-top:10px;" onclick="toggleDescription()">Read more</button>
+            <div class="mod-install" id="mod-install" style="display:none;"></div>
             <div class="mod-changelog" id="mod-changelog" style="display:none;"></div>
+            <div class="mod-in-collections" id="mod-in-collections" style="display:none;"></div>
           </div>
 
           <!-- Comments -->
           <div class="mod-detail__desc-card mt-24" id="comments-section">
-            <h2 class="mod-detail__desc-title">Comments (<span id="comments-count">0</span>)</h2>
+            <div class="comments-head">
+              <h2 class="mod-detail__desc-title" style="margin:0;">Comments (<span id="comments-count">0</span>)</h2>
+              <label class="sr-only" for="comments-sort">Sort comments</label>
+              <select class="input toolbar__sort" id="comments-sort" onchange="setCommentSort(this.value)">
+                <option value="newest">Newest</option>
+                <option value="oldest">Oldest</option>
+                <option value="liked">Most liked</option>
+              </select>
+            </div>
             <div id="comments-list" class="comments-list">
               <p class="comments-empty">Loading comments…</p>
             </div>
@@ -135,6 +153,7 @@
 
             <div class="mod-detail__actions">
               <button type="button" onclick="handleModDownload(event)" class="btn btn--primary mod-detail__dl-btn" id="mod-dl-btn">⬇ Download Mod</button>
+              <button type="button" onclick="copyDownloadLink()" class="btn btn--ghost btn--sm" id="mod-copy-dl-btn">Copy link</button>
               <button type="button" onclick="handleLikeToggle(event)" class="btn btn--secondary mod-detail__dl-btn" id="mod-like-btn" aria-pressed="false"><span>🤍 Like (<span id="mod-likes-count">0</span>)</span></button>
               <button type="button" onclick="handleWishlistToggle(event)" class="btn btn--secondary mod-detail__dl-btn" id="mod-wishlist-btn" aria-pressed="false"><span>☆ Wishlist</span></button>
               <button type="button" onclick="handleShare(event)" class="btn btn--secondary btn--sm" id="mod-share-btn" style="justify-content:center;">🔗 Share</button>
@@ -158,6 +177,14 @@
                 <span class="mod-detail__meta-label">Version</span>
                 <span class="mod-detail__meta-val" id="mod-version"></span>
               </div>
+              <div class="mod-detail__meta-item" id="meta-updated-row" style="display:none;">
+                <span class="mod-detail__meta-label">Updated</span>
+                <span class="mod-detail__meta-val" id="mod-updated"></span>
+              </div>
+              <div class="mod-detail__meta-item" id="meta-size-row" style="display:none;">
+                <span class="mod-detail__meta-label">File size</span>
+                <span class="mod-detail__meta-val" id="mod-file-size"></span>
+              </div>
               <div class="mod-detail__meta-item" id="meta-compat-row" style="display:none;">
                 <span class="mod-detail__meta-label">Compatibility</span>
                 <span class="mod-detail__meta-val" id="mod-compatibility"></span>
@@ -180,6 +207,7 @@
               </div>
             </div>
 
+            <div id="mod-mirrors" class="mod-mirrors" style="display:none;"></div>
             <p class="mod-detail__note">Verified mod download for tuckzed mods community.</p>
           </div>
 
@@ -204,10 +232,20 @@
       </div><!-- /.mod-detail-grid -->
 
       <!-- Related mods -->
+      <section class="related-section" id="also-liked-section" aria-labelledby="also-liked-title" style="display:none;">
+        <h2 class="related-section__title" id="also-liked-title">People also liked</h2>
+        <div class="mod-grid" id="also-liked-grid" role="list"></div>
+      </section>
+
       <section class="related-section" id="related-section" aria-labelledby="related-title">
         <h2 class="related-section__title" id="related-title">More Mods You Might Like</h2>
         <div class="mod-grid" id="related-grid" role="list"></div>
       </section>
+
+<div class="mod-sticky-dl" id="mod-sticky-dl" hidden>
+  <span class="mod-sticky-dl__title" id="mod-sticky-title"></span>
+  <button type="button" class="btn btn--primary btn--sm" onclick="handleModDownload(event)">⬇ Download</button>
+</div>
 
     </div><!-- /#mod-content -->
   </div>
@@ -248,9 +286,9 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js?v=2"></script>
-<script src="store.js?v=17"></script>
+<script src="store.js?v=18"></script>
 <script src="firebase-config.js?v=3"></script>
 <script src="auth-nav.js?v=16"></script>
-<script src="mod.js?v=16"></script>
+<script src="mod.js?v=18"></script>
 </body>
 </html>

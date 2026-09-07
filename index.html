@@ -13,7 +13,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Comic+Relief:wght@400;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=16" />
+  <link rel="stylesheet" href="styles.css?v=18" />
   <link rel="alternate" type="application/rss+xml" title="tuckzed mods — What's New" href="feed.xml" />
 
   <!-- Open Graph / Twitter -->
@@ -60,6 +60,7 @@
       Hand-picked, community-verified modifications for Assetto Corsa and BeamNG.drive.
       Cars, tracks, maps, and physics overhauls — all in one place.
     </p>
+    <p class="hero__stats" id="hero-stats" aria-live="polite"></p>
     <div class="hero__actions">
       <button type="button" class="btn btn--primary" id="hero-browse-btn" onclick="document.getElementById('games').scrollIntoView({behavior:'smooth'})">
         Browse Mods
@@ -92,7 +93,26 @@
         <span id="mods-title-text">All Mods</span>
         <span class="section__count" id="mods-count"></span>
       </h2>
+      <div class="view-toggle" role="group" aria-label="Listing layout">
+        <button type="button" class="view-toggle__btn is-active" id="view-grid-btn" onclick="setView('grid')" aria-pressed="true">Grid</button>
+        <button type="button" class="view-toggle__btn" id="view-list-btn" onclick="setView('list')" aria-pressed="false">List</button>
+      </div>
     </div>
+
+    <div id="continue-browse" class="continue-browse" style="display:none;"></div>
+
+    <section class="home-rail" id="featured-rail" aria-labelledby="featured-rail-title" style="display:none;">
+      <h3 class="home-rail__title" id="featured-rail-title">★ Staff picks</h3>
+      <div class="home-rail__row" id="featured-rail-row"></div>
+    </section>
+    <section class="home-rail" id="new-rail" aria-labelledby="new-rail-title" style="display:none;">
+      <h3 class="home-rail__title" id="new-rail-title">What’s new</h3>
+      <div class="home-rail__row" id="new-rail-row"></div>
+    </section>
+    <section class="home-rail" id="trending-rail" aria-labelledby="trending-rail-title" style="display:none;">
+      <h3 class="home-rail__title" id="trending-rail-title">Trending</h3>
+      <div class="home-rail__row" id="trending-rail-row"></div>
+    </section>
 
     <!-- Toolbar -->
     <div class="toolbar" role="search">
@@ -105,7 +125,10 @@
           placeholder="Search mods by title, description or tag…"
           aria-label="Search mods"
           autocomplete="off"
+          aria-autocomplete="list"
+          aria-controls="search-suggest"
         />
+        <div class="search-suggest" id="search-suggest" role="listbox" hidden></div>
       </div>
       <div class="filter-group" role="group" aria-label="Category filters">
         <button type="button" class="filter-btn active" id="filter-all" aria-pressed="true" onclick="setCategory('all')">All</button>
@@ -114,15 +137,21 @@
         <button type="button" class="filter-btn" id="filter-maps" aria-pressed="false" onclick="setCategory('Maps')">🗺️ Maps</button>
         <button type="button" class="filter-btn" id="filter-physics" aria-pressed="false" onclick="setCategory('Physics')">⚙️ Physics</button>
       </div>
-      <div class="filter-group" id="active-tag-wrap" style="display:none;" aria-label="Active tag filter"></div>
+      <div class="filter-group" id="active-tag-wrap" style="display:none;" aria-label="Active tag filters"></div>
       <div class="filter-group toolbar__end">
         <label class="sr-only" for="sort-select">Sort mods</label>
         <select class="input toolbar__sort" id="sort-select" onchange="setSort(this.value)">
           <option value="newest">Sort by: Newest</option>
+          <option value="trending">Sort by: Trending</option>
           <option value="popular">Sort by: Most Downloaded</option>
           <option value="liked">Sort by: Most Liked</option>
         </select>
       </div>
+    </div>
+
+    <div class="results-bar" id="results-bar" style="display:none;">
+      <span id="results-bar-text"></span>
+      <button type="button" class="btn btn--ghost btn--sm" onclick="resetFilters()">Clear all</button>
     </div>
 
     <!-- Popular tags -->
@@ -201,9 +230,9 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js?v=2"></script>
-<script src="store.js?v=16"></script>
+<script src="store.js?v=18"></script>
 <script src="firebase-config.js?v=3"></script>
 <script src="auth-nav.js?v=16"></script>
-<script src="home.js?v=17"></script>
+<script src="home.js?v=18"></script>
 </body>
 </html>

@@ -9,10 +9,11 @@
 const state = {
   activeGame:     null,   // 'ac' | 'beamng' | null
   activeCategory: 'all',
-  activeTag:      '',     // exact tag filter (set by clicking a #tag)
+  activeTags:     [],     // multi-tag AND filter
   searchQuery:    '',
   sort:           'newest',
   page:           1,
+  view:           'grid',
 };
 
 const PAGE_SIZE = 12;
@@ -23,7 +24,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const { Store } = window.TZ;
 
   applyFiltersFromUrl();
+  applySavedView();
   renderGameCards();
+  renderHeroStats();
+  renderContinueBrowse();
+  renderDiscoveryRails();
   renderMods();
   renderPopularTags();
   renderCollections();
@@ -31,10 +36,17 @@ document.addEventListener('DOMContentLoaded', () => {
   initHeroButton();
   initAlertsCta();
 
+  if (window.TZ_AUTH && window.TZ_AUTH.onChange) {
+    window.TZ_AUTH.onChange(() => hydrateCardActions());
+  }
+
   // Fetch live mods from Supabase, then re-render with fresh data
   if (Store.fetchFromRemote) {
     Store.fetchFromRemote().then(() => {
       renderGameCards();
+      renderHeroStats();
+      renderContinueBrowse();
+      renderDiscoveryRails();
       renderMods();
       renderPopularTags();
       renderCollections();
@@ -55,20 +67,24 @@ function applyFiltersFromUrl() {
   const tag  = params.get('tag');
   const q    = params.get('q');
   const sort = params.get('sort');
+  const view = params.get('view');
 
   if (game && GAMES[game]) state.activeGame = game;
   if (cat && CATEGORIES.includes(cat)) state.activeCategory = cat;
-  if (tag) state.activeTag = tag.trim();
+  if (tag) {
+    state.activeTags = tag.split(',').map(t => t.trim()).filter(Boolean);
+  }
   if (q) {
     state.searchQuery = q.trim().toLowerCase();
     const input = document.getElementById('search-input');
     if (input) input.value = q.trim();
   }
-  if (sort && ['newest', 'popular', 'liked'].includes(sort)) {
+  if (sort && ['newest', 'popular', 'liked', 'trending'].includes(sort)) {
     state.sort = sort;
     const select = document.getElementById('sort-select');
     if (select) select.value = sort;
   }
+  if (view === 'list' || view === 'grid') state.view = view;
 
   syncCategoryButtons();
   updateModsTitle();
@@ -81,9 +97,10 @@ function syncUrl() {
   const params = new URLSearchParams();
   if (state.activeGame) params.set('game', state.activeGame);
   if (state.activeCategory !== 'all') params.set('category', state.activeCategory);
-  if (state.activeTag) params.set('tag', state.activeTag);
+  if (state.activeTags.length) params.set('tag', state.activeTags.join(','));
   if (state.searchQuery) params.set('q', state.searchQuery);
   if (state.sort !== 'newest') params.set('sort', state.sort);
+  if (state.view === 'list') params.set('view', 'list');
   const qs = params.toString();
   const url = window.location.pathname + (qs ? '?' + qs : '') + (window.location.hash || '#mods');
   try { window.history.replaceState(null, '', url); } catch (_) {}
@@ -96,7 +113,7 @@ function updateDocumentTitle() {
   const parts = [];
   if (state.activeGame && GAMES[state.activeGame]) parts.push(GAMES[state.activeGame].name);
   if (state.activeCategory !== 'all') parts.push(state.activeCategory);
-  if (state.activeTag) parts.push('#' + state.activeTag);
+  if (state.activeTags.length) parts.push(state.activeTags.map(t => '#' + t).join(' '));
   if (state.searchQuery) parts.push('“' + state.searchQuery + '”');
   document.title = parts.length
     ? `${parts.join(' · ')} — tuckzed mods`
@@ -134,6 +151,16 @@ function initHeroButton() {
 }
 
 // ── Game Cards ─────────────────────────────────────────────
+function renderHeroStats() {
+  const { Store, GAMES } = window.TZ;
+  const el = document.getElementById('hero-stats');
+  if (!el) return;
+  const mods = Store.getAll();
+  const games = Object.keys(GAMES).filter(id => mods.some(m => m.game === id)).length;
+  if (!mods.length) { el.textContent = ''; return; }
+  el.textContent = `${mods.length} ${mods.length === 1 ? 'mod' : 'mods'} · ${games} ${games === 1 ? 'game' : 'games'}`;
+}
+
 function renderGameCards() {
   const { Store, GAMES } = window.TZ;
   const counts = Store.countByGame();
@@ -190,18 +217,58 @@ function updateModsTitle() {
 // ── Search ─────────────────────────────────────────────────
 function initSearch() {
   const input = document.getElementById('search-input');
+  const box = document.getElementById('search-suggest');
   let timer;
   const apply = () => {
     state.searchQuery = input.value.trim().toLowerCase();
+    renderSearchSuggest();
     renderMods();
   };
   input.addEventListener('input', () => {
     clearTimeout(timer);
-    timer = setTimeout(apply, 200);
+    timer = setTimeout(apply, 160);
   });
-  // Fired when the native "clear" (x) button of a search input is used
   input.addEventListener('search', apply);
+  input.addEventListener('focus', renderSearchSuggest);
+  document.addEventListener('click', e => {
+    if (!box) return;
+    if (e.target === input || box.contains(e.target)) return;
+    box.hidden = true;
+  });
 }
+
+function renderSearchSuggest() {
+  const { Store, escapeHtml, fuzzyMatch, parseTags } = window.TZ;
+  const input = document.getElementById('search-input');
+  const box = document.getElementById('search-suggest');
+  if (!input || !box) return;
+  const q = input.value.trim();
+  if (q.length < 2) { box.hidden = true; box.innerHTML = ''; return; }
+  const mods = Store.getAll();
+  const titles = mods.filter(m => fuzzyMatch(m.title, q)).slice(0, 5);
+  const seen = new Set();
+  const tags = [];
+  mods.forEach(m => parseTags(m.tags).forEach(t => {
+    if (seen.has(t.toLowerCase())) return;
+    if (t.toLowerCase().includes(q.toLowerCase()) || fuzzyMatch(t, q)) {
+      seen.add(t.toLowerCase());
+      tags.push(t);
+    }
+  }));
+  const tagHits = tags.slice(0, 5);
+  if (!titles.length && !tagHits.length) { box.hidden = true; box.innerHTML = ''; return; }
+  box.hidden = false;
+  box.innerHTML = [
+    ...titles.map(m => `<button type="button" class="search-suggest__item" role="option" onclick="pickSearchTitle('${escapeHtml(m.id)}')">${escapeHtml(m.title)}</button>`),
+    ...tagHits.map(t => `<button type="button" class="search-suggest__item search-suggest__item--tag" role="option" onclick="searchTag('${escapeHtml(t).replace(/'/g, "\\'")}')">#${escapeHtml(t)}</button>`)
+  ].join('');
+}
+
+window.pickSearchTitle = function (id) {
+  const box = document.getElementById('search-suggest');
+  if (box) { box.hidden = true; box.innerHTML = ''; }
+  window.location.href = `mod.html?id=${encodeURIComponent(id)}`;
+};
 
 // ── Category Filters ───────────────────────────────────────
 const CATEGORY_BUTTON_IDS = {
@@ -232,33 +299,46 @@ function setSort(val) {
 
 // ── Tag filter ─────────────────────────────────────────────
 function searchTag(tag) {
-  state.activeTag = String(tag || '').trim();
+  const next = String(tag || '').trim();
+  if (!next) return;
+  const key = next.toLowerCase();
+  const idx = state.activeTags.findIndex(t => t.toLowerCase() === key);
+  if (idx >= 0) state.activeTags.splice(idx, 1);
+  else state.activeTags.push(next);
   updateTagChip();
   renderMods();
+  renderPopularTags();
   document.getElementById('mods').scrollIntoView({ behavior: 'smooth' });
 }
 window.searchTag = searchTag;
 
-function clearTag() {
-  state.activeTag = '';
+function clearTag(tag) {
+  if (tag) {
+    const key = String(tag).toLowerCase();
+    state.activeTags = state.activeTags.filter(t => t.toLowerCase() !== key);
+  } else {
+    state.activeTags = [];
+  }
   updateTagChip();
   renderMods();
+  renderPopularTags();
 }
 window.clearTag = clearTag;
 
 function updateTagChip() {
   const wrap = document.getElementById('active-tag-wrap');
   if (!wrap) return;
-  if (!state.activeTag) {
+  if (!state.activeTags.length) {
     wrap.innerHTML = '';
     wrap.style.display = 'none';
     return;
   }
+  const { escapeHtml } = window.TZ;
   wrap.style.display = '';
-  wrap.innerHTML = `
-    <button type="button" class="active-tag-chip" onclick="clearTag()" aria-label="Remove tag filter ${window.TZ.escapeHtml(state.activeTag)}" title="Remove tag filter">
-      #${window.TZ.escapeHtml(state.activeTag)} <span aria-hidden="true">✕</span>
-    </button>`;
+  wrap.innerHTML = state.activeTags.map(tag => `
+    <button type="button" class="active-tag-chip" onclick="clearTag('${escapeHtml(tag).replace(/'/g, "\\'")}')" aria-label="Remove tag filter ${escapeHtml(tag)}" title="Remove tag filter">
+      #${escapeHtml(tag)} <span aria-hidden="true">✕</span>
+    </button>`).join('');
 }
 
 // ── Downloads ──────────────────────────────────────────────
@@ -310,9 +390,12 @@ function getFilteredMods() {
   if (state.activeCategory !== 'all') {
     mods = mods.filter(m => m.category === state.activeCategory);
   }
-  if (state.activeTag) {
-    const wanted = state.activeTag.toLowerCase();
-    mods = mods.filter(m => parseTags(m.tags).some(t => t.toLowerCase() === wanted));
+  if (state.activeTags.length) {
+    const wanted = state.activeTags.map(t => t.toLowerCase());
+    mods = mods.filter(m => {
+      const have = parseTags(m.tags).map(t => t.toLowerCase());
+      return wanted.every(t => have.includes(t));
+    });
   }
   if (state.searchQuery) {
     const { fuzzyMatch, parseTags: pt, stripMarkdown } = window.TZ;
@@ -326,14 +409,19 @@ function getFilteredMods() {
     mods.sort((a, b) => (b.downloads || 0) - (a.downloads || 0));
   } else if (state.sort === 'liked') {
     mods.sort((a, b) => (b.likes || 0) - (a.likes || 0));
+  } else if (state.sort === 'trending') {
+    mods.sort((a, b) => trendingScore(b) - trendingScore(a));
   } else {
     mods = Store.sortNewest(mods);
   }
 
-  // Curated featured mods always float to the top of the current view
-  const featured = mods.filter(m => m.featured);
-  const rest = mods.filter(m => !m.featured);
-  return featured.concat(rest);
+  return mods;
+}
+
+function trendingScore(mod) {
+  const created = new Date(mod.createdAtIso || mod.createdAt || Date.now()).getTime();
+  const days = Math.max(1, (Date.now() - created) / 86400000);
+  return ((mod.downloads || 0) * 2 + (mod.likes || 0) * 4) / Math.pow(days, 0.6);
 }
 
 function renderSkeletons(grid, count = 6) {
@@ -408,6 +496,10 @@ function renderModCard(mod, i) {
         >
           ⬇ Download
         </button>
+        <div class="mod-card__quick">
+          <button type="button" class="mod-card__icon-btn" data-like-id="${escapeHtml(mod.id)}" onclick="toggleCardLike(event, '${escapeHtml(mod.id)}')" aria-pressed="false" title="Like">🤍</button>
+          <button type="button" class="mod-card__icon-btn" data-wish-id="${escapeHtml(mod.id)}" onclick="toggleCardWish(event, '${escapeHtml(mod.id)}')" aria-pressed="false" title="Wishlist">☆</button>
+        </div>
       </div>
     </article>`;
 }
@@ -420,6 +512,8 @@ function renderMods(append = false) {
   if (!append) {
     state.page = 1;
     syncUrl();
+    renderDiscoveryRails();
+    renderHeroStats();
   }
 
   const mods = getFilteredMods();
@@ -433,9 +527,12 @@ function renderMods(append = false) {
   }
 
   countEl.textContent = `${mods.length} ${mods.length === 1 ? 'mod' : 'mods'}`;
+  updateResultsBar(mods.length);
+  try { sessionStorage.setItem('tz_browse_ids', JSON.stringify(mods.map(m => m.id))); } catch (_) {}
 
   if (mods.length === 0) {
-    const hasFilters = state.activeGame || state.activeCategory !== 'all' || state.activeTag || state.searchQuery;
+    const hasFilters = hasActiveFilters();
+    updateResultsBar(0);
     if (totalInStore === 0 && Store.lastFetchError) {
       grid.innerHTML = `
         <div class="empty-state" role="status">
@@ -451,6 +548,7 @@ function renderMods(append = false) {
           <div class="empty-state__title">No mods found</div>
           <div class="empty-state__desc">Try adjusting your search or filters.</div>
           <div class="mt-24"><button type="button" class="btn" onclick="resetFilters()">Clear all filters</button></div>
+          ${renderEmptySuggestions()}
         </div>`;
     } else {
       grid.innerHTML = `
@@ -466,6 +564,7 @@ function renderMods(append = false) {
   const pageMods = mods.slice((state.page - 1) * PAGE_SIZE, state.page * PAGE_SIZE);
   const html = pageMods.map(renderModCard).join('');
 
+  applyViewClass();
   if (!append) {
     grid.innerHTML = html;
   } else {
@@ -489,6 +588,7 @@ function renderMods(append = false) {
     }, { rootMargin: '240px' });
     observer.observe(document.getElementById('scroll-sentinel'));
   }
+  hydrateCardActions();
 }
 
 function loadMoreMods() {
@@ -505,7 +605,7 @@ window.loadMoreMods = loadMoreMods;
 function resetFilters() {
   state.activeGame = null;
   state.activeCategory = 'all';
-  state.activeTag = '';
+  state.activeTags = [];
   state.searchQuery = '';
   const input = document.getElementById('search-input');
   if (input) input.value = '';
@@ -556,7 +656,7 @@ function renderPopularTags() {
   }
   el.style.display = '';
   el.innerHTML = `<span class="popular-tags__label">Popular tags</span>` + tags.map(t =>
-    `<button type="button" class="popular-tags__chip${state.activeTag.toLowerCase() === t.tag.toLowerCase() ? ' is-active' : ''}" onclick="searchTag('${escapeHtml(t.tag).replace(/'/g, "\\'")}')">#${escapeHtml(t.tag)} <span class="popular-tags__count">${t.count}</span></button>`
+    `<button type="button" class="popular-tags__chip${state.activeTags.some(x => x.toLowerCase() === t.tag.toLowerCase()) ? ' is-active' : ''}" onclick="searchTag('${escapeHtml(t.tag).replace(/'/g, "\\'")}')">#${escapeHtml(t.tag)} <span class="popular-tags__count">${t.count}</span></button>`
   ).join('');
 }
 
@@ -585,11 +685,187 @@ async function renderCollections() {
   }).join('');
 }
 
+function hasActiveFilters() {
+  return !!(state.activeGame || state.activeCategory !== 'all' || state.activeTags.length || state.searchQuery);
+}
+
+function updateResultsBar(count) {
+  const bar = document.getElementById('results-bar');
+  const text = document.getElementById('results-bar-text');
+  if (!bar || !text) return;
+  if (!hasActiveFilters()) {
+    bar.style.display = 'none';
+    return;
+  }
+  bar.style.display = '';
+  text.textContent = `${count} ${count === 1 ? 'result' : 'results'} for current filters`;
+}
+
+function renderEmptySuggestions() {
+  const { Store, escapeHtml, fuzzyMatch } = window.TZ;
+  const tags = Store.getPopularTags(6);
+  const q = state.searchQuery;
+  let close = [];
+  if (q) {
+    close = Store.getAll()
+      .map(m => ({ m, d: window.TZ ? 0 : 0 }))
+      .filter(({ m }) => fuzzyMatch(m.title, q) || fuzzyMatch((m.tags || ''), q))
+      .slice(0, 3)
+      .map(x => x.m);
+    if (!close.length) close = Store.sortNewest(Store.getAll()).slice(0, 3);
+  }
+  const tagHtml = tags.length
+    ? `<div class="empty-suggest">${tags.map(t => `<button type="button" class="popular-tags__chip" onclick="resetFilters(); searchTag('${escapeHtml(t.tag).replace(/'/g, "\\'")}')">#${escapeHtml(t.tag)}</button>`).join('')}</div>`
+    : '';
+  const closeHtml = close.length
+    ? `<p class="form-hint" style="margin-top:16px;">Closest matches</p><ul class="empty-close">${close.map(m => `<li><a href="mod.html?id=${encodeURIComponent(m.id)}">${escapeHtml(m.title)}</a></li>`).join('')}</ul>`
+    : '';
+  return tagHtml + closeHtml;
+}
+
+function applySavedView() {
+  try {
+    const saved = localStorage.getItem('tz_view');
+    if (saved === 'list' || saved === 'grid') state.view = saved;
+  } catch (_) {}
+  applyViewClass();
+}
+
+function applyViewClass() {
+  const grid = document.getElementById('mod-grid');
+  if (grid) grid.classList.toggle('mod-grid--list', state.view === 'list');
+  const g = document.getElementById('view-grid-btn');
+  const l = document.getElementById('view-list-btn');
+  if (g) { g.classList.toggle('is-active', state.view === 'grid'); g.setAttribute('aria-pressed', String(state.view === 'grid')); }
+  if (l) { l.classList.toggle('is-active', state.view === 'list'); l.setAttribute('aria-pressed', String(state.view === 'list')); }
+}
+
+window.setView = function (view) {
+  state.view = view === 'list' ? 'list' : 'grid';
+  try { localStorage.setItem('tz_view', state.view); } catch (_) {}
+  applyViewClass();
+  syncUrl();
+};
+
+function renderContinueBrowse() {
+  const wrap = document.getElementById('continue-browse');
+  if (!wrap) return;
+  let last = null;
+  try { last = JSON.parse(sessionStorage.getItem('tz_last_mod') || 'null'); } catch (_) {}
+  if (!last || !last.id || !window.TZ.Store.getById(last.id)) {
+    wrap.style.display = 'none';
+    wrap.innerHTML = '';
+    return;
+  }
+  wrap.style.display = '';
+  wrap.innerHTML = `<a class="continue-browse__chip" href="mod.html?id=${encodeURIComponent(last.id)}">Continue browsing: ${window.TZ.escapeHtml(last.title || 'last mod')}</a>`;
+}
+
+function railCard(mod) {
+  const { escapeHtml } = window.TZ;
+  return `<a class="home-rail__card" href="mod.html?id=${encodeURIComponent(mod.id)}">
+    <span class="home-rail__card-title">${escapeHtml(mod.title)}</span>
+    <span class="home-rail__card-meta">${escapeHtml(mod.category)} · v${escapeHtml(mod.version)}</span>
+  </a>`;
+}
+
+function renderDiscoveryRails() {
+  const { Store } = window.TZ;
+  const all = applyLightFilters(Store.getAll());
+  const featured = all.filter(m => m.featured).slice(0, 8);
+  const weekAgo = Date.now() - 7 * 86400000;
+  const newest = Store.sortNewest(all).filter(m => new Date(m.createdAtIso || m.createdAt).getTime() >= weekAgo).slice(0, 8);
+  const trending = [...all].sort((a, b) => trendingScore(b) - trendingScore(a)).slice(0, 8);
+
+  fillRail('featured-rail', 'featured-rail-row', featured);
+  fillRail('new-rail', 'new-rail-row', newest);
+  fillRail('trending-rail', 'trending-rail-row', trending.filter(m => !featured.includes(m)));
+}
+
+function applyLightFilters(mods) {
+  if (state.activeGame) mods = mods.filter(m => m.game === state.activeGame);
+  if (state.activeCategory !== 'all') mods = mods.filter(m => m.category === state.activeCategory);
+  return mods;
+}
+
+function fillRail(sectionId, rowId, mods) {
+  const section = document.getElementById(sectionId);
+  const row = document.getElementById(rowId);
+  if (!section || !row) return;
+  if (!mods.length) { section.style.display = 'none'; row.innerHTML = ''; return; }
+  section.style.display = '';
+  row.innerHTML = mods.map(railCard).join('');
+}
+
+function requireHomeSignIn(message) {
+  const href = window.TZ.authRedirectUrl ? window.TZ.authRedirectUrl() : 'auth.html';
+  window.TZ.showToast(message, { action: { label: 'Sign in', href } });
+}
+
+window.toggleCardLike = async function (e, id) {
+  e.preventDefault();
+  e.stopPropagation();
+  if (!window.TZ_AUTH || !window.TZ_AUTH.currentUser()) {
+    requireHomeSignIn('Sign in to like mods.');
+    return;
+  }
+  const btn = document.querySelector(`[data-like-id="${id}"]`);
+  const next = !btn || btn.getAttribute('aria-pressed') !== 'true';
+  if (btn) {
+    btn.setAttribute('aria-pressed', String(next));
+    btn.textContent = next ? '❤️' : '🤍';
+  }
+  const result = await window.TZ.Store.toggleLike(id, next);
+  if (!result || !result.ok) {
+    if (btn) { btn.setAttribute('aria-pressed', String(!next)); btn.textContent = next ? '🤍' : '❤️'; }
+    window.TZ.showToast('Could not update like.');
+  }
+};
+
+window.toggleCardWish = async function (e, id) {
+  e.preventDefault();
+  e.stopPropagation();
+  if (!window.TZ_AUTH || !window.TZ_AUTH.currentUser()) {
+    requireHomeSignIn('Sign in to save a wishlist.');
+    return;
+  }
+  const btn = document.querySelector(`[data-wish-id="${id}"]`);
+  const next = !btn || btn.getAttribute('aria-pressed') !== 'true';
+  if (btn) {
+    btn.setAttribute('aria-pressed', String(next));
+    btn.textContent = next ? '★' : '☆';
+  }
+  const result = await window.TZ.Store.toggleWishlist(id, next);
+  if (!result || !result.ok) {
+    if (btn) { btn.setAttribute('aria-pressed', String(!next)); btn.textContent = next ? '☆' : '★'; }
+    window.TZ.showToast('Could not update wishlist.');
+  }
+};
+
+async function hydrateCardActions() {
+  const user = window.TZ_AUTH && window.TZ_AUTH.currentUser();
+  if (!user) return;
+  const likeBtns = [...document.querySelectorAll('[data-like-id]')];
+  const wishBtns = [...document.querySelectorAll('[data-wish-id]')];
+  await Promise.all(likeBtns.slice(0, 24).map(async btn => {
+    const liked = await window.TZ.Store.getModLikeStatus(btn.dataset.likeId);
+    btn.setAttribute('aria-pressed', String(!!liked));
+    btn.textContent = liked ? '❤️' : '🤍';
+  }));
+  await Promise.all(wishBtns.slice(0, 24).map(async btn => {
+    const wished = await window.TZ.Store.getWishlistStatus(btn.dataset.wishId);
+    btn.setAttribute('aria-pressed', String(!!wished));
+    btn.textContent = wished ? '★' : '☆';
+  }));
+}
+
 // ── Refresh when another tab (e.g. the admin panel) edits mods ──
 window.addEventListener('storage', e => {
   if (e.key === 'tuckzed_mods_v2') {
     if (window.TZ && window.TZ.Store) window.TZ.Store._cache = null;
     renderGameCards();
+    renderHeroStats();
+    renderDiscoveryRails();
     renderMods();
     renderPopularTags();
   }

@@ -58,7 +58,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (!currentMod) showNotFound();
 
+  if (currentMod) {
+    try { sessionStorage.setItem('tz_last_mod', JSON.stringify({ id: currentMod.id, title: currentMod.title })); } catch (_) {}
+  }
+
   bindGalleryControls();
+  bindGallerySwipe();
+  initStickyDownload();
+  renderSiblingNav(modId);
 
   if (window.TZ_AUTH && window.TZ_AUTH.onChange) {
     window.TZ_AUTH.onChange(user => {
@@ -274,6 +281,24 @@ function renderMod(mod) {
   setText('mod-game-name', game ? game.name : mod.game);
   setText('mod-cat-name', mod.category);
   setText('mod-version', 'v' + mod.version);
+  const updatedRow = document.getElementById('meta-updated-row');
+  const updatedEl = document.getElementById('mod-updated');
+  if (updatedRow && updatedEl) {
+    const updated = mod.updatedAtIso || mod.updatedAt;
+    const created = mod.createdAtIso || mod.createdAt;
+    if (updated && created && String(updated).slice(0, 10) !== String(created).slice(0, 10)) {
+      updatedEl.textContent = formatDate(mod.updatedAt || updated);
+      updatedRow.style.display = '';
+    } else {
+      updatedRow.style.display = 'none';
+    }
+  }
+  const sizeRow = document.getElementById('meta-size-row');
+  const sizeEl = document.getElementById('mod-file-size');
+  if (sizeRow && sizeEl) {
+    if (mod.fileSize) { sizeEl.textContent = mod.fileSize; sizeRow.style.display = ''; }
+    else sizeRow.style.display = 'none';
+  }
   const compatRow = document.getElementById('meta-compat-row');
   const compatEl = document.getElementById('mod-compatibility');
   if (compatRow && compatEl) {
@@ -329,7 +354,13 @@ function renderMod(mod) {
     } else {
       descEl.textContent = mod.description || '';
     }
+    setupReadMore(descEl);
   }
+
+  renderVideo(mod);
+  renderInstallBlock(mod);
+  renderMirrors(mod);
+  renderModCollections(mod.id);
 
   const changelogEl = document.getElementById('mod-changelog');
   if (changelogEl) {
@@ -366,6 +397,9 @@ function renderMod(mod) {
   setLikeButton(document.getElementById('mod-like-btn')?.dataset.liked === 'true', mod.likes || 0);
   updateAuthUI();
   renderRelatedMods(mod);
+  renderAlsoLiked(mod);
+  const stickyTitle = document.getElementById('mod-sticky-title');
+  if (stickyTitle) stickyTitle.textContent = mod.title;
 
   const editWrap = document.getElementById('admin-edit-wrap');
   if (editWrap) {
@@ -526,6 +560,13 @@ function updateMainImage() {
   const currentUrl = galleryImages[activeImageIndex];
 
   if (currentUrl) {
+    mainImg.onerror = () => {
+      mainImg.onerror = null;
+      mainImg.removeAttribute('src');
+      mainImg.alt = 'Preview unavailable';
+      mainImg.style.background = 'var(--gray-100)';
+      mainImg.style.minHeight = '220px';
+    };
     mainImg.src = currentUrl;
     mainImg.alt = `${currentMod ? currentMod.title : 'Mod'} screenshot ${activeImageIndex + 1}`;
   }
@@ -710,6 +751,8 @@ window.handleShare = async function (e) {
 const COMMENTS_PAGE_SIZE = 20;
 let commentsRootOffset = 0;
 let commentsHasMore = false;
+let commentSort = 'newest';
+let lastCommentsPayload = [];
 
 function highlightCommentFromHash() {
   const match = (window.location.hash || '').match(/^#comment-(.+)$/);
@@ -757,11 +800,23 @@ async function loadComments(modId, append = false) {
     return;
   }
 
+  lastCommentsPayload = comments;
   const commentsByParent = {};
   comments.forEach(c => {
     const pid = c.parent_id || 'root';
     (commentsByParent[pid] = commentsByParent[pid] || []).push(c);
   });
+  const sortRoots = (list) => {
+    const copy = [...list];
+    copy.sort((a, b) => {
+      const pin = Number(!!b.pinned) - Number(!!a.pinned);
+      if (pin) return pin;
+      if (commentSort === 'oldest') return String(a.created_at || '').localeCompare(String(b.created_at || ''));
+      if (commentSort === 'liked') return ((reactionMap[b.id] && reactionMap[b.id].count) || 0) - ((reactionMap[a.id] && reactionMap[a.id].count) || 0);
+      return String(b.created_at || '').localeCompare(String(a.created_at || ''));
+    });
+    return copy;
+  };
 
   const reactionMap = await window.TZ.Store.getCommentReactionCounts(comments.map(c => c.id));
   if (!currentMod || currentMod.id !== modId) return;
@@ -783,6 +838,7 @@ async function loadComments(modId, append = false) {
     const rx = reactionMap[c.id] || { count: 0, mine: false };
 
     const actionsHtml = `
+      ${isAdmin ? `<button type="button" class="comment__action" onclick="pinComment('${escapeHtml(c.id)}', ${c.pinned ? 'false' : 'true'})">${c.pinned ? 'Unpin' : 'Pin'}</button>` : ''}
       ${isOwner ? `<button type="button" class="comment__action" onclick="editComment('${escapeHtml(c.id)}')">Edit</button>` : ''}
       ${canDelete ? `<button type="button" class="comment__action comment__action--danger" onclick="deleteComment('${escapeHtml(c.id)}')">Delete</button>` : ''}
       ${!isOwner ? `<button type="button" class="comment__action comment__action--icon" onclick="reportComment('${escapeHtml(c.id)}')" title="Report this comment" aria-label="Report this comment">🚩</button>` : ''}`;
@@ -795,7 +851,7 @@ async function loadComments(modId, append = false) {
           ${avatarHtml}
           <div class="comment__body">
             <div class="comment__head">
-              <span class="comment__author">${escapeHtml(name)}</span>
+              <span class="comment__author">${escapeHtml(name)}${c.pinned ? ' · 📌 Pinned' : ''}</span>
               <div class="comment__meta">
                 ${actionsHtml}
                 <time datetime="${created ? created.toISOString() : ''}" title="${created ? created.toLocaleString() : ''}">${timeAgo(c.created_at)}${edited ? ' · edited' : ''}</time>
@@ -821,7 +877,7 @@ async function loadComments(modId, append = false) {
       </div>`;
   }
 
-  const html = (commentsByParent['root'] || []).map(c => renderCommentNode(c, 0)).join('');
+  const html = sortRoots(commentsByParent['root'] || []).map(c => renderCommentNode(c, 0)).join('');
   if (append) {
     commentsList.insertAdjacentHTML('beforeend', html);
   } else {
@@ -1029,3 +1085,163 @@ window.postComment = async function () {
   input.value = '';
   loadComments(currentMod.id);
 };
+
+window.setCommentSort = function (val) {
+  commentSort = val || 'newest';
+  if (currentMod) loadComments(currentMod.id);
+};
+
+window.pinComment = async function (commentId, pinned) {
+  const ok = await window.TZ.Store.pinComment(commentId, pinned);
+  window.TZ.showToast(ok ? (pinned ? 'Comment pinned.' : 'Comment unpinned.') : 'Could not pin comment. Re-run supabase_setup.sql.');
+  if (ok && currentMod) loadComments(currentMod.id);
+};
+
+window.copyDownloadLink = async function () {
+  if (!currentMod || !currentMod.downloadUrl) {
+    window.TZ.showToast('No download link is available.');
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(currentMod.downloadUrl);
+    window.TZ.showToast('Download link copied.');
+  } catch (_) {
+    window.TZ.promptDialog('Copy this download link:', { title: 'Download link', defaultValue: currentMod.downloadUrl, confirmText: 'Done', required: false });
+  }
+};
+
+window.toggleDescription = function () {
+  const desc = document.getElementById('mod-description');
+  const btn = document.getElementById('desc-more-btn');
+  if (!desc || !btn) return;
+  const open = desc.classList.toggle('is-expanded');
+  btn.textContent = open ? 'Read less' : 'Read more';
+};
+
+function setupReadMore(descEl) {
+  const btn = document.getElementById('desc-more-btn');
+  if (!descEl || !btn) return;
+  descEl.classList.remove('is-clamped', 'is-expanded');
+  btn.style.display = 'none';
+  requestAnimationFrame(() => {
+    if (descEl.scrollHeight > 280) {
+      descEl.classList.add('is-clamped');
+      btn.style.display = '';
+      btn.textContent = 'Read more';
+    }
+  });
+}
+
+function renderVideo(mod) {
+  const wrap = document.getElementById('mod-video');
+  if (!wrap) return;
+  const id = window.TZ.parseYoutubeId ? window.TZ.parseYoutubeId(mod.videoUrl) : '';
+  if (!id) { wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
+  wrap.style.display = '';
+  wrap.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${id}" title="Mod preview video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>`;
+}
+
+function renderInstallBlock(mod) {
+  const el = document.getElementById('mod-install');
+  if (!el) return;
+  const { escapeHtml } = window.TZ;
+  const rows = [];
+  if (mod.fileSize) rows.push(`<li><strong>Size</strong> ${escapeHtml(mod.fileSize)}</li>`);
+  if (mod.requirements || mod.compatibility) rows.push(`<li><strong>Requirements</strong> ${escapeHtml(mod.requirements || mod.compatibility)}</li>`);
+  if (mod.installPath) rows.push(`<li><strong>Install path</strong> <code>${escapeHtml(mod.installPath)}</code></li>`);
+  if (!rows.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  el.style.display = '';
+  el.innerHTML = `<h3 class="mod-changelog__title">Install &amp; requirements</h3><ul class="mod-install__list">${rows.join('')}</ul>`;
+}
+
+function renderMirrors(mod) {
+  const el = document.getElementById('mod-mirrors');
+  if (!el) return;
+  const { escapeHtml, parseMirrors } = window.TZ;
+  const urls = parseMirrors ? parseMirrors(mod.downloadMirrors) : [];
+  if (!urls.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  el.style.display = '';
+  el.innerHTML = `<p class="mod-mirrors__label">Mirrors</p>` + urls.map((u, i) =>
+    `<a class="mod-mirrors__link" href="${escapeHtml(u)}" target="_blank" rel="noopener noreferrer">Mirror ${i + 1}</a>`
+  ).join(' ');
+}
+
+async function renderModCollections(modId) {
+  const el = document.getElementById('mod-in-collections');
+  if (!el || !window.TZ.Store.getCollectionsForMod) return;
+  const cols = await window.TZ.Store.getCollectionsForMod(modId);
+  if (!currentMod || currentMod.id !== modId) return;
+  if (!cols.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  const { escapeHtml } = window.TZ;
+  el.style.display = '';
+  el.innerHTML = `<h3 class="mod-changelog__title">This belongs to</h3>` + cols.map(c =>
+    `<a class="badge badge--outline" href="collection.html?id=${encodeURIComponent(c.id)}">${escapeHtml(c.title)}</a>`
+  ).join(' ');
+}
+
+function renderSiblingNav(modId) {
+  const wrap = document.getElementById('mod-siblings');
+  const prev = document.getElementById('mod-prev-link');
+  const next = document.getElementById('mod-next-link');
+  if (!wrap || !prev || !next) return;
+  let ids = [];
+  try { ids = JSON.parse(sessionStorage.getItem('tz_browse_ids') || '[]'); } catch (_) {}
+  const idx = ids.indexOf(modId);
+  if (idx < 0 || ids.length < 2) { wrap.style.display = 'none'; return; }
+  wrap.style.display = '';
+  if (idx > 0) {
+    prev.style.visibility = '';
+    prev.href = 'mod.html?id=' + encodeURIComponent(ids[idx - 1]);
+  } else prev.style.visibility = 'hidden';
+  if (idx < ids.length - 1) {
+    next.style.visibility = '';
+    next.href = 'mod.html?id=' + encodeURIComponent(ids[idx + 1]);
+  } else next.style.visibility = 'hidden';
+}
+
+async function renderAlsoLiked(mod) {
+  const section = document.getElementById('also-liked-section');
+  const grid = document.getElementById('also-liked-grid');
+  if (!section || !grid || !window.TZ.Store.getAlsoLikedMods) return;
+  const mods = await window.TZ.Store.getAlsoLikedMods(mod.id, 4);
+  if (!mods.length) { section.style.display = 'none'; return; }
+  section.style.display = '';
+  const { escapeHtml, formatDate, GAMES } = window.TZ;
+  grid.innerHTML = mods.map(m => {
+    const href = `mod.html?id=${encodeURIComponent(m.id)}`;
+    return `<article class="mod-card" role="listitem">
+      <a href="${href}" class="mod-card__hit">
+        <div class="mod-card__body">
+          <div class="mod-card__tags"><span class="badge badge--filled">${escapeHtml((GAMES[m.game] && GAMES[m.game].name) || m.game)}</span></div>
+          <h3 class="mod-card__title">${escapeHtml(m.title)}</h3>
+          <div class="mod-card__meta"><span>v${escapeHtml(m.version)}</span><time>${escapeHtml(formatDate(m.createdAt))}</time></div>
+        </div>
+      </a>
+    </article>`;
+  }).join('');
+}
+
+function bindGallerySwipe() {
+  const wrap = document.getElementById('main-img-wrap');
+  if (!wrap || wrap.dataset.swipeBound) return;
+  wrap.dataset.swipeBound = '1';
+  let startX = null;
+  wrap.addEventListener('touchstart', e => { startX = e.touches[0].clientX; }, { passive: true });
+  wrap.addEventListener('touchend', e => {
+    if (startX === null) return;
+    const dx = e.changedTouches[0].clientX - startX;
+    startX = null;
+    if (Math.abs(dx) > 50) { dx > 0 ? prevImage() : nextImage(); }
+  }, { passive: true });
+}
+
+function initStickyDownload() {
+  const bar = document.getElementById('mod-sticky-dl');
+  const dl = document.getElementById('mod-dl-btn');
+  if (!bar || !dl || typeof IntersectionObserver === 'undefined') return;
+  const io = new IntersectionObserver(entries => {
+    const visible = entries[0] && entries[0].isIntersecting;
+    bar.hidden = !!visible;
+  }, { threshold: 0.15 });
+  io.observe(dl);
+}
