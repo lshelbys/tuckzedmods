@@ -277,18 +277,55 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- Comment 👍 reactions
-CREATE TABLE IF NOT EXISTS public.comment_reactions (
-  comment_id BIGINT NOT NULL,
-  user_email TEXT NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  PRIMARY KEY (comment_id, user_email)
-);
+-- mod_comments.id may be BIGINT (script default) or UUID (some existing installs).
+-- Rebuild comment_reactions if its comment_id type does not match.
+DO $$
+DECLARE
+  comments_id_type TEXT;
+  reactions_id_type TEXT;
+BEGIN
+  SELECT c.data_type INTO comments_id_type
+  FROM information_schema.columns c
+  WHERE c.table_schema = 'public' AND c.table_name = 'mod_comments' AND c.column_name = 'id';
+
+  SELECT c.data_type INTO reactions_id_type
+  FROM information_schema.columns c
+  WHERE c.table_schema = 'public' AND c.table_name = 'comment_reactions' AND c.column_name = 'comment_id';
+
+  IF reactions_id_type IS NOT NULL AND comments_id_type IS NOT NULL AND reactions_id_type IS DISTINCT FROM comments_id_type THEN
+    DROP TABLE public.comment_reactions CASCADE;
+    reactions_id_type := NULL;
+  END IF;
+
+  IF reactions_id_type IS NULL THEN
+    IF comments_id_type = 'uuid' THEN
+      CREATE TABLE public.comment_reactions (
+        comment_id UUID NOT NULL,
+        user_email TEXT NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        PRIMARY KEY (comment_id, user_email)
+      );
+    ELSE
+      CREATE TABLE public.comment_reactions (
+        comment_id BIGINT NOT NULL,
+        user_email TEXT NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        PRIMARY KEY (comment_id, user_email)
+      );
+    END IF;
+  END IF;
+END $$;
 
 DO $$ BEGIN
   ALTER TABLE public.comment_reactions
     ADD CONSTRAINT comment_reactions_comment_id_fkey
     FOREIGN KEY (comment_id) REFERENCES public.mod_comments(id) ON DELETE CASCADE;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+  WHEN others THEN
+    -- Skip FK if types still cannot match; reactions still work without cascade FK
+    RAISE NOTICE 'comment_reactions FK skipped: %', SQLERRM;
+END $$;
 
 CREATE INDEX IF NOT EXISTS comment_reactions_comment_id_idx ON public.comment_reactions (comment_id);
 ALTER TABLE public.comment_reactions ENABLE ROW LEVEL SECURITY;

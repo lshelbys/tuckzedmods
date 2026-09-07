@@ -850,7 +850,7 @@ window.toggleCommentReaction = async function (commentId, btn) {
   btn.dataset.count = String(nextCount);
   btn.setAttribute('aria-pressed', (!mine).toString());
   btn.textContent = '👍 ' + (nextCount || '');
-  const result = await window.TZ.Store.toggleCommentReaction(Number(commentId) || commentId, !mine);
+  const result = await window.TZ.Store.toggleCommentReaction(commentId, !mine);
   if (!result || !result.ok) {
     btn.classList.toggle('is-active', mine);
     btn.dataset.count = String(prev);
