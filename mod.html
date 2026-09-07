@@ -418,16 +418,53 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (e.key === 'ArrowRight') nextImage();
   });
 
-  // Admin view check
+  // Watch auth state changes to dynamically update the UI
   if (window.TZ_AUTH && window.TZ_AUTH.onChange) {
     window.TZ_AUTH.onChange(user => {
       const editWrap = document.getElementById('admin-edit-wrap');
       if (editWrap && user && user.email.toLowerCase() === window.TZ_AUTH.ADMIN_EMAIL.toLowerCase()) {
         editWrap.style.display = 'block';
       }
+      if (currentMod) {
+        updateAuthUI();
+      }
     });
   }
 });
+
+function updateAuthUI() {
+  const formWrap = document.getElementById('comment-form-wrap');
+  const loginPrompt = document.getElementById('comment-login-prompt');
+  
+  if(window.TZ_AUTH && window.TZ_AUTH.currentUser()) {
+    if (formWrap) formWrap.style.display = 'block';
+    if (loginPrompt) loginPrompt.style.display = 'none';
+    
+    // Also fetch the like status
+    if (currentMod) {
+      window.TZ.Store.getModLikeStatus(currentMod.id).then(isLiked => {
+        const likeBtn = document.getElementById('mod-like-btn');
+        if (likeBtn) {
+          if (isLiked) {
+            likeBtn.innerHTML = `❤️ Liked (<span id="mod-likes-count">${currentMod.likes || 0}</span>)`;
+            likeBtn.dataset.liked = 'true';
+          } else {
+            likeBtn.innerHTML = `🤍 Like (<span id="mod-likes-count">${currentMod.likes || 0}</span>)`;
+            likeBtn.dataset.liked = 'false';
+          }
+        }
+      });
+    }
+  } else {
+    if (formWrap) formWrap.style.display = 'none';
+    if (loginPrompt) loginPrompt.style.display = 'block';
+    const likeBtn = document.getElementById('mod-like-btn');
+    if (likeBtn && currentMod) {
+      likeBtn.innerHTML = `🤍 Like (<span id="mod-likes-count">${currentMod.likes || 0}</span>)`;
+      likeBtn.dataset.liked = 'false';
+    }
+  }
+}
 
 function showNotFound() {
   document.getElementById('mod-loading').style.display = 'none';
@@ -541,18 +578,8 @@ function renderMod(mod) {
   const likesCountEl = document.getElementById('mod-likes-count');
   if (likesCountEl) likesCountEl.textContent = mod.likes || 0;
   
-  if (window.TZ_AUTH && window.TZ_AUTH.currentUser()) {
-    window.TZ.Store.getModLikeStatus(mod.id).then(isLiked => {
-      const likeBtn = document.getElementById('mod-like-btn');
-      if (isLiked) {
-        likeBtn.innerHTML = `❤️ Liked (<span id="mod-likes-count">${mod.likes || 0}</span>)`;
-        likeBtn.dataset.liked = 'true';
-      } else {
-        likeBtn.innerHTML = `🤍 Like (<span id="mod-likes-count">${mod.likes || 0}</span>)`;
-        likeBtn.dataset.liked = 'false';
-      }
-    });
-  }
+  // Update Auth UI (comments form and like button state)
+  updateAuthUI();
 
   // Related Mods
   renderRelatedMods(mod);
@@ -856,18 +883,8 @@ window.handleModDownload = function(e) {
 async function loadComments(modId) {
   const commentsList = document.getElementById('comments-list');
   const countEl = document.getElementById('comments-count');
-  const formWrap = document.getElementById('comment-form-wrap');
-  const loginPrompt = document.getElementById('comment-login-prompt');
   
-  if(window.TZ_AUTH && window.TZ_AUTH.currentUser()) {
-    formWrap.style.display = 'block';
-    loginPrompt.style.display = 'none';
-  } else {
-    formWrap.style.display = 'none';
-    loginPrompt.style.display = 'block';
-  }
-
-  const comments = await window.TZ.Store.getComments(modId);
+  updateAuthUI();  const comments = await window.TZ.Store.getComments(modId);
   countEl.textContent = comments.length;
   
   if (comments.length === 0) {
