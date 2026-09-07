@@ -1189,7 +1189,7 @@ textarea.modal__input { min-height: 90px; }
   padding: 48px 24px;
   min-height: calc(100vh - 64px);
   background-color: var(--white);
-  background-image: url('images/LOGINPAGE.png?v=3');
+  background-image: url('images/LOGINPAGE.webp'), url('images/LOGINPAGE.png?v=4');
   background-position: center;
   background-size: cover;
   background-repeat: no-repeat;
@@ -1984,4 +1984,39 @@ textarea.modal__input { min-height: 90px; }
 }
 
 .badge--outline { background: transparent; border: 1px solid var(--gray-300); color: var(--black); }
+
+/* Liked mods on profile */
+.liked-mods { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.liked-mods__item { margin: 0; }
+.liked-mods__link {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 2px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+  transition: border-color var(--transition), background var(--transition);
+}
+.liked-mods__link:hover { border-color: var(--black); background: var(--gray-50); }
+.liked-mods__title { font-weight: 700; }
+.liked-mods__meta { font-size: .8rem; color: var(--gray-600); white-space: nowrap; }
+
+/* Admin markdown preview */
+.markdown-preview-wrap { margin-top: 12px; }
+.markdown-preview {
+  min-height: 80px;
+  padding: 14px 16px;
+  border: 2px dashed var(--gray-200);
+  border-radius: var(--radius-sm);
+  background: var(--gray-50);
+}
+
+/* Highlight a deep-linked comment */
+.comment--highlight .comment__box {
+  box-shadow: 0 0 0 3px var(--black);
+  border-radius: var(--radius-sm);
+  animation: likePop .45s ease;
+}
+
 

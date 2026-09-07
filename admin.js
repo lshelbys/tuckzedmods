@@ -239,6 +239,7 @@ function renderManageTable() {
         <div class="table__actions">
           <a class="btn btn--sm btn--ghost" href="mod.html?id=${encodeURIComponent(mod.id)}" target="_blank" rel="noopener" title="View on site">👁</a>
           <button type="button" class="btn btn--sm" id="edit-btn-${escapeHtml(mod.id)}" onclick="openEdit('${escapeHtml(mod.id)}')">✏️ Edit</button>
+          <button type="button" class="btn btn--sm btn--ghost" id="clone-btn-${escapeHtml(mod.id)}" onclick="cloneMod('${escapeHtml(mod.id)}')">⧉ Clone</button>
           <button type="button" class="btn btn--sm btn--danger" id="delete-btn-${escapeHtml(mod.id)}" onclick="openDeleteModal('${escapeHtml(mod.id)}')">🗑 Delete</button>
         </div>
       </td>
@@ -322,9 +323,18 @@ async function renderReportsTable() {
   }
 
   tbody.innerHTML = reports.map(r => {
-    const targetLink = r.target_type === 'mod'
-      ? `<a href="mod.html?id=${encodeURIComponent(r.target_id)}" target="_blank" rel="noopener">${escapeHtml(r.target_id)}</a>`
-      : `<small>${escapeHtml(r.target_id)}</small>`;
+    let targetLink = `<small>${escapeHtml(r.target_id)}</small>`;
+    if (r.target_type === 'mod') {
+      targetLink = `<a href="mod.html?id=${encodeURIComponent(r.target_id)}" target="_blank" rel="noopener">${escapeHtml(r.target_id)}</a>`;
+    } else if (r.target_type === 'comment') {
+      const modId = r.context_id || '';
+      targetLink = modId
+        ? `<a href="mod.html?id=${encodeURIComponent(modId)}#comment-${encodeURIComponent(r.target_id)}" target="_blank" rel="noopener">Comment #${escapeHtml(r.target_id)}</a>`
+        : `<small>Comment #${escapeHtml(r.target_id)}</small>`;
+    }
+    const deleteBtn = (r.status !== 'resolved' && r.target_type === 'comment')
+      ? `<button type="button" class="btn btn--sm btn--danger" onclick="deleteReportedComment('${escapeHtml(r.target_id)}','${escapeHtml(r.id)}')">Delete comment</button>`
+      : '';
     return `
     <tr>
       <td class="table__nowrap"><time datetime="${escapeHtml(r.created_at || '')}" title="${r.created_at ? new Date(r.created_at).toLocaleString() : ''}">${escapeHtml(window.TZ.timeAgo(r.created_at))}</time></td>
@@ -336,8 +346,9 @@ async function renderReportsTable() {
           ? '<span class="badge badge--filled badge--success">Resolved</span>'
           : '<span class="badge badge--gray">Pending</span>'}
       </td>
-      <td>
+      <td class="table__nowrap">
         ${r.status !== 'resolved' ? `<button type="button" class="btn btn--sm" onclick="resolveReport('${escapeHtml(r.id)}')">Resolve</button>` : ''}
+        ${deleteBtn}
       </td>
     </tr>`;
   }).join('');
@@ -348,6 +359,18 @@ window.resolveReport = async function (id) {
   if (!ok) return;
   const success = await Store.resolveReport(id);
   showToast(success ? '✅ Report resolved.' : '❌ Could not resolve report.');
+  renderReportsTable();
+};
+
+window.deleteReportedComment = async function (commentId, reportId) {
+  const ok = await window.TZ.confirmDialog('This deletes the comment (and its replies) and resolves the report.', {
+    title: 'Delete reported comment?',
+    confirmText: 'Delete comment',
+    danger: true
+  });
+  if (!ok) return;
+  const success = await Store.deleteCommentAndResolve(commentId, reportId);
+  showToast(success ? '✅ Comment deleted and report resolved.' : '❌ Could not delete comment.');
   renderReportsTable();
 };
 
@@ -400,7 +423,7 @@ function renderImageGallery() {
     return `
       <div class="image-card ${isCover ? 'is-cover' : ''}" id="img-card-${idx}">
         <div class="image-card__thumb-wrap">
-          <img src="${escapeHtml(item.preview)}" alt="Mod image ${idx + 1}" class="image-card__thumb" onerror="this.src='https://placehold.co/600x400?text=Broken+Image'" />
+          <img src="${escapeHtml(item.preview)}" alt="Mod image ${idx + 1}" class="image-card__thumb" onerror="this.style.opacity='0.35'" />
           ${isCover ? '<span class="image-card__badge">★ COVER</span>' : ''}
           <span class="image-card__order">#${idx + 1}</span>
           ${isPending ? '<span class="image-card__pending">💾 Pending upload</span>' : ''}
@@ -512,10 +535,17 @@ function addFiles(files) {
     showToast(`⚠️ Maximum ${MAX_IMAGES} images allowed per mod.`);
     return;
   }
-  const toAdd = files.slice(0, remainingSlots);
-  if (files.length > remainingSlots) {
+  const MAX_BYTES = 10 * 1024 * 1024;
+  const oversized = files.filter(f => f && f.size > MAX_BYTES);
+  const eligible = files.filter(f => f && f.size <= MAX_BYTES);
+  if (oversized.length) {
+    showToast(`⚠️ Skipped ${oversized.length} file(s) over 10MB.`);
+  }
+  const toAdd = eligible.slice(0, remainingSlots);
+  if (eligible.length > remainingSlots) {
     showToast(`⚠️ Only adding ${remainingSlots} image(s) to stay within the ${MAX_IMAGES}-image limit.`);
   }
+  if (!toAdd.length) return;
 
   Promise.all(toAdd.map(compressImage)).then(results => {
     const skipped = results.filter(r => r === null).length;
@@ -561,7 +591,13 @@ function initModGallery() {
   }
 
   const descEl = document.getElementById('f-desc');
-  if (descEl) descEl.addEventListener('input', () => autoExpandDesc(descEl));
+  if (descEl) {
+    descEl.addEventListener('input', () => {
+      autoExpandDesc(descEl);
+      updateDescPreview();
+    });
+    updateDescPreview();
+  }
 
   renderImageGallery();
 }
@@ -603,6 +639,7 @@ function resetForm() {
 
   const descEl = document.getElementById('f-desc');
   if (descEl) descEl.style.height = 'auto';
+  updateDescPreview();
 
   document.getElementById('edit-id').value = '';
   document.getElementById('form-panel-title').textContent = 'New Mod';
@@ -630,6 +667,8 @@ function openEdit(id) {
 
   const descEl = document.getElementById('f-desc');
   descEl.value = mod.description || '';
+  autoExpandDesc(descEl);
+  updateDescPreview();
 
   document.getElementById('f-dl').value = mod.downloadUrl || '';
 
@@ -818,3 +857,64 @@ async function confirmDelete() {
   renderOverview();
   if (currentPanel === 'manage') renderManageTable();
 }
+
+function updateDescPreview() {
+  const src = document.getElementById('f-desc');
+  const preview = document.getElementById('desc-preview');
+  if (!src || !preview) return;
+  const raw = src.value.trim();
+  if (!raw) {
+    preview.innerHTML = '<p class="form-hint">Markdown preview will appear here.</p>';
+    return;
+  }
+  try {
+    const html = (window.marked && marked.parse)
+      ? marked.parse(raw, { breaks: true })
+      : raw.replace(/</g, '&lt;');
+    preview.innerHTML = (window.DOMPurify && DOMPurify.sanitize)
+      ? DOMPurify.sanitize(html)
+      : html;
+  } catch (_) {
+    preview.textContent = raw;
+  }
+}
+
+window.cloneMod = function (id) {
+  const mod = Store.getById(id);
+  if (!mod) { showToast('Mod not found.'); return; }
+  startNewMod();
+  document.getElementById('f-title').value = (mod.title || '') + ' (Copy)';
+  document.getElementById('f-version').value = mod.version || '1.0.0';
+  document.getElementById('f-game').value = mod.game || '';
+  document.getElementById('f-category').value = mod.category || '';
+  document.getElementById('f-tags').value = mod.tags || '';
+  document.getElementById('f-desc').value = mod.description || '';
+  document.getElementById('f-dl').value = mod.downloadUrl || '';
+  autoExpandDesc(document.getElementById('f-desc'));
+  updateDescPreview();
+  // Keep image URLs (shared assets) so a version bump is quick
+  const existingUrls = (Array.isArray(mod.images) && mod.images.length > 0)
+    ? mod.images
+    : (mod.coverImage ? [mod.coverImage] : []);
+  currentImages = existingUrls.map(url => ({ id: newImageId(), preview: url, file: null, url }));
+  coverId = currentImages[0] ? currentImages[0].id : null;
+  renderImageGallery();
+  formSnapshot = serializeForm();
+  document.getElementById('form-panel-title').textContent = 'Clone Mod';
+  document.getElementById('form-panel-sub').textContent = 'Review the copied details, then publish as a new mod.';
+  showToast('⧉ Mod cloned into the form — publish when ready.');
+};
+
+window.downloadSitemap = function () {
+  const xml = Store.buildSitemapXml('https://tuckzed.com');
+  const blob = new Blob([xml], { type: 'application/xml' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'sitemap.xml';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  showToast('📄 Sitemap downloaded — replace the file in the repo if needed.');
+};

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <script src="head.js?v=2"></script>
+  <script src="head.js?v=3"></script>
   <title>My Profile — tuckzed mods</title>
   <meta name="description" content="Manage your tuckzed mods account — update username, email and password." />
   <meta name="robots" content="noindex, nofollow" />
@@ -13,7 +13,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Comic+Relief:wght@400;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=12" />
+  <link rel="stylesheet" href="styles.css?v=13" />
 </head>
 <body>
 <a class="skip-link" href="#main-content">Skip to content</a>
@@ -83,6 +83,16 @@
               <span class="profile-status" id="status-profile" role="status"></span>
             </div>
           </form>
+        </section>
+
+        <!-- ── Liked Mods ──────────────────────────────── -->
+        <section class="profile-card" aria-labelledby="card-likes-title">
+          <h2 class="profile-card__title" id="card-likes-title">Liked Mods</h2>
+          <p class="profile-card__sub">Mods you’ve hearted across the site.</p>
+          <hr class="profile-card__divider" />
+          <div id="liked-mods-list" class="liked-mods-list" aria-live="polite">
+            <p class="form-hint">Loading liked mods…</p>
+          </div>
         </section>
 
         <!-- ── Email ─────────────────────────────────── -->
@@ -191,9 +201,9 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js?v=2"></script>
-<script src="store.js?v=12"></script>
+<script src="store.js?v=13"></script>
 <script src="firebase-config.js?v=3"></script>
-<script src="auth-nav.js?v=12"></script>
-<script src="profile.js?v=12"></script>
+<script src="auth-nav.js?v=13"></script>
+<script src="profile.js?v=13"></script>
 </body>
 </html>

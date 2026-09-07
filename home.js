@@ -80,28 +80,50 @@ function syncUrl() {
   if (state.searchQuery) params.set('q', state.searchQuery);
   if (state.sort !== 'newest') params.set('sort', state.sort);
   const qs = params.toString();
-  const url = window.location.pathname + (qs ? '?' + qs : '') + window.location.hash;
+  const url = window.location.pathname + (qs ? '?' + qs : '') + (window.location.hash || '#mods');
   try { window.history.replaceState(null, '', url); } catch (_) {}
+  try { sessionStorage.setItem('tz_browse', url.startsWith('/') ? url : './' + url.replace(/^\.\//, '')); } catch (_) {}
+  updateDocumentTitle();
 }
 
-// ── Hero "Upload Mods" button reflects auth state ──────────
+function updateDocumentTitle() {
+  const { GAMES } = window.TZ;
+  const parts = [];
+  if (state.activeGame && GAMES[state.activeGame]) parts.push(GAMES[state.activeGame].name);
+  if (state.activeCategory !== 'all') parts.push(state.activeCategory);
+  if (state.activeTag) parts.push('#' + state.activeTag);
+  if (state.searchQuery) parts.push('“' + state.searchQuery + '”');
+  document.title = parts.length
+    ? `${parts.join(' · ')} — tuckzed mods`
+    : 'tuckzed mods — Assetto Corsa & BeamNG.drive Mods';
+}
+
+// ── Hero button reflects auth state (admin vs community submit) ──────────
 function initHeroButton() {
   const btn = document.getElementById('hero-admin-btn');
   if (!btn || !window.TZ_AUTH || !window.TZ_AUTH.onChange) return;
   window.TZ_AUTH.onChange(user => {
     if (!user) {
       btn.style.display = '';
-      btn.href = 'auth.html?redirect=upload';
-      btn.textContent = 'Upload Mods';
+      btn.href = 'https://discord.gg/5nE69arMNP';
+      btn.target = '_blank';
+      btn.rel = 'noopener noreferrer';
+      btn.textContent = 'Submit a Mod';
       return;
     }
     const isAdmin = window.TZ_AUTH.isAdmin && window.TZ_AUTH.isAdmin();
     if (isAdmin) {
       btn.style.display = '';
       btn.href = 'admin.html';
+      btn.removeAttribute('target');
+      btn.removeAttribute('rel');
       btn.textContent = '⚡ Admin Panel';
     } else {
-      btn.style.display = 'none';
+      btn.style.display = '';
+      btn.href = 'https://discord.gg/5nE69arMNP';
+      btn.target = '_blank';
+      btn.rel = 'noopener noreferrer';
+      btn.textContent = 'Submit a Mod';
     }
   });
 }

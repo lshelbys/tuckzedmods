@@ -32,6 +32,7 @@ function isAdminUser(user) {
 
 // ── Boot ───────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
+  restoreBackLink();
   const params = new URLSearchParams(window.location.search);
   const modId = params.get('id');
 
@@ -196,6 +197,44 @@ function updatePageMeta(mod) {
   setMeta('meta[property="og:url"]', url);
   const canonical = document.querySelector('link[rel="canonical"]');
   if (canonical) canonical.setAttribute('href', url);
+
+  // JSON-LD for search engines
+  let ld = document.getElementById('mod-jsonld');
+  if (!ld) {
+    ld = document.createElement('script');
+    ld.type = 'application/ld+json';
+    ld.id = 'mod-jsonld';
+    document.head.appendChild(ld);
+  }
+  ld.textContent = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: mod.title,
+    description: desc,
+    applicationCategory: 'GameMod',
+    operatingSystem: mod.game === 'ac' ? 'Assetto Corsa' : (mod.game === 'beamng' ? 'BeamNG.drive' : 'PC'),
+    image: mod.coverImage || undefined,
+    url,
+    downloadUrl: mod.downloadUrl || undefined,
+    interactionStatistic: {
+      '@type': 'InteractionCounter',
+      interactionType: 'https://schema.org/DownloadAction',
+      userInteractionCount: mod.downloads || 0
+    }
+  });
+}
+
+function restoreBackLink() {
+  const back = document.getElementById('back-btn');
+  if (!back) return;
+  try {
+    const saved = sessionStorage.getItem('tz_browse');
+    if (saved && (saved.startsWith('./') || saved.startsWith('/') || saved.startsWith('index') || saved.includes('#mods'))) {
+      back.href = saved;
+      return;
+    }
+  } catch (_) {}
+  back.href = './#mods';
 }
 
 // ── Render ─────────────────────────────────────────────────
@@ -313,12 +352,15 @@ function setupGallery() {
   const thumbs = document.getElementById('gallery-thumbs');
 
   if (galleryImages.length === 0) {
-    mainImg.src = 'https://placehold.co/1280x720?text=No+Preview+Available';
+    mainImg.removeAttribute('src');
+    mainImg.alt = 'No preview available';
+    mainImg.style.background = 'var(--gray-100)';
+    mainImg.style.minHeight = '220px';
     prevBtn.style.display = 'none';
     nextBtn.style.display = 'none';
     counter.style.display = 'none';
     thumbs.style.display = 'none';
-    galleryImages = [mainImg.src];
+    galleryImages = [];
     return;
   }
 
@@ -339,7 +381,7 @@ function setupGallery() {
         onclick="setImageIndex(${idx})"
         aria-label="View screenshot ${idx + 1}"
       >
-        <img src="${window.TZ.escapeHtml(url)}" alt="Thumbnail ${idx + 1}" class="mod-detail__thumb-img" loading="lazy" onerror="this.src='https://placehold.co/200x120?text=Image'" />
+        <img src="${window.TZ.escapeHtml(url)}" alt="Thumbnail ${idx + 1}" class="mod-detail__thumb-img" loading="lazy" onerror="this.style.opacity='0.3'" />
       </button>
     `).join('');
   } else {
@@ -607,24 +649,53 @@ window.handleShare = async function (e) {
 };
 
 // ── Comments ───────────────────────────────────────────────
-async function loadComments(modId) {
+const COMMENTS_PAGE_SIZE = 20;
+let commentsRootOffset = 0;
+let commentsHasMore = false;
+
+function highlightCommentFromHash() {
+  const match = (window.location.hash || '').match(/^#comment-(.+)$/);
+  if (!match) return;
+  const el = document.getElementById('comment-' + match[1]);
+  if (!el) return;
+  el.classList.add('comment--highlight');
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+async function loadComments(modId, append = false) {
   const commentsList = document.getElementById('comments-list');
   const countEl = document.getElementById('comments-count');
+  const moreWrap = document.getElementById('comments-more-wrap');
   const { escapeHtml, timeAgo } = window.TZ;
 
-  const comments = await window.TZ.Store.getComments(modId);
+  if (!append) {
+    commentsRootOffset = 0;
+    commentsHasMore = false;
+    if (commentsList) commentsList.innerHTML = '<p class="comments-empty">Loading comments…</p>';
+  }
+
+  const result = await window.TZ.Store.getComments(modId, {
+    limit: COMMENTS_PAGE_SIZE,
+    offset: commentsRootOffset
+  });
   // The mod may have changed while we were waiting
   if (!currentMod || currentMod.id !== modId) return;
 
-  if (comments === null) {
+  if (result === null) {
     commentsList.innerHTML = '<p class="comments-empty">Failed to load comments. Please try again later.</p>';
     countEl.textContent = '0';
+    if (moreWrap) moreWrap.style.display = 'none';
     return;
   }
-  countEl.textContent = comments.length;
 
-  if (comments.length === 0) {
+  const comments = Array.isArray(result) ? result : (result.comments || []);
+  const totalRoots = Array.isArray(result) ? comments.filter(c => !c.parent_id).length : (result.total || 0);
+  commentsHasMore = Array.isArray(result) ? false : !!result.hasMore;
+  countEl.textContent = String(totalRoots);
+
+  if (!append && comments.length === 0) {
     commentsList.innerHTML = '<p class="comments-empty">No comments yet. Be the first!</p>';
+    if (moreWrap) moreWrap.style.display = 'none';
     return;
   }
 
@@ -685,8 +756,22 @@ async function loadComments(modId) {
       </div>`;
   }
 
-  commentsList.innerHTML = (commentsByParent['root'] || []).map(c => renderCommentNode(c, 0)).join('');
+  const html = (commentsByParent['root'] || []).map(c => renderCommentNode(c, 0)).join('');
+  if (append) {
+    commentsList.insertAdjacentHTML('beforeend', html);
+  } else {
+    commentsList.innerHTML = html;
+  }
+
+  commentsRootOffset += (commentsByParent['root'] || []).length;
+  if (moreWrap) moreWrap.style.display = commentsHasMore ? '' : 'none';
+  highlightCommentFromHash();
 }
+
+window.loadMoreComments = function () {
+  if (!currentMod || !commentsHasMore) return;
+  loadComments(currentMod.id, true);
+};
 
 window.showReplyForm = function (commentId) {
   const form = document.getElementById('reply-form-' + commentId);
@@ -809,7 +894,25 @@ window.reportComment = async function (commentId) {
   });
   if (!reason) return;
 
-  const success = await window.TZ.Store.submitReport(commentId, 'comment', reason);
+  const success = await window.TZ.Store.submitReport(commentId, 'comment', reason, currentMod ? currentMod.id : '');
+  window.TZ.showToast(success ? '✅ Report submitted. Thank you.' : 'Failed to submit report.');
+};
+
+window.handleReportMod = async function () {
+  if (!currentMod) return;
+  if (!window.TZ_AUTH || !window.TZ_AUTH.currentUser()) {
+    requireSignIn('Sign in to report this mod.');
+    return;
+  }
+  const reason = await window.TZ.promptDialog('Tell us what is wrong with this mod (e.g. broken download, malware suspicion, stolen content).', {
+    title: 'Report mod',
+    placeholder: 'Reason for reporting…',
+    confirmText: 'Submit Report',
+    multiline: true,
+    maxlength: 500
+  });
+  if (!reason) return;
+  const success = await window.TZ.Store.submitReport(currentMod.id, 'mod', reason, currentMod.id);
   window.TZ.showToast(success ? '✅ Report submitted. Thank you.' : 'Failed to submit report.');
 };
 

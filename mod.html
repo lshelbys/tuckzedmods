@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <script src="head.js?v=2"></script>
+  <script src="head.js?v=3"></script>
   <title>Mod Details — tuckzed mods</title>
   <meta name="description" content="View mod details, screenshots, and download links on tuckzed mods." />
   <meta name="theme-color" content="#000000" />
@@ -13,7 +13,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Comic+Relief:wght@400;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=12" />
+  <link rel="stylesheet" href="styles.css?v=13" />
 
   <!-- Open Graph / Twitter (updated by JS once the mod loads) -->
   <meta property="og:type" content="article" />
@@ -106,6 +106,9 @@
             <div id="comments-list" class="comments-list">
               <p class="comments-empty">Loading comments…</p>
             </div>
+            <div id="comments-more-wrap" class="load-more-wrap" style="display:none;">
+              <button type="button" class="btn btn--ghost" id="comments-more-btn" onclick="loadMoreComments()">Load more comments</button>
+            </div>
             <div id="comment-form-wrap" style="display:none;">
               <label class="sr-only" for="comment-input">Add a comment</label>
               <textarea id="comment-input" class="input" rows="3" maxlength="2000" placeholder="Add a comment…"></textarea>
@@ -133,6 +136,7 @@
               <button type="button" onclick="handleModDownload(event)" class="btn btn--primary mod-detail__dl-btn" id="mod-dl-btn">⬇ Download Mod</button>
               <button type="button" onclick="handleLikeToggle(event)" class="btn btn--secondary mod-detail__dl-btn" id="mod-like-btn" aria-pressed="false"><span>🤍 Like (<span id="mod-likes-count">0</span>)</span></button>
               <button type="button" onclick="handleShare(event)" class="btn btn--secondary btn--sm" id="mod-share-btn" style="justify-content:center;">🔗 Share</button>
+              <button type="button" onclick="handleReportMod()" class="btn btn--ghost btn--sm" id="mod-report-btn" style="justify-content:center;">🚩 Report</button>
             </div>
 
             <div id="admin-edit-wrap" style="display:none;margin-top:12px;">
@@ -237,9 +241,9 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js?v=2"></script>
-<script src="store.js?v=12"></script>
+<script src="store.js?v=13"></script>
 <script src="firebase-config.js?v=3"></script>
-<script src="auth-nav.js?v=12"></script>
-<script src="mod.js?v=12"></script>
+<script src="auth-nav.js?v=13"></script>
+<script src="mod.js?v=13"></script>
 </body>
 </html>

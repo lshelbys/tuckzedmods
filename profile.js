@@ -22,10 +22,44 @@ document.addEventListener('DOMContentLoaded', function () {
       return;
     }
     document.getElementById('profile-loading').style.display = 'none';
-    document.getElementById('profile-main').style.display = '';
+    var page = document.querySelector('.profile-page');
+    if (page) page.style.display = '';
     populateSidebar(user);
     prefillForms(user);
+    loadLikedMods(user.email);
+    maybeMigrateEmail(user);
   });
+
+  async function maybeMigrateEmail(user) {
+    try {
+      var raw = localStorage.getItem('tz_pending_email_migrate');
+      if (!raw || !window.TZ.Store.migrateUserEmail) return;
+      var pending = JSON.parse(raw);
+      if (!pending || !pending.from || !pending.to) return;
+      if ((user.email || '').toLowerCase() !== String(pending.to).toLowerCase()) return;
+      await window.TZ.Store.migrateUserEmail(pending.from, pending.to);
+      localStorage.removeItem('tz_pending_email_migrate');
+      window.TZ.showToast('Your likes and profile were moved to the new email.');
+    } catch (_) {}
+  }
+
+  async function loadLikedMods(email) {
+    var wrap = document.getElementById('liked-mods-list');
+    if (!wrap || !window.TZ.Store.getLikedMods) return;
+    wrap.innerHTML = '<p class="form-hint">Loading liked mods…</p>';
+    var mods = await window.TZ.Store.getLikedMods(email);
+    if (!mods.length) {
+      wrap.innerHTML = '<p class="form-hint">You haven’t liked any mods yet. Heart one on a mod page and it’ll show up here.</p>';
+      return;
+    }
+    var escapeHtml = window.TZ.escapeHtml;
+    wrap.innerHTML = '<ul class="liked-mods">' + mods.map(function (m) {
+      return '<li class="liked-mods__item"><a class="liked-mods__link" href="mod.html?id=' + encodeURIComponent(m.id) + '">' +
+        '<span class="liked-mods__title">' + escapeHtml(m.title) + '</span>' +
+        '<span class="liked-mods__meta">' + escapeHtml(m.category) + ' · v' + escapeHtml(m.version) + '</span>' +
+        '</a></li>';
+    }).join('') + '</ul>';
+  }
 
   // ── Sidebar ────────────────────────────────────────────────
   function populateSidebar(user) {
@@ -173,7 +207,7 @@ document.addEventListener('DOMContentLoaded', function () {
     setLoading('btn-profile', true, 'Save Profile');
     try {
       var avatarUrl = null;
-      if (avatarFile) avatarUrl = await window.TZ.Store.uploadAvatar(avatarFile);
+      if (avatarFile) avatarUrl = await window.TZ.Store.uploadAvatar(avatarFile, user.photoURL || '');
       var newPhotoURL = avatarUrl || user.photoURL || null;
 
       await user.updateProfile({ displayName: username, photoURL: newPhotoURL });
@@ -219,6 +253,12 @@ document.addEventListener('DOMContentLoaded', function () {
         return u.updateEmail(newEmail);
       })
       .then(function () {
+        try {
+          localStorage.setItem('tz_pending_email_migrate', JSON.stringify({
+            from: user.email,
+            to: newEmail
+          }));
+        } catch (_) {}
         showStatus('status-email', '✓ Verification link sent to ' + newEmail, 'success');
         window.TZ.showToast('Check ' + newEmail + ' and click the link to finish changing your email.');
         document.getElementById('f-email-pass').value = '';
@@ -288,6 +328,10 @@ document.addEventListener('DOMContentLoaded', function () {
       deleteBtn.disabled = true;
       try {
         await reauth(password);
+        var email = firebase.auth().currentUser.email;
+        if (window.TZ.Store.deleteAccountData) {
+          await window.TZ.Store.deleteAccountData(email);
+        }
         await firebase.auth().currentUser.delete();
         window.TZ.showToast('Your account has been deleted.');
         window.location.href = './';

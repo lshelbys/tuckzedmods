@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <script src="head.js?v=2"></script>
+  <script src="head.js?v=3"></script>
   <title>Admin — tuckzed mods</title>
   <meta name="description" content="tuckzed mods admin dashboard — create, edit and delete mod listings." />
   <meta name="robots" content="noindex, nofollow" />
@@ -13,7 +13,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Comic+Relief:wght@400;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=12" />
+  <link rel="stylesheet" href="styles.css?v=13" />
 </head>
 <body>
 <a class="skip-link" href="#main-content">Skip to content</a>
@@ -92,8 +92,13 @@
     <!-- ── Overview Panel ──────────────────────────────────── -->
     <div class="panel active" id="panel-overview">
       <div class="admin-header">
-        <h1 class="admin-header__title">Dashboard</h1>
-        <p class="admin-header__sub">Welcome to the tuckzed mods admin panel.</p>
+        <div class="admin-header__row">
+          <div>
+            <h1 class="admin-header__title">Dashboard</h1>
+            <p class="admin-header__sub">Welcome to the tuckzed mods admin panel.</p>
+          </div>
+          <button type="button" class="btn btn--ghost btn--sm" onclick="downloadSitemap()">📄 Download sitemap.xml</button>
+        </div>
       </div>
 
       <div class="stat-grid" id="stat-grid"></div>
@@ -198,6 +203,12 @@
             <label class="form-label" for="f-desc">Description <span>*</span></label>
             <textarea class="input" id="f-desc" rows="4" placeholder="Describe this mod. Markdown is supported (**bold**, *italics*, - lists, [links](https://…))." aria-required="true"></textarea>
             <span class="form-error" id="err-desc" role="alert">Please enter a description.</span>
+            <div class="markdown-preview-wrap">
+              <div class="form-label">Live preview</div>
+              <div id="desc-preview" class="markdown-preview mod-detail__desc-content" aria-live="polite">
+                <p class="form-hint">Markdown preview will appear here.</p>
+              </div>
+            </div>
           </div>
 
           <div class="form-field form-field--full" id="field-dl">
@@ -320,10 +331,12 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
 <script src="supabase-config.js?v=2"></script>
-<script src="store.js?v=12"></script>
+<script src="store.js?v=13"></script>
 <script src="firebase-config.js?v=3"></script>
-<script src="auth-nav.js?v=12"></script>
-<script src="admin.js?v=12"></script>
+<script src="auth-nav.js?v=13"></script>
+<script src="admin.js?v=13"></script>
 </body>
 </html>

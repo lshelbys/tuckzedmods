@@ -270,12 +270,26 @@ const Store = {
     return next;
   },
 
-  /** Delete a mod (persists to Supabase and cache, and cleans all images from Storage) */
+  /** Delete a mod (persists to Supabase and cache, and cleans related rows + images) */
   async delete(id) {
     const mod = this.getById(id);
     const sb = this.getSb();
     if (sb) {
       try {
+        // Collect comment ids before deleting them (for report cleanup)
+        const { data: commentRows } = await sb.from('mod_comments').select('id').eq('mod_id', id);
+        const commentIds = (commentRows || []).map(r => String(r.id));
+
+        await Promise.all([
+          sb.from('mod_likes').delete().eq('mod_id', id),
+          sb.from('mod_comments').delete().eq('mod_id', id),
+          sb.from('reports').delete().eq('target_type', 'mod').eq('target_id', id),
+          sb.from('reports').delete().eq('context_id', id)
+        ]);
+        if (commentIds.length) {
+          await sb.from('reports').delete().eq('target_type', 'comment').in('target_id', commentIds);
+        }
+
         const { error } = await sb.from('mods').delete().eq('id', id);
         if (error) {
           console.error('Supabase delete error:', error);
@@ -299,12 +313,13 @@ const Store = {
   async uploadImage(file) {
     const sb = this.getSb();
     if (!sb) throw new Error('Supabase is not configured.');
+    if (!file) throw new Error('No file provided.');
+    if (file.size > 10 * 1024 * 1024) throw new Error('Image must be 10MB or smaller.');
 
-    const ext = (file.name.split('.').pop() || 'png').toLowerCase();
     const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_').slice(0, 30);
     const filename = 'img-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7) + '-' + safeName;
 
-    const { data, error } = await sb.storage.from('mod-covers').upload(filename, file, {
+    const { error } = await sb.storage.from('mod-covers').upload(filename, file, {
       cacheControl: '3600',
       upsert: false
     });
@@ -327,21 +342,43 @@ const Store = {
     }, {});
   },
 
-  /** Upload Avatar to Supabase */
-  async uploadAvatar(file) {
+  extractAvatarFilename(url) {
+    if (!url || typeof url !== 'string') return null;
+    const match = url.match(/\/avatars\/([^?#]+)/);
+    return match ? decodeURIComponent(match[1]) : null;
+  },
+
+  async deleteAvatarFiles(fileUrls) {
+    const sb = this.getSb();
+    if (!sb || !fileUrls || !fileUrls.length) return;
+    const files = fileUrls.map(u => this.extractAvatarFilename(u)).filter(Boolean);
+    if (!files.length) return;
+    try {
+      const { error } = await sb.storage.from('avatars').remove(files);
+      if (error) console.warn('Avatar storage remove error:', error);
+    } catch (err) {
+      console.warn('Avatar storage remove exception:', err);
+    }
+  },
+
+  /** Upload Avatar to Supabase (optionally removes the previous avatar file) */
+  async uploadAvatar(file, previousUrl) {
     const sb = this.getSb();
     if (!sb) throw new Error('Supabase is not configured.');
+    if (!file) throw new Error('No file provided.');
+    if (file.size > 5 * 1024 * 1024) throw new Error('Avatar must be 5MB or smaller.');
 
     const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_').slice(0, 30);
     const filename = 'avatar-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7) + '-' + safeName;
 
-    const { data, error } = await sb.storage.from('avatars').upload(filename, file, {
+    const { error } = await sb.storage.from('avatars').upload(filename, file, {
       cacheControl: '3600',
       upsert: false
     });
     if (error) throw error;
 
     const { data: pubData } = sb.storage.from('avatars').getPublicUrl(filename);
+    if (previousUrl) await this.deleteAvatarFiles([previousUrl]);
     return pubData.publicUrl;
   },
 
@@ -367,7 +404,60 @@ const Store = {
     return true;
   },
 
-  /** Increment downloads counter */
+  /** Migrate profile + likes when a user changes email */
+  async migrateUserEmail(oldEmail, newEmail) {
+    const sb = this.getSb();
+    if (!sb || !oldEmail || !newEmail || oldEmail === newEmail) return false;
+    try {
+      const profile = await this.getProfile(oldEmail);
+      if (profile) {
+        await sb.from('profiles').upsert([{
+          email: newEmail,
+          display_name: profile.display_name || '',
+          avatar_url: profile.avatar_url || '',
+          updated_at: new Date().toISOString()
+        }]);
+        await sb.from('profiles').delete().eq('email', oldEmail);
+      }
+      // Re-key likes (ignore duplicates on new email)
+      const { data: likes } = await sb.from('mod_likes').select('mod_id').eq('user_email', oldEmail);
+      if (likes && likes.length) {
+        await sb.from('mod_likes').upsert(
+          likes.map(l => ({ mod_id: l.mod_id, user_email: newEmail })),
+          { onConflict: 'mod_id,user_email', ignoreDuplicates: true }
+        );
+        await sb.from('mod_likes').delete().eq('user_email', oldEmail);
+      }
+      await sb.from('mod_comments').update({ user_email: newEmail }).eq('user_email', oldEmail);
+      return true;
+    } catch (err) {
+      console.error('migrateUserEmail error:', err);
+      return false;
+    }
+  },
+
+  /** Wipe likes/profile/avatar for account deletion (comments stay anonymized) */
+  async deleteAccountData(email) {
+    const sb = this.getSb();
+    if (!sb || !email) return false;
+    try {
+      const profile = await this.getProfile(email);
+      await sb.from('mod_likes').delete().eq('user_email', email);
+      await sb.from('profiles').delete().eq('email', email);
+      if (profile && profile.avatar_url) await this.deleteAvatarFiles([profile.avatar_url]);
+      // Soft-anonymize comments rather than deleting community history
+      await sb.from('mod_comments').update({
+        user_email: 'deleted',
+        username: 'Deleted user'
+      }).eq('user_email', email);
+      return true;
+    } catch (err) {
+      console.error('deleteAccountData error:', err);
+      return false;
+    }
+  },
+
+  /** Increment downloads counter (atomic RPC when available) */
   async incrementDownloads(id) {
     const mod = this.getById(id);
     if (mod) {
@@ -375,16 +465,57 @@ const Store = {
       this.save(this.getAll());
     }
     const sb = this.getSb();
-    if (!sb) return;
+    if (!sb) return mod ? mod.downloads : 0;
     try {
-      const { data } = await sb.from('mods').select('downloads').eq('id', id).maybeSingle();
-      const next = ((data && Number(data.downloads)) || (mod ? mod.downloads - 1 : 0)) + 1;
+      const { data, error } = await sb.rpc('increment_mod_downloads', { p_id: id });
+      if (!error && data != null) {
+        const next = Number(data) || 0;
+        if (mod) {
+          mod.downloads = next;
+          this.save(this.getAll());
+        }
+        return next;
+      }
+      // Fallback for DBs that have not run the latest SQL yet
+      const { data: row } = await sb.from('mods').select('downloads').eq('id', id).maybeSingle();
+      const next = ((row && Number(row.downloads)) || (mod ? Math.max(0, mod.downloads - 1) : 0)) + 1;
       await sb.from('mods').update({ downloads: next }).eq('id', id);
-      if (mod && mod.downloads !== next) {
+      if (mod) {
         mod.downloads = next;
         this.save(this.getAll());
       }
-    } catch (e) { console.error('Increment downloads error:', e); }
+      return next;
+    } catch (e) {
+      console.error('Increment downloads error:', e);
+      return mod ? mod.downloads : 0;
+    }
+  },
+
+  /** Mods liked by a user email */
+  async getLikedMods(email) {
+    const sb = this.getSb();
+    if (!sb || !email) return [];
+    try {
+      const { data, error } = await sb
+        .from('mod_likes')
+        .select('mod_id, created_at')
+        .eq('user_email', email)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      const ids = (data || []).map(r => r.mod_id);
+      if (!ids.length) return [];
+      const cached = this.getAll();
+      const byId = Object.fromEntries(cached.map(m => [m.id, m]));
+      const missing = ids.filter(id => !byId[id]);
+      if (missing.length) {
+        const { data: rows } = await sb.from('mods').select('*').in('id', missing);
+        (rows || []).forEach(row => { byId[row.id] = this.rowToMod(row); });
+      }
+      return ids.map(id => byId[id]).filter(Boolean);
+    } catch (err) {
+      console.error('getLikedMods error:', err);
+      return [];
+    }
   },
 
   /** Mod Likes */
@@ -403,13 +534,19 @@ const Store = {
     const { count, error } = await sb.from('mod_likes').select('*', { count: 'exact', head: true }).eq('mod_id', modId);
     if (error) throw error;
     const likes = count || 0;
-    await sb.from('mods').update({ likes }).eq('id', modId);
+    // Prefer reading the trigger-maintained column; still write as a fallback for older DBs
+    const { data: row } = await sb.from('mods').select('likes').eq('id', modId).maybeSingle();
+    const remoteLikes = row && Number.isFinite(Number(row.likes)) ? Number(row.likes) : likes;
+    if (remoteLikes !== likes) {
+      await sb.from('mods').update({ likes }).eq('id', modId);
+    }
+    const finalLikes = likes;
     const mod = this.getById(modId);
     if (mod) {
-      mod.likes = likes;
+      mod.likes = finalLikes;
       this.save(this.getAll());
     }
-    return likes;
+    return finalLikes;
   },
 
   async toggleLike(modId, isLiking) {
@@ -431,6 +568,7 @@ const Store = {
       return { ok: false, likes: (this.getById(modId) || {}).likes || 0 };
     }
     try {
+      // Short delay so DB trigger can update mods.likes, then sync
       const likes = await this.syncLikeCount(modId);
       return { ok: true, likes };
     } catch (err) {
@@ -445,20 +583,47 @@ const Store = {
     }
   },
 
-  /** Reporting System */
-  async submitReport(targetId, targetType, reason) {
+  /**
+   * Submit a report. Dedupes pending reports from the same user/target.
+   * @param {string} targetId
+   * @param {'mod'|'comment'} targetType
+   * @param {string} reason
+   * @param {string} [contextId] mod id for comment reports (admin deep-links)
+   */
+  async submitReport(targetId, targetType, reason, contextId = '') {
     const sb = this.getSb();
     const user = window.TZ_AUTH ? window.TZ_AUTH.currentUser() : null;
     if (!sb) return false;
-    
-    const { error } = await sb.from('reports').insert([{
-      target_id: targetId,
-      target_type: targetType,
-      reported_by: user ? user.email : 'anonymous',
-      reason: reason
-    }]);
-    if (error) { console.error('Report error:', error); return false; }
-    return true;
+    const reportedBy = user ? user.email : 'anonymous';
+
+    try {
+      const { data: existingRows } = await sb.from('reports')
+        .select('id')
+        .eq('target_type', targetType)
+        .eq('target_id', String(targetId))
+        .eq('status', 'pending')
+        .eq('reported_by', reportedBy)
+        .limit(1);
+      if (existingRows && existingRows.length) return true; // already reported — treat as success
+
+      const row = {
+        target_id: String(targetId),
+        target_type: targetType,
+        reported_by: reportedBy,
+        reason: reason || '',
+        context_id: contextId || (targetType === 'mod' ? String(targetId) : '')
+      };
+      let { error } = await sb.from('reports').insert([row]);
+      if (error && (error.code === '42703' || error.code === 'PGRST204' || /context_id/i.test(error.message || ''))) {
+        delete row.context_id;
+        ({ error } = await sb.from('reports').insert([row]));
+      }
+      if (error) { console.error('Report error:', error); return false; }
+      return true;
+    } catch (err) {
+      console.error('Report exception:', err);
+      return false;
+    }
   },
 
   async getReports() {
@@ -474,6 +639,14 @@ const Store = {
     if (!sb) return false;
     const { error } = await sb.from('reports').update({ status: 'resolved' }).eq('id', reportId);
     return !error;
+  },
+
+  /** Delete a reported comment (and its replies) then resolve the report */
+  async deleteCommentAndResolve(commentId, reportId) {
+    const deleted = await this.deleteComment(commentId);
+    if (!deleted) return false;
+    if (reportId) await this.resolveReport(reportId);
+    return true;
   },
 
   /** Add a comment */
@@ -507,40 +680,87 @@ const Store = {
     return true;
   },
 
-  /** Delete a comment */
+  /** Delete a comment and its replies */
   async deleteComment(commentId) {
     const sb = this.getSb();
     if (!sb) return false;
+    // Delete replies first (works even without FK CASCADE)
+    const { error: replyErr } = await sb.from('mod_comments').delete().eq('parent_id', commentId);
+    if (replyErr) console.warn('Delete comment replies warning:', replyErr);
     const { error } = await sb.from('mod_comments').delete().eq('id', commentId);
     if (error) { console.error('Delete comment error:', error); return false; }
+    // Clean related comment reports
+    await sb.from('reports').delete().eq('target_type', 'comment').eq('target_id', String(commentId));
     return true;
   },
 
-  /** Get comments for a mod */
-  async getComments(modId) {
+  /**
+   * Get comments for a mod.
+   * @param {string} modId
+   * @param {{ limit?: number, offset?: number }} [opts]
+   * @returns {Promise<Array|null|{comments:Array, total:number, hasMore:boolean}>}
+   */
+  async getComments(modId, opts = {}) {
     const sb = this.getSb();
     if (!sb) return [];
-    const { data: comments, error } = await sb.from('mod_comments').select('*').eq('mod_id', modId).order('created_at', { ascending: true });
-    if (error) { console.error('Get comments error:', error); return null; }
-    if (!comments || comments.length === 0) return [];
+    const limit = Number.isFinite(opts.limit) ? opts.limit : null;
+    const offset = Number(opts.offset) || 0;
 
-    const emails = [...new Set(comments.map(c => c.user_email).filter(Boolean))];
-    let profiles = {};
-    if (emails.length > 0) {
-      const { data: profs } = await sb.from('profiles').select('*').in('email', emails);
-      if (profs) {
-        profs.forEach(p => { profiles[p.email] = p; });
+    try {
+      // Load all comments for the mod (replies need parents). For large threads,
+      // paginate root comments and always include their replies.
+      const { data: all, error } = await sb
+        .from('mod_comments')
+        .select('*')
+        .eq('mod_id', modId)
+        .order('created_at', { ascending: true });
+      if (error) { console.error('Get comments error:', error); return null; }
+      if (!all || all.length === 0) {
+        return limit == null ? [] : { comments: [], total: 0, hasMore: false };
       }
-    }
 
-    return comments.map(c => {
-      const p = profiles[c.user_email];
+      const emails = [...new Set(all.map(c => c.user_email).filter(Boolean))];
+      let profiles = {};
+      if (emails.length > 0) {
+        const { data: profs } = await sb.from('profiles').select('*').in('email', emails);
+        if (profs) profs.forEach(p => { profiles[p.email] = p; });
+      }
+
+      const enriched = all.map(c => {
+        const p = profiles[c.user_email];
+        return {
+          ...c,
+          display_name: p?.display_name || c.username,
+          avatar_url: p?.avatar_url || null
+        };
+      });
+
+      if (limit == null) return enriched;
+
+      const roots = enriched.filter(c => !c.parent_id);
+      const total = roots.length;
+      const pageRoots = roots.slice(offset, offset + limit);
+      const rootIds = new Set(pageRoots.map(c => c.id));
+      const page = enriched.filter(c => rootIds.has(c.id) || rootIds.has(c.parent_id));
       return {
-        ...c,
-        display_name: p?.display_name || c.username,
-        avatar_url: p?.avatar_url || null
+        comments: page,
+        total,
+        hasMore: offset + limit < total
       };
-    });
+    } catch (err) {
+      console.error('Get comments exception:', err);
+      return null;
+    }
+  },
+
+  /** Build a sitemap.xml string for all known mods */
+  buildSitemapXml(origin = 'https://tuckzed.com') {
+    const base = String(origin || 'https://tuckzed.com').replace(/\/$/, '');
+    const urls = [`${base}/`].concat(
+      this.getAll().map(m => `${base}/mod?id=${encodeURIComponent(m.id)}`)
+    );
+    const body = urls.map(u => `  <url><loc>${u}</loc></url>`).join('\n');
+    return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</urlset>\n`;
   }
 };
 

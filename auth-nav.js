@@ -29,6 +29,19 @@
       const isAdmin = !!(user.email && window.TZ_AUTH && window.TZ_AUTH.ADMIN_EMAIL
         && user.email.toLowerCase() === window.TZ_AUTH.ADMIN_EMAIL.toLowerCase());
 
+      // Finish pending email migrations after the user clicks the verification link
+      try {
+        const raw = localStorage.getItem('tz_pending_email_migrate');
+        if (raw && window.TZ && window.TZ.Store && window.TZ.Store.migrateUserEmail) {
+          const pending = JSON.parse(raw);
+          if (pending && pending.to && user.email && user.email.toLowerCase() === String(pending.to).toLowerCase()) {
+            window.TZ.Store.migrateUserEmail(pending.from, pending.to).then(ok => {
+              if (ok) localStorage.removeItem('tz_pending_email_migrate');
+            });
+          }
+        }
+      } catch (_) {}
+
       if (isAdmin) {
         if (uploadLi) uploadLi.style.display = '';
         if (uploadLink) {
