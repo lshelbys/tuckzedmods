@@ -7,28 +7,50 @@
 
 document.addEventListener('DOMContentLoaded', function () {
 
-  var auth = window.TZ_AUTH;
   var avatarFile = null;
   var avatarPreviewUrl = null;
 
-  // ── Auth guard: must be a signed-in, non-admin user ────────
-  auth.onChange(function (user) {
-    if (!user) {
-      window.location.href = 'auth.html?redirect=profile.html';
+  function showProfile(user) {
+    var loading = document.getElementById('profile-loading');
+    var page = document.getElementById('main-content') || document.querySelector('.profile-page');
+    if (loading) loading.style.display = 'none';
+    if (page) {
+      page.style.display = 'block';
+      page.removeAttribute('hidden');
+    }
+    try {
+      populateSidebar(user);
+      prefillForms(user);
+      loadLikedMods(user && user.email);
+      maybeMigrateEmail(user);
+    } catch (err) {
+      console.error('Profile render error:', err);
+      if (loading) {
+        loading.style.display = 'block';
+        loading.innerHTML = '<p class="admin-loading__title">Could not load profile</p><p class="admin-loading__sub">Please refresh and try again.</p>';
+      }
+    }
+  }
+
+  function bootAuth() {
+    var auth = window.TZ_AUTH;
+    if (!auth || !auth.onChange) {
+      setTimeout(bootAuth, 50);
       return;
     }
-    if (user.email.toLowerCase() === auth.ADMIN_EMAIL.toLowerCase()) {
-      window.location.href = 'admin.html';
-      return;
-    }
-    document.getElementById('profile-loading').style.display = 'none';
-    var page = document.querySelector('.profile-page');
-    if (page) page.style.display = '';
-    populateSidebar(user);
-    prefillForms(user);
-    loadLikedMods(user.email);
-    maybeMigrateEmail(user);
-  });
+
+    // Signed-in users (including admin) can manage their account here.
+    // Guests are sent to sign-in with a return URL.
+    auth.onChange(function (user) {
+      if (!user) {
+        window.location.href = 'auth.html?redirect=profile.html';
+        return;
+      }
+      showProfile(user);
+    });
+  }
+
+  bootAuth();
 
   async function maybeMigrateEmail(user) {
     try {
@@ -36,7 +58,7 @@ document.addEventListener('DOMContentLoaded', function () {
       if (!raw || !window.TZ.Store.migrateUserEmail) return;
       var pending = JSON.parse(raw);
       if (!pending || !pending.from || !pending.to) return;
-      if ((user.email || '').toLowerCase() !== String(pending.to).toLowerCase()) return;
+      if (!user.email || user.email.toLowerCase() !== String(pending.to).toLowerCase()) return;
       await window.TZ.Store.migrateUserEmail(pending.from, pending.to);
       localStorage.removeItem('tz_pending_email_migrate');
       window.TZ.showToast('Your likes and profile were moved to the new email.');
@@ -46,24 +68,34 @@ document.addEventListener('DOMContentLoaded', function () {
   async function loadLikedMods(email) {
     var wrap = document.getElementById('liked-mods-list');
     if (!wrap || !window.TZ.Store.getLikedMods) return;
-    wrap.innerHTML = '<p class="form-hint">Loading liked mods…</p>';
-    var mods = await window.TZ.Store.getLikedMods(email);
-    if (!mods.length) {
-      wrap.innerHTML = '<p class="form-hint">You haven’t liked any mods yet. Heart one on a mod page and it’ll show up here.</p>';
+    if (!email) {
+      wrap.innerHTML = '<p class="form-hint">Sign in with an email account to see liked mods.</p>';
       return;
     }
-    var escapeHtml = window.TZ.escapeHtml;
-    wrap.innerHTML = '<ul class="liked-mods">' + mods.map(function (m) {
-      return '<li class="liked-mods__item"><a class="liked-mods__link" href="mod.html?id=' + encodeURIComponent(m.id) + '">' +
-        '<span class="liked-mods__title">' + escapeHtml(m.title) + '</span>' +
-        '<span class="liked-mods__meta">' + escapeHtml(m.category) + ' · v' + escapeHtml(m.version) + '</span>' +
-        '</a></li>';
-    }).join('') + '</ul>';
+    wrap.innerHTML = '<p class="form-hint">Loading liked mods…</p>';
+    try {
+      var mods = await window.TZ.Store.getLikedMods(email);
+      if (!mods.length) {
+        wrap.innerHTML = '<p class="form-hint">You haven\'t liked any mods yet. Heart one on a mod page and it will show up here.</p>';
+        return;
+      }
+      var escapeHtml = window.TZ.escapeHtml;
+      wrap.innerHTML = '<ul class="liked-mods">' + mods.map(function (m) {
+        return '<li class="liked-mods__item"><a class="liked-mods__link" href="mod.html?id=' + encodeURIComponent(m.id) + '">' +
+          '<span class="liked-mods__title">' + escapeHtml(m.title) + '</span>' +
+          '<span class="liked-mods__meta">' + escapeHtml(m.category) + ' · v' + escapeHtml(m.version) + '</span>' +
+          '</a></li>';
+      }).join('') + '</ul>';
+    } catch (err) {
+      console.error(err);
+      wrap.innerHTML = '<p class="form-hint">Could not load liked mods right now.</p>';
+    }
   }
 
   // ── Sidebar ────────────────────────────────────────────────
   function populateSidebar(user) {
-    var name   = user.displayName || user.email.split('@')[0];
+    var email = user.email || '';
+    var name   = user.displayName || (email ? email.split('@')[0] : 'User');
     var avatarEl = document.getElementById('profile-avatar');
 
     if (user.photoURL) {
@@ -73,22 +105,23 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     document.getElementById('sidebar-name').textContent  = name;
-    document.getElementById('sidebar-email').textContent = user.email;
+    document.getElementById('sidebar-email').textContent = email;
 
     var created = user.metadata && user.metadata.creationTime ? window.TZ.formatDate(user.metadata.creationTime) : '';
     document.getElementById('sidebar-joined').textContent = created ? 'Member since ' + created : '';
   }
 
   function prefillForms(user) {
-    document.getElementById('f-username').value  = user.displayName || user.email.split('@')[0] || '';
-    document.getElementById('f-new-email').value = user.email || '';
+    var email = user.email || '';
+    document.getElementById('f-username').value  = user.displayName || (email ? email.split('@')[0] : '') || '';
+    document.getElementById('f-new-email').value = email;
     if (user.photoURL) {
       var img = document.getElementById('avatar-preview');
       img.src = user.photoURL;
       img.style.display = 'block';
       document.getElementById('avatar-placeholder').style.display = 'none';
     } else {
-      document.getElementById('avatar-placeholder').textContent = (user.displayName || user.email).charAt(0).toUpperCase();
+      document.getElementById('avatar-placeholder').textContent = (user.displayName || email || '?').charAt(0).toUpperCase();
     }
   }
 

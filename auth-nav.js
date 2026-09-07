@@ -22,6 +22,8 @@
     const signoutBtn  = document.getElementById('nav-signout-btn');
     const footerAdmin = document.getElementById('footer-admin');
     const heroUpload  = document.getElementById('hero-admin-btn');
+    // Always keep the footer Admin link available so the site owner can reach the panel
+    if (footerAdmin) footerAdmin.style.display = '';
 
     if (!signinLink) return; // nav not present
 
@@ -56,7 +58,6 @@
           heroUpload.removeAttribute('target');
           heroUpload.removeAttribute('rel');
         }
-        if (footerAdmin) footerAdmin.style.display = '';
       } else {
         if (uploadLi) uploadLi.style.display = 'none';
         if (heroUpload) {
@@ -65,7 +66,6 @@
           heroUpload.rel = 'noopener noreferrer';
           heroUpload.textContent = 'Submit a Mod';
         }
-        if (footerAdmin) footerAdmin.style.display = 'none';
       }
 
       signinLink.style.display = 'none';
@@ -157,7 +157,6 @@
       }
       signinLink.style.display = '';
       if (userPill) userPill.style.display = 'none';
-      if (footerAdmin) footerAdmin.style.display = 'none';
     }
 
     updateNavHighlight();
