@@ -30,6 +30,7 @@
   <meta property="og:image" content="https://lshelbys.github.io/tuckzedmods/images/PREVIEW.png" />
   <meta property="og:type" content="website" />
   <meta name="twitter:card" content="summary_large_image" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script>if(localStorage.getItem('theme')==='dark') document.documentElement.setAttribute('data-theme', 'dark');</script>
 </head>
@@ -553,7 +554,7 @@ function renderMod(mod) {
   const descEl = document.getElementById('mod-description');
   if (descEl) {
     if (window.marked && typeof marked.parse === 'function') {
-      descEl.innerHTML = marked.parse(mod.description || '');
+      descEl.innerHTML = window.DOMPurify ? window.DOMPurify.sanitize(marked.parse(mod.description || '')) : marked.parse(mod.description || '');
     } else {
       descEl.textContent = mod.description;
     }
@@ -888,6 +889,11 @@ async function loadComments(modId) {
   
   updateAuthUI();
   const comments = await window.TZ.Store.getComments(modId);
+  if (comments === null) {
+    commentsList.innerHTML = '<p style="color:var(--gray-600); font-size:.9rem;">Failed to load comments. Please try again later.</p>';
+    countEl.textContent = '0';
+    return;
+  }
   countEl.textContent = comments.length;
   
   if (comments.length === 0) {

@@ -458,7 +458,7 @@ const Store = {
     const sb = this.getSb();
     if (!sb) return [];
     const { data: comments, error } = await sb.from('mod_comments').select('*').eq('mod_id', modId).order('created_at', { ascending: true });
-    if (error) { console.error('Get comments error:', error); return []; }
+    if (error) { console.error('Get comments error:', error); return null; }
     if (!comments || comments.length === 0) return [];
 
     const emails = [...new Set(comments.map(c => c.user_email).filter(Boolean))];
