@@ -964,14 +964,33 @@ async function copyBrowseLink() {
       if (err && err.name === 'AbortError') return;
     }
   }
-  try {
-    await navigator.clipboard.writeText(url);
-    window.TZ.showToast('🔗 Browse link copied');
-  } catch (_) {
-    window.TZ.showToast('Could not copy link');
-  }
+  const ok = await copyTextToClipboard(url);
+  window.TZ.showToast(ok ? '🔗 Browse link copied' : 'Could not copy link');
 }
 window.copyBrowseLink = copyBrowseLink;
+
+function copyTextToClipboard(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    return navigator.clipboard.writeText(text).then(() => true).catch(() => copyTextFallback(text));
+  }
+  return Promise.resolve(copyTextFallback(text));
+}
+
+function copyTextFallback(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.setAttribute('readonly', '');
+  ta.style.position = 'fixed';
+  ta.style.top = '0';
+  ta.style.left = '-9999px';
+  document.body.appendChild(ta);
+  ta.select();
+  ta.setSelectionRange(0, ta.value.length);
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch (_) {}
+  ta.remove();
+  return ok;
+}
 
 function initBrowseShortcuts() {
   document.addEventListener('keydown', e => {
@@ -1012,6 +1031,10 @@ function initBackToTop() {
   const onScroll = () => {
     btn.hidden = window.scrollY < 480;
   };
+  btn.addEventListener('click', e => {
+    e.preventDefault();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
   window.addEventListener('scroll', onScroll, { passive: true });
   onScroll();
 }
