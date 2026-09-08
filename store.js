@@ -951,6 +951,30 @@ const Store = {
     return Object.values(counts).sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag)).slice(0, limit);
   },
 
+  rememberRecentMod(mod) {
+    if (!mod || !mod.id) return;
+    let ids = [];
+    try { ids = JSON.parse(localStorage.getItem('tz_recent_mods') || '[]'); } catch (_) {}
+    if (!Array.isArray(ids)) ids = [];
+    ids = ids.filter(id => id !== mod.id);
+    ids.unshift(mod.id);
+    try { localStorage.setItem('tz_recent_mods', JSON.stringify(ids.slice(0, 8))); } catch (_) {}
+    try { sessionStorage.setItem('tz_last_mod', JSON.stringify({ id: mod.id, title: mod.title })); } catch (_) {}
+  },
+
+  getRecentMods() {
+    let ids = [];
+    try { ids = JSON.parse(localStorage.getItem('tz_recent_mods') || '[]'); } catch (_) {}
+    if (!Array.isArray(ids)) return [];
+    const byId = Object.fromEntries(this.getAll().map(m => [m.id, m]));
+    return ids.map(id => byId[id]).filter(Boolean);
+  },
+
+  clearRecentMods() {
+    try { localStorage.removeItem('tz_recent_mods'); } catch (_) {}
+    try { sessionStorage.removeItem('tz_last_mod'); } catch (_) {}
+  },
+
   // ── Wishlists ────────────────────────────────────────────
   async getWishlistStatus(modId) {
     const sb = this.getSb();

@@ -59,7 +59,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!currentMod) showNotFound();
 
   if (currentMod) {
-    try { sessionStorage.setItem('tz_last_mod', JSON.stringify({ id: currentMod.id, title: currentMod.title })); } catch (_) {}
+    try { window.TZ.Store.rememberRecentMod(currentMod); } catch (_) {}
   }
 
   bindGalleryControls();
