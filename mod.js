@@ -66,6 +66,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   bindGallerySwipe();
   initStickyDownload();
   renderSiblingNav(modId);
+  if (window.TZ.initBackToTop) window.TZ.initBackToTop('back-to-top');
+  initModShortcuts();
 
   if (window.TZ_AUTH && window.TZ_AUTH.onChange) {
     window.TZ_AUTH.onChange(user => {
@@ -739,12 +741,10 @@ window.handleShare = async function (e) {
       if (err && err.name === 'AbortError') return;
     }
   }
-  try {
-    await navigator.clipboard.writeText(url);
-    window.TZ.showToast('🔗 Link copied to clipboard!');
-  } catch (_) {
-    window.TZ.promptDialog('Copy this link to share the mod:', { title: 'Share mod', defaultValue: url, confirmText: 'Done', required: false });
-  }
+  const copy = window.TZ.copyTextToClipboard;
+  const ok = copy ? await copy(url) : false;
+  if (ok) window.TZ.showToast('🔗 Link copied to clipboard!');
+  else window.TZ.promptDialog('Copy this link to share the mod:', { title: 'Share mod', defaultValue: url, confirmText: 'Done', required: false });
 };
 
 // ── Comments ───────────────────────────────────────────────
@@ -1102,12 +1102,10 @@ window.copyDownloadLink = async function () {
     window.TZ.showToast('No download link is available.');
     return;
   }
-  try {
-    await navigator.clipboard.writeText(currentMod.downloadUrl);
-    window.TZ.showToast('Download link copied.');
-  } catch (_) {
-    window.TZ.promptDialog('Copy this download link:', { title: 'Download link', defaultValue: currentMod.downloadUrl, confirmText: 'Done', required: false });
-  }
+  const copy = window.TZ.copyTextToClipboard;
+  const ok = copy ? await copy(currentMod.downloadUrl) : false;
+  if (ok) window.TZ.showToast('Download link copied.');
+  else window.TZ.promptDialog('Copy this download link:', { title: 'Download link', defaultValue: currentMod.downloadUrl, confirmText: 'Done', required: false });
 };
 
 window.toggleDescription = function () {
@@ -1186,7 +1184,13 @@ function renderSiblingNav(modId) {
   if (!wrap || !prev || !next) return;
   let ids = [];
   try { ids = JSON.parse(sessionStorage.getItem('tz_browse_ids') || '[]'); } catch (_) {}
-  const idx = ids.indexOf(modId);
+  let idx = ids.indexOf(modId);
+  if (idx < 0 || ids.length < 2) {
+    const current = window.TZ.Store.getById(modId);
+    const pool = window.TZ.Store.sortNewest(window.TZ.Store.getAll().filter(m => current && m.game === current.game));
+    ids = pool.map(m => m.id);
+    idx = ids.indexOf(modId);
+  }
   if (idx < 0 || ids.length < 2) { wrap.style.display = 'none'; return; }
   wrap.style.display = '';
   if (idx > 0) {
@@ -1199,6 +1203,24 @@ function renderSiblingNav(modId) {
   } else next.style.visibility = 'hidden';
 }
 
+function initModShortcuts() {
+  document.addEventListener('keydown', e => {
+    if (isLightboxOpen) return;
+    const tag = (e.target && e.target.tagName) || '';
+    const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(tag) || !!(e.target && e.target.isContentEditable);
+    if (typing) return;
+    const wrap = document.getElementById('mod-siblings');
+    if (!wrap || wrap.style.display === 'none') return;
+    if (e.key === '[') {
+      const prev = document.getElementById('mod-prev-link');
+      if (prev && prev.style.visibility !== 'hidden' && prev.href) window.location.href = prev.href;
+    } else if (e.key === ']') {
+      const next = document.getElementById('mod-next-link');
+      if (next && next.style.visibility !== 'hidden' && next.href) window.location.href = next.href;
+    }
+  });
+}
+
 async function renderAlsoLiked(mod) {
   const section = document.getElementById('also-liked-section');
   const grid = document.getElementById('also-liked-grid');
@@ -1206,13 +1228,22 @@ async function renderAlsoLiked(mod) {
   const mods = await window.TZ.Store.getAlsoLikedMods(mod.id, 4);
   if (!mods.length) { section.style.display = 'none'; return; }
   section.style.display = '';
-  const { escapeHtml, formatDate, GAMES } = window.TZ;
+  const { escapeHtml, formatDate, GAMES, CATEGORY_ICONS } = window.TZ;
   grid.innerHTML = mods.map(m => {
     const href = `mod.html?id=${encodeURIComponent(m.id)}`;
+    const game = GAMES[m.game];
+    const icon = (CATEGORY_ICONS && CATEGORY_ICONS[m.category]) || '📦';
+    const imgHtml = m.coverImage
+      ? `<img src="${escapeHtml(m.coverImage)}" alt="" class="mod-card__img img-fade" loading="lazy" decoding="async" onload="this.classList.add('is-loaded')" onerror="this.parentElement.innerHTML='<div class=\\'mod-card__img-placeholder\\'>${icon}</div>'" />`
+      : `<div class="mod-card__img-placeholder">${icon}</div>`;
     return `<article class="mod-card" role="listitem">
-      <a href="${href}" class="mod-card__hit">
+      <a href="${href}" class="mod-card__hit" aria-label="View ${escapeHtml(m.title)}">
+        <div class="mod-card__img-wrap">${imgHtml}</div>
         <div class="mod-card__body">
-          <div class="mod-card__tags"><span class="badge badge--filled">${escapeHtml((GAMES[m.game] && GAMES[m.game].name) || m.game)}</span></div>
+          <div class="mod-card__tags">
+            <span class="badge badge--filled">${escapeHtml((game && game.name) || m.game)}</span>
+            <span class="badge badge--gray">${escapeHtml(m.category || '')}</span>
+          </div>
           <h3 class="mod-card__title">${escapeHtml(m.title)}</h3>
           <div class="mod-card__meta"><span>v${escapeHtml(m.version)}</span><time>${escapeHtml(formatDate(m.createdAt))}</time></div>
         </div>

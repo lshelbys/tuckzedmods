@@ -14,10 +14,14 @@ const state = {
   sort:           'newest',
   page:           1,
   view:           'grid',
+  featured:       false,
 };
 
 const PAGE_SIZE = 12;
 let observer = null;
+let suggestIndex = -1;
+let personalLists = { liked: [], wished: [] };
+let personalLoaded = false;
 
 // ── Init ───────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -33,13 +37,15 @@ document.addEventListener('DOMContentLoaded', () => {
   renderPopularTags();
   renderCollections();
   initSearch();
-  initHeroButton();
   initAlertsCta();
   initBrowseShortcuts();
   initBackToTop();
 
   if (window.TZ_AUTH && window.TZ_AUTH.onChange) {
-    window.TZ_AUTH.onChange(() => hydrateCardActions());
+    window.TZ_AUTH.onChange(() => {
+      hydrateCardActions();
+      renderPersonalRails();
+    });
   }
 
   // Fetch live mods from Supabase, then re-render with fresh data
@@ -53,6 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
       renderMods();
       renderPopularTags();
       renderCollections();
+      renderPersonalRails();
     });
   }
 
@@ -71,6 +78,7 @@ function applyFiltersFromUrl() {
   const q    = params.get('q');
   const sort = params.get('sort');
   const view = params.get('view');
+  const featured = params.get('featured');
 
   if (game && GAMES[game]) state.activeGame = game;
   if (cat && CATEGORIES.includes(cat)) state.activeCategory = cat;
@@ -88,8 +96,10 @@ function applyFiltersFromUrl() {
     if (select) select.value = sort;
   }
   if (view === 'list' || view === 'grid') state.view = view;
+  state.featured = featured === '1' || featured === 'true';
 
   syncCategoryButtons();
+  syncFeaturedButton();
   updateModsTitle();
   updateTagChip();
   document.getElementById('clear-game-btn').style.display = state.activeGame ? '' : 'none';
@@ -104,6 +114,7 @@ function syncUrl() {
   if (state.searchQuery) params.set('q', state.searchQuery);
   if (state.sort !== 'newest') params.set('sort', state.sort);
   if (state.view === 'list') params.set('view', 'list');
+  if (state.featured) params.set('featured', '1');
   const qs = params.toString();
   const url = window.location.pathname + (qs ? '?' + qs : '') + (window.location.hash || '#mods');
   try { window.history.replaceState(null, '', url); } catch (_) {}
@@ -118,39 +129,10 @@ function updateDocumentTitle() {
   if (state.activeCategory !== 'all') parts.push(state.activeCategory);
   if (state.activeTags.length) parts.push(state.activeTags.map(t => '#' + t).join(' '));
   if (state.searchQuery) parts.push('“' + state.searchQuery + '”');
+  if (state.featured) parts.push('Featured');
   document.title = parts.length
     ? `${parts.join(' · ')} — tuckzed mods`
     : 'tuckzed mods — Assetto Corsa & BeamNG.drive Mods';
-}
-
-// ── Hero button reflects auth state (admin vs community submit) ──────────
-function initHeroButton() {
-  const btn = document.getElementById('hero-admin-btn');
-  if (!btn || !window.TZ_AUTH || !window.TZ_AUTH.onChange) return;
-  window.TZ_AUTH.onChange(user => {
-    if (!user) {
-      btn.style.display = '';
-      btn.href = 'submit.html';
-      btn.removeAttribute('target');
-      btn.removeAttribute('rel');
-      btn.textContent = 'Submit a Mod';
-      return;
-    }
-    const isAdmin = window.TZ_AUTH.isAdmin && window.TZ_AUTH.isAdmin();
-    if (isAdmin) {
-      btn.style.display = '';
-      btn.href = 'admin.html';
-      btn.removeAttribute('target');
-      btn.removeAttribute('rel');
-      btn.textContent = '⚡ Admin Panel';
-    } else {
-      btn.style.display = '';
-      btn.href = 'submit.html';
-      btn.removeAttribute('target');
-      btn.removeAttribute('rel');
-      btn.textContent = 'Submit a Mod';
-    }
-  });
 }
 
 // ── Game Cards ─────────────────────────────────────────────
@@ -241,11 +223,44 @@ function initSearch() {
   });
   input.addEventListener('search', apply);
   input.addEventListener('focus', renderSearchSuggest);
+  input.addEventListener('keydown', e => {
+    const items = box ? [...box.querySelectorAll('.search-suggest__item')] : [];
+    if (e.key === 'ArrowDown' && items.length && !box.hidden) {
+      e.preventDefault();
+      suggestIndex = (suggestIndex + 1) % items.length;
+      highlightSuggest(items);
+    } else if (e.key === 'ArrowUp' && items.length && !box.hidden) {
+      e.preventDefault();
+      suggestIndex = (suggestIndex - 1 + items.length) % items.length;
+      highlightSuggest(items);
+    } else if (e.key === 'Enter' && suggestIndex >= 0 && items[suggestIndex] && !box.hidden) {
+      e.preventDefault();
+      items[suggestIndex].click();
+    } else if (e.key === 'Escape' && box && !box.hidden) {
+      e.preventDefault();
+      box.hidden = true;
+      input.setAttribute('aria-expanded', 'false');
+    }
+  });
   document.addEventListener('click', e => {
     if (!box) return;
     if (e.target === input || box.contains(e.target)) return;
     box.hidden = true;
+    input.setAttribute('aria-expanded', 'false');
   });
+}
+
+function highlightSuggest(items) {
+  const input = document.getElementById('search-input');
+  items.forEach((el, i) => {
+    const on = i === suggestIndex;
+    el.classList.toggle('is-active', on);
+    el.setAttribute('aria-selected', String(on));
+  });
+  if (input) {
+    if (suggestIndex >= 0 && items[suggestIndex]) input.setAttribute('aria-activedescendant', items[suggestIndex].id);
+    else input.removeAttribute('aria-activedescendant');
+  }
 }
 
 function renderSearchSuggest() {
@@ -254,7 +269,14 @@ function renderSearchSuggest() {
   const box = document.getElementById('search-suggest');
   if (!input || !box) return;
   const q = input.value.trim();
-  if (q.length < 2) { box.hidden = true; box.innerHTML = ''; return; }
+  suggestIndex = -1;
+  if (q.length < 2) {
+    box.hidden = true;
+    box.innerHTML = '';
+    input.setAttribute('aria-expanded', 'false');
+    input.removeAttribute('aria-activedescendant');
+    return;
+  }
   const mods = Store.getAll();
   const titles = mods.filter(m => fuzzyMatch(m.title, q)).slice(0, 5);
   const seen = new Set();
@@ -267,11 +289,18 @@ function renderSearchSuggest() {
     }
   }));
   const tagHits = tags.slice(0, 5);
-  if (!titles.length && !tagHits.length) { box.hidden = true; box.innerHTML = ''; return; }
+  if (!titles.length && !tagHits.length) {
+    box.hidden = true;
+    box.innerHTML = '';
+    input.setAttribute('aria-expanded', 'false');
+    return;
+  }
   box.hidden = false;
+  input.setAttribute('aria-expanded', 'true');
+  let n = 0;
   box.innerHTML = [
-    ...titles.map(m => `<button type="button" class="search-suggest__item" role="option" onclick="pickSearchTitle('${escapeHtml(m.id)}')">${escapeHtml(m.title)}</button>`),
-    ...tagHits.map(t => `<button type="button" class="search-suggest__item search-suggest__item--tag" role="option" onclick="searchTag('${escapeHtml(t).replace(/'/g, "\\'")}')">#${escapeHtml(t)}</button>`)
+    ...titles.map(m => `<button type="button" class="search-suggest__item" role="option" id="suggest-${n++}" onclick="pickSearchTitle('${escapeHtml(m.id)}')">${escapeHtml(m.title)}</button>`),
+    ...tagHits.map(t => `<button type="button" class="search-suggest__item search-suggest__item--tag" role="option" id="suggest-${n++}" onclick="searchTag('${escapeHtml(t).replace(/'/g, "\\'")}')">#${escapeHtml(t)}</button>`)
   ].join('');
 }
 
@@ -303,6 +332,7 @@ function syncCategoryButtons() {
     btn.textContent = `${labels[cat]} (${n})`;
     btn.classList.toggle('is-empty', cat !== 'all' && n === 0);
   });
+  syncFeaturedButton();
 }
 
 function setCategory(cat) {
@@ -314,6 +344,34 @@ function setCategory(cat) {
 function setSort(val) {
   state.sort = val;
   renderMods();
+}
+
+function toggleFeatured() {
+  state.featured = !state.featured;
+  syncFeaturedButton();
+  renderMods();
+}
+window.toggleFeatured = toggleFeatured;
+
+function showFeaturedMods() {
+  state.featured = true;
+  syncFeaturedButton();
+  renderMods();
+  const grid = document.getElementById('mod-grid');
+  if (grid) grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+window.showFeaturedMods = showFeaturedMods;
+
+function syncFeaturedButton() {
+  const btn = document.getElementById('filter-featured');
+  if (!btn) return;
+  const { Store } = window.TZ;
+  const all = Store.getAll().filter(m => !state.activeGame || m.game === state.activeGame);
+  const n = all.filter(m => m.featured).length;
+  btn.textContent = `★ Featured (${n})`;
+  btn.classList.toggle('active', state.featured);
+  btn.setAttribute('aria-pressed', String(state.featured));
+  btn.classList.toggle('is-empty', n === 0);
 }
 
 // ── Tag filter ─────────────────────────────────────────────
@@ -408,6 +466,9 @@ function getFilteredMods() {
   }
   if (state.activeCategory !== 'all') {
     mods = mods.filter(m => m.category === state.activeCategory);
+  }
+  if (state.featured) {
+    mods = mods.filter(m => m.featured);
   }
   if (state.activeTags.length) {
     const wanted = state.activeTags.map(t => t.toLowerCase());
@@ -643,9 +704,14 @@ function resetFilters() {
   state.activeCategory = 'all';
   state.activeTags = [];
   state.searchQuery = '';
+  state.sort = 'newest';
+  state.featured = false;
   const input = document.getElementById('search-input');
   if (input) input.value = '';
+  const select = document.getElementById('sort-select');
+  if (select) select.value = 'newest';
   syncCategoryButtons();
+  syncFeaturedButton();
   updateTagChip();
   updateModsTitle();
   document.getElementById('clear-game-btn').style.display = 'none';
@@ -723,7 +789,7 @@ async function renderCollections() {
 }
 
 function hasActiveFilters() {
-  return !!(state.activeGame || state.activeCategory !== 'all' || state.activeTags.length || state.searchQuery);
+  return !!(state.activeGame || state.activeCategory !== 'all' || state.activeTags.length || state.searchQuery || state.featured);
 }
 
 function updateResultsBar(count) {
@@ -740,6 +806,7 @@ function updateResultsBar(count) {
   if (state.activeCategory !== 'all') bits.push(state.activeCategory);
   if (state.activeTags.length) bits.push(state.activeTags.map(t => '#' + t).join(' '));
   if (state.searchQuery) bits.push(`“${state.searchQuery}”`);
+  if (state.featured) bits.push('Featured');
   text.textContent = bits.join(' · ');
 }
 
@@ -750,10 +817,8 @@ function renderEmptySuggestions() {
   let close = [];
   if (q) {
     close = Store.getAll()
-      .map(m => ({ m, d: window.TZ ? 0 : 0 }))
-      .filter(({ m }) => fuzzyMatch(m.title, q) || fuzzyMatch((m.tags || ''), q))
-      .slice(0, 3)
-      .map(x => x.m);
+      .filter(m => fuzzyMatch(m.title, q) || fuzzyMatch((m.tags || ''), q))
+      .slice(0, 3);
     if (!close.length) close = Store.sortNewest(Store.getAll()).slice(0, 3);
   }
   const tagHtml = tags.length
@@ -781,7 +846,6 @@ function applyViewClass() {
 
 window.setView = function (view) {
   state.view = view === 'list' ? 'list' : 'grid';
-  try { localStorage.setItem('tz_view', state.view); } catch (_) {}
   applyViewClass();
   syncUrl();
 };
@@ -806,8 +870,13 @@ function railCard(mod) {
   const media = mod.coverImage
     ? `<img src="${escapeHtml(mod.coverImage)}" alt="" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'home-rail__card-ph\\'>${icon}</div>'" />`
     : `<div class="home-rail__card-ph" aria-hidden="true">${icon}</div>`;
+  const badge = mod.featured
+    ? `<span class="home-rail__badge">★ Featured</span>`
+    : (isNewMod(mod)
+      ? `<span class="home-rail__badge home-rail__badge--new">New</span>`
+      : (isUpdatedMod(mod) ? `<span class="home-rail__badge home-rail__badge--updated">Updated</span>` : ''));
   return `<a class="home-rail__card" href="mod.html?id=${encodeURIComponent(mod.id)}">
-    <div class="home-rail__card-media">${media}</div>
+    <div class="home-rail__card-media">${media}${badge}</div>
     <div class="home-rail__card-body">
       <span class="home-rail__card-title">${escapeHtml(mod.title)}</span>
       <span class="home-rail__card-meta">${escapeHtml(mod.category)} · v${escapeHtml(mod.version)}</span>
@@ -817,20 +886,50 @@ function railCard(mod) {
 
 function renderDiscoveryRails() {
   const { Store } = window.TZ;
-  const all = applyLightFilters(Store.getAll());
-  const featured = all.filter(m => m.featured).slice(0, 8);
-  const weekAgo = Date.now() - 7 * 86400000;
-  const newest = Store.sortNewest(all).filter(m => new Date(m.createdAtIso || m.createdAt).getTime() >= weekAgo).slice(0, 8);
-
-  fillRail('featured-rail', 'featured-rail-row', featured);
-  fillRail('new-rail', 'new-rail-row', newest);
-  const updated = [...all]
-    .filter(isUpdatedMod)
-    .sort((a, b) => String(b.updatedAtIso || '').localeCompare(String(a.updatedAtIso || '')))
-    .slice(0, 8);
-  fillRail('updated-rail', 'updated-rail-row', updated);
-  const recent = (Store.getRecentMods ? Store.getRecentMods() : []).filter(m => all.some(x => x.id === m.id)).slice(0, 8);
+  const hideCatalogRails = !!(state.searchQuery || state.activeTags.length || state.featured);
+  if (hideCatalogRails) {
+    ['featured-rail', 'new-rail', 'updated-rail'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
+  } else {
+    const all = applyLightFilters(Store.getAll());
+    const featured = all.filter(m => m.featured).slice(0, 8);
+    const weekAgo = Date.now() - 7 * 86400000;
+    const newest = Store.sortNewest(all).filter(m => new Date(m.createdAtIso || m.createdAt).getTime() >= weekAgo).slice(0, 8);
+    fillRail('featured-rail', 'featured-rail-row', featured);
+    fillRail('new-rail', 'new-rail-row', newest);
+    const updated = [...all]
+      .filter(isUpdatedMod)
+      .sort((a, b) => String(b.updatedAtIso || '').localeCompare(String(a.updatedAtIso || '')))
+      .slice(0, 8);
+    fillRail('updated-rail', 'updated-rail-row', updated);
+  }
+  const scoped = applyLightFilters(Store.getAll());
+  const recent = (Store.getRecentMods ? Store.getRecentMods() : []).filter(m => scoped.some(x => x.id === m.id)).slice(0, 8);
   fillRail('recent-rail', 'recent-rail-row', recent);
+}
+
+async function renderPersonalRails() {
+  const user = window.TZ_AUTH && window.TZ_AUTH.currentUser();
+  if (!user || !window.TZ.Store.getWishlistMods) {
+    personalLists = { liked: [], wished: [] };
+    personalLoaded = false;
+    fillRail('wish-rail', 'wish-rail-row', []);
+    fillRail('liked-rail', 'liked-rail-row', []);
+    return;
+  }
+  const [wished, liked] = await Promise.all([
+    window.TZ.Store.getWishlistMods(user.email),
+    window.TZ.Store.getLikedMods(user.email),
+  ]);
+  personalLists = { liked: liked || [], wished: wished || [] };
+  personalLoaded = true;
+  const scoped = applyLightFilters(window.TZ.Store.getAll());
+  const inScope = m => scoped.some(x => x.id === m.id);
+  fillRail('wish-rail', 'wish-rail-row', personalLists.wished.filter(inScope).slice(0, 8));
+  fillRail('liked-rail', 'liked-rail-row', personalLists.liked.filter(inScope).slice(0, 8));
+  applyPersonalHydration();
 }
 
 function applyLightFilters(mods) {
@@ -870,6 +969,8 @@ window.toggleCardLike = async function (e, id) {
   if (!result || !result.ok) {
     if (btn) { btn.setAttribute('aria-pressed', String(!next)); btn.textContent = next ? '🤍' : '❤️'; }
     window.TZ.showToast('Could not update like.');
+  } else {
+    renderPersonalRails();
   }
 };
 
@@ -890,24 +991,34 @@ window.toggleCardWish = async function (e, id) {
   if (!result || !result.ok) {
     if (btn) { btn.setAttribute('aria-pressed', String(!next)); btn.textContent = next ? '☆' : '★'; }
     window.TZ.showToast('Could not update wishlist.');
+  } else {
+    renderPersonalRails();
   }
 };
 
 async function hydrateCardActions() {
   const user = window.TZ_AUTH && window.TZ_AUTH.currentUser();
   if (!user) return;
-  const likeBtns = [...document.querySelectorAll('[data-like-id]')];
-  const wishBtns = [...document.querySelectorAll('[data-wish-id]')];
-  await Promise.all(likeBtns.slice(0, 24).map(async btn => {
-    const liked = await window.TZ.Store.getModLikeStatus(btn.dataset.likeId);
-    btn.setAttribute('aria-pressed', String(!!liked));
-    btn.textContent = liked ? '❤️' : '🤍';
-  }));
-  await Promise.all(wishBtns.slice(0, 24).map(async btn => {
-    const wished = await window.TZ.Store.getWishlistStatus(btn.dataset.wishId);
-    btn.setAttribute('aria-pressed', String(!!wished));
-    btn.textContent = wished ? '★' : '☆';
-  }));
+  if (!personalLoaded) {
+    await renderPersonalRails();
+    return;
+  }
+  applyPersonalHydration();
+}
+
+function applyPersonalHydration() {
+  const liked = new Set(personalLists.liked.map(m => m.id));
+  const wished = new Set(personalLists.wished.map(m => m.id));
+  document.querySelectorAll('[data-like-id]').forEach(btn => {
+    const on = liked.has(btn.dataset.likeId);
+    btn.setAttribute('aria-pressed', String(on));
+    btn.textContent = on ? '❤️' : '🤍';
+  });
+  document.querySelectorAll('[data-wish-id]').forEach(btn => {
+    const on = wished.has(btn.dataset.wishId);
+    btn.setAttribute('aria-pressed', String(on));
+    btn.textContent = on ? '★' : '☆';
+  });
 }
 
 // ── Refresh when another tab (e.g. the admin panel) edits mods ──
@@ -956,41 +1067,13 @@ window.surpriseMe = surpriseMe;
 
 async function copyBrowseLink() {
   const url = window.location.href;
-  if (navigator.share) {
-    try {
-      await navigator.share({ title: document.title, url });
-      return;
-    } catch (err) {
-      if (err && err.name === 'AbortError') return;
-    }
-  }
-  const ok = await copyTextToClipboard(url);
+  const copy = window.TZ.copyTextToClipboard || (async text => {
+    try { await navigator.clipboard.writeText(text); return true; } catch (_) { return false; }
+  });
+  const ok = await copy(url);
   window.TZ.showToast(ok ? '🔗 Browse link copied' : 'Could not copy link');
 }
 window.copyBrowseLink = copyBrowseLink;
-
-function copyTextToClipboard(text) {
-  if (navigator.clipboard && window.isSecureContext) {
-    return navigator.clipboard.writeText(text).then(() => true).catch(() => copyTextFallback(text));
-  }
-  return Promise.resolve(copyTextFallback(text));
-}
-
-function copyTextFallback(text) {
-  const ta = document.createElement('textarea');
-  ta.value = text;
-  ta.setAttribute('readonly', '');
-  ta.style.position = 'fixed';
-  ta.style.top = '0';
-  ta.style.left = '-9999px';
-  document.body.appendChild(ta);
-  ta.select();
-  ta.setSelectionRange(0, ta.value.length);
-  let ok = false;
-  try { ok = document.execCommand('copy'); } catch (_) {}
-  ta.remove();
-  return ok;
-}
 
 function initBrowseShortcuts() {
   document.addEventListener('keydown', e => {
@@ -1026,15 +1109,5 @@ function initBrowseShortcuts() {
 }
 
 function initBackToTop() {
-  const btn = document.getElementById('back-to-top');
-  if (!btn) return;
-  const onScroll = () => {
-    btn.hidden = window.scrollY < 480;
-  };
-  btn.addEventListener('click', e => {
-    e.preventDefault();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  });
-  window.addEventListener('scroll', onScroll, { passive: true });
-  onScroll();
+  if (window.TZ.initBackToTop) window.TZ.initBackToTop('back-to-top');
 }

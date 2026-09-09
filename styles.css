@@ -527,6 +527,7 @@ textarea.input {
   font-weight: 700;
 }
 .section__count { font-weight: 400; color: var(--gray-600); font-size: 1rem; margin-left: 8px; }
+.section__sub { margin: 6px 0 0; color: var(--gray-600); font-size: .95rem; font-weight: 400; }
 
 /* ── Game Cards ─────────────────────────────────────────────── */
 .game-grid {
@@ -726,14 +727,19 @@ textarea.input {
 }
 .home-rail__title { margin: 0; font-size: 1rem; }
 .home-rail__row {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  display: flex;
   gap: 14px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 8px;
+  -webkit-overflow-scrolling: touch;
 }
 .home-rail__card {
   display: flex;
   flex-direction: column;
+  flex: 0 0 220px;
   min-width: 0;
+  scroll-snap-align: start;
   border: 2px solid var(--black);
   border-radius: var(--radius-md);
   overflow: hidden;
@@ -744,6 +750,7 @@ textarea.input {
 }
 .home-rail__card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
 .home-rail__card-media {
+  position: relative;
   aspect-ratio: 16 / 9;
   background: var(--gray-100, #f3f3f3);
   overflow: hidden;
@@ -770,6 +777,24 @@ textarea.input {
   line-height: 1.25;
 }
 .home-rail__card-meta { font-size: .78rem; opacity: .7; }
+.home-rail__badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 2;
+  background: var(--black);
+  color: var(--white);
+  font-size: .7rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+.home-rail__badge--new,
+.home-rail__badge--updated {
+  background: var(--white);
+  color: var(--black);
+  border: 2px solid var(--black);
+}
 .toolbar__search-wrap { position: relative; }
 .search-suggest {
   position: absolute;
@@ -785,7 +810,8 @@ textarea.input {
   border: 0; background: none; padding: 8px 12px;
   font-family: var(--font); font-weight: 700; cursor: pointer;
 }
-.search-suggest__item:hover { background: var(--gray-100, #f3f3f3); }
+.search-suggest__item:hover,
+.search-suggest__item.is-active { background: var(--gray-100, #f3f3f3); }
 .search-suggest__item--tag { font-weight: 600; opacity: .85; }
 .results-bar {
   display: flex; align-items: center; justify-content: space-between;

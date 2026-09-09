@@ -30,8 +30,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.title = `${col.title} — tuckzed mods`;
   document.getElementById('collection-title').textContent = col.title;
   document.getElementById('collection-desc').textContent = col.description || '';
+  const countEl = document.getElementById('collection-count');
   const grid = document.getElementById('collection-grid');
   const mods = col.mods || [];
+  if (countEl) countEl.textContent = `${mods.length} ${mods.length === 1 ? 'mod' : 'mods'}`;
   if (!mods.length) {
     grid.innerHTML = '<p class="empty-state__desc">This collection has no mods yet.</p>';
   } else {
