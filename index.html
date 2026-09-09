@@ -13,7 +13,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Comic+Relief:wght@400;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=19" />
+  <link rel="stylesheet" href="styles.css?v=22" />
   <link rel="alternate" type="application/rss+xml" title="tuckzed mods — What's New" href="feed.xml" />
 
   <!-- Open Graph / Twitter -->
@@ -66,6 +66,7 @@
         Browse Mods
       </button>
       <a href="submit.html" class="btn" id="hero-admin-btn">Submit a Mod</a>
+      <button type="button" class="btn btn--ghost" id="hero-surprise-btn" onclick="surpriseMe()">Surprise me</button>
     </div>
   </div>
 </section>
@@ -102,16 +103,46 @@
     <div id="continue-browse" class="continue-browse" style="display:none;"></div>
 
     <section class="home-rail" id="featured-rail" aria-labelledby="featured-rail-title" style="display:none;">
-      <h3 class="home-rail__title" id="featured-rail-title">★ Staff picks</h3>
+      <div class="home-rail__head">
+        <h3 class="home-rail__title" id="featured-rail-title">★ Staff picks</h3>
+        <button type="button" class="btn btn--ghost btn--sm" onclick="showFeaturedMods()">See all</button>
+      </div>
       <div class="home-rail__row" id="featured-rail-row"></div>
     </section>
     <section class="home-rail" id="new-rail" aria-labelledby="new-rail-title" style="display:none;">
-      <h3 class="home-rail__title" id="new-rail-title">What’s new</h3>
+      <div class="home-rail__head">
+        <h3 class="home-rail__title" id="new-rail-title">What’s new</h3>
+        <button type="button" class="btn btn--ghost btn--sm" onclick="showSortedMods('newest')">See all</button>
+      </div>
       <div class="home-rail__row" id="new-rail-row"></div>
     </section>
-    <section class="home-rail" id="trending-rail" aria-labelledby="trending-rail-title" style="display:none;">
-      <h3 class="home-rail__title" id="trending-rail-title">Trending</h3>
-      <div class="home-rail__row" id="trending-rail-row"></div>
+    <section class="home-rail" id="updated-rail" aria-labelledby="updated-rail-title" style="display:none;">
+      <div class="home-rail__head">
+        <h3 class="home-rail__title" id="updated-rail-title">Recently updated</h3>
+        <button type="button" class="btn btn--ghost btn--sm" onclick="showSortedMods('updated')">See all</button>
+      </div>
+      <div class="home-rail__row" id="updated-rail-row"></div>
+    </section>
+    <section class="home-rail" id="recent-rail" aria-labelledby="recent-rail-title" style="display:none;">
+      <div class="home-rail__head">
+        <h3 class="home-rail__title" id="recent-rail-title">Recently viewed</h3>
+        <button type="button" class="btn btn--ghost btn--sm" onclick="clearRecentViewed()">Clear</button>
+      </div>
+      <div class="home-rail__row" id="recent-rail-row"></div>
+    </section>
+    <section class="home-rail" id="wish-rail" aria-labelledby="wish-rail-title" style="display:none;">
+      <div class="home-rail__head">
+        <h3 class="home-rail__title" id="wish-rail-title">Your wishlist</h3>
+        <a class="btn btn--ghost btn--sm" href="profile.html#card-wishlist-title">Profile</a>
+      </div>
+      <div class="home-rail__row" id="wish-rail-row"></div>
+    </section>
+    <section class="home-rail" id="liked-rail" aria-labelledby="liked-rail-title" style="display:none;">
+      <div class="home-rail__head">
+        <h3 class="home-rail__title" id="liked-rail-title">Liked by you</h3>
+        <a class="btn btn--ghost btn--sm" href="profile.html#card-likes-title">Profile</a>
+      </div>
+      <div class="home-rail__row" id="liked-rail-row"></div>
     </section>
 
     <!-- Toolbar -->
@@ -122,12 +153,14 @@
           type="search"
           class="input toolbar__search"
           id="search-input"
-          placeholder="Search mods by title, description or tag…"
+          placeholder="Search mods… press / to focus"
           aria-label="Search mods"
           autocomplete="off"
           aria-autocomplete="list"
           aria-controls="search-suggest"
+          aria-expanded="false"
         />
+        <kbd class="toolbar__kbd" title="Press / to focus search">/</kbd>
         <div class="search-suggest" id="search-suggest" role="listbox" hidden></div>
       </div>
       <div class="filter-group" role="group" aria-label="Category filters">
@@ -136,22 +169,27 @@
         <button type="button" class="filter-btn" id="filter-tracks" aria-pressed="false" onclick="setCategory('Tracks')">🏁 Tracks</button>
         <button type="button" class="filter-btn" id="filter-maps" aria-pressed="false" onclick="setCategory('Maps')">🗺️ Maps</button>
         <button type="button" class="filter-btn" id="filter-physics" aria-pressed="false" onclick="setCategory('Physics')">⚙️ Physics</button>
+        <button type="button" class="filter-btn" id="filter-featured" aria-pressed="false" onclick="toggleFeatured()">★ Featured</button>
       </div>
       <div class="filter-group" id="active-tag-wrap" style="display:none;" aria-label="Active tag filters"></div>
       <div class="filter-group toolbar__end">
         <label class="sr-only" for="sort-select">Sort mods</label>
         <select class="input toolbar__sort" id="sort-select" onchange="setSort(this.value)">
           <option value="newest">Sort by: Newest</option>
-          <option value="trending">Sort by: Trending</option>
+          <option value="updated">Sort by: Recently Updated</option>
           <option value="popular">Sort by: Most Downloaded</option>
           <option value="liked">Sort by: Most Liked</option>
+          <option value="title">Sort by: Title A–Z</option>
         </select>
       </div>
     </div>
 
     <div class="results-bar" id="results-bar" style="display:none;">
       <span id="results-bar-text"></span>
-      <button type="button" class="btn btn--ghost btn--sm" onclick="resetFilters()">Clear all</button>
+      <span class="results-bar__actions">
+        <button type="button" class="btn btn--ghost btn--sm" onclick="copyBrowseLink()">Copy link</button>
+        <button type="button" class="btn btn--ghost btn--sm" onclick="resetFilters()">Clear all</button>
+      </span>
     </div>
 
     <!-- Popular tags -->
@@ -167,9 +205,11 @@
 <!-- ── Collections ──────────────────────────────────────────── -->
 <section class="section collections-section" id="collections" aria-labelledby="collections-title" style="display:none;">
   <div class="container">
-    <div class="section-header">
-      <h2 class="section-title" id="collections-title">Collections</h2>
-      <p class="section-sub">Curated packs of mods worth browsing together.</p>
+    <div class="section__header">
+      <div>
+        <h2 class="section__title" id="collections-title">Collections</h2>
+        <p class="section__sub">Curated packs of mods worth browsing together.</p>
+      </div>
     </div>
     <div class="collections-grid" id="collections-grid" role="list"></div>
   </div>
@@ -224,15 +264,16 @@
 
 <!-- ── Toast Container ──────────────────────────────────────── -->
 <div class="toast-container" aria-live="assertive" aria-atomic="true"></div>
+<button type="button" class="back-to-top" id="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="Back to top" hidden>↑ Top</button>
 
 <!-- ── Scripts ─────────────────────────────────────────────── -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js?v=2"></script>
-<script src="store.js?v=18"></script>
+<script src="store.js?v=20"></script>
 <script src="firebase-config.js?v=3"></script>
 <script src="auth-nav.js?v=16"></script>
-<script src="home.js?v=19"></script>
+<script src="home.js?v=22"></script>
 </body>
 </html>

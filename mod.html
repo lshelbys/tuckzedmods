@@ -13,7 +13,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Comic+Relief:wght@400;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=19" />
+  <link rel="stylesheet" href="styles.css?v=22" />
 
   <!-- Open Graph / Twitter (updated by JS once the mod loads) -->
   <meta property="og:type" content="article" />
@@ -59,8 +59,8 @@
     <div class="mod-detail-navrow">
       <a href="./#mods" class="mod-detail-back" id="back-btn">← Back to all mods</a>
       <div class="mod-detail-siblings" id="mod-siblings" style="display:none;">
-        <a class="btn btn--ghost btn--sm" id="mod-prev-link" href="#">← Prev</a>
-        <a class="btn btn--ghost btn--sm" id="mod-next-link" href="#">Next →</a>
+        <a class="btn btn--ghost btn--sm" id="mod-prev-link" href="#" title="Previous mod ([)">← Prev</a>
+        <a class="btn btn--ghost btn--sm" id="mod-next-link" href="#" title="Next mod (])">Next →</a>
       </div>
     </div>
 
@@ -280,15 +280,16 @@
 
 <!-- ── Toast Container ──────────────────────────────────────── -->
 <div class="toast-container" aria-live="assertive" aria-atomic="true"></div>
+<button type="button" class="back-to-top" id="back-to-top" aria-label="Back to top" hidden>↑ Top</button>
 
 <!-- ── Scripts ─────────────────────────────────────────────── -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js?v=2"></script>
-<script src="store.js?v=18"></script>
+<script src="store.js?v=20"></script>
 <script src="firebase-config.js?v=3"></script>
 <script src="auth-nav.js?v=16"></script>
-<script src="mod.js?v=18"></script>
+<script src="mod.js?v=20"></script>
 </body>
 </html>

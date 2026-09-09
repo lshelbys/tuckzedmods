@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Comic+Relief:wght@400;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=19" />
+  <link rel="stylesheet" href="styles.css?v=22" />
 </head>
 <body>
 <a class="skip-link" href="#main-content">Skip to content</a>
@@ -47,9 +47,12 @@
       <a href="./#mods" class="btn btn--primary mt-24">Browse Mods</a>
     </div>
     <div id="collection-content" style="display:none;">
-      <header class="section-header" style="margin-bottom:24px;">
-        <h1 class="section-title" id="collection-title">Collection</h1>
-        <p class="section-sub" id="collection-desc"></p>
+      <header class="section__header" style="margin-bottom:24px;">
+        <div>
+          <h1 class="section__title" id="collection-title">Collection</h1>
+          <p class="section__sub" id="collection-desc"></p>
+        </div>
+        <span class="section__count" id="collection-count"></span>
       </header>
       <div class="mod-grid" id="collection-grid" role="list"></div>
     </div>
@@ -74,9 +77,9 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js?v=2"></script>
-<script src="store.js?v=18"></script>
+<script src="store.js?v=20"></script>
 <script src="firebase-config.js?v=3"></script>
 <script src="auth-nav.js?v=16"></script>
-<script src="collection.js?v=16"></script>
+<script src="collection.js?v=17"></script>
 </body>
 </html>

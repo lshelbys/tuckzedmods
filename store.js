@@ -951,6 +951,30 @@ const Store = {
     return Object.values(counts).sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag)).slice(0, limit);
   },
 
+  rememberRecentMod(mod) {
+    if (!mod || !mod.id) return;
+    let ids = [];
+    try { ids = JSON.parse(localStorage.getItem('tz_recent_mods') || '[]'); } catch (_) {}
+    if (!Array.isArray(ids)) ids = [];
+    ids = ids.filter(id => id !== mod.id);
+    ids.unshift(mod.id);
+    try { localStorage.setItem('tz_recent_mods', JSON.stringify(ids.slice(0, 8))); } catch (_) {}
+    try { sessionStorage.setItem('tz_last_mod', JSON.stringify({ id: mod.id, title: mod.title })); } catch (_) {}
+  },
+
+  getRecentMods() {
+    let ids = [];
+    try { ids = JSON.parse(localStorage.getItem('tz_recent_mods') || '[]'); } catch (_) {}
+    if (!Array.isArray(ids)) return [];
+    const byId = Object.fromEntries(this.getAll().map(m => [m.id, m]));
+    return ids.map(id => byId[id]).filter(Boolean);
+  },
+
+  clearRecentMods() {
+    try { localStorage.removeItem('tz_recent_mods'); } catch (_) {}
+    try { sessionStorage.removeItem('tz_last_mod'); } catch (_) {}
+  },
+
   // ── Wishlists ────────────────────────────────────────────
   async getWishlistStatus(modId) {
     const sb = this.getSb();
@@ -1739,10 +1763,47 @@ function promptDialog(message, opts = {}) {
   });
 }
 
+function copyTextFallback(text) {
+  const ta = document.createElement('textarea');
+  ta.value = String(text || '');
+  ta.setAttribute('readonly', '');
+  ta.style.position = 'fixed';
+  ta.style.top = '0';
+  ta.style.left = '-9999px';
+  document.body.appendChild(ta);
+  ta.select();
+  ta.setSelectionRange(0, ta.value.length);
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch (_) {}
+  ta.remove();
+  return ok;
+}
+
+function copyTextToClipboard(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    return navigator.clipboard.writeText(String(text || '')).then(() => true).catch(() => copyTextFallback(text));
+  }
+  return Promise.resolve(copyTextFallback(text));
+}
+
+function initBackToTop(btnId) {
+  const btn = document.getElementById(btnId || 'back-to-top');
+  if (!btn || btn.dataset.bound === '1') return;
+  btn.dataset.bound = '1';
+  const onScroll = () => { btn.hidden = window.scrollY < 480; };
+  btn.addEventListener('click', e => {
+    e.preventDefault();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+}
+
 // ── Export globals ───────────────────────────────────────────
 window.TZ = {
   Store, GAMES, CATEGORIES, CATEGORY_ICONS,
   generateId, today, escapeHtml, escapeXml, showToast, normalizeTags, parseTags,
   formatDate, timeAgo, formatCount, stripMarkdown, confirmDialog, promptDialog,
-  authRedirectUrl, fuzzyMatch, parseYoutubeId, parseMirrors
+  authRedirectUrl, fuzzyMatch, parseYoutubeId, parseMirrors,
+  copyTextToClipboard, initBackToTop
 };
